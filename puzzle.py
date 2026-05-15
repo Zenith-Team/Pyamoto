@@ -1976,7 +1976,7 @@ class paletteWidget(QtWidgets.QWidget):
             ['4x4 Circle Bottom Right', QtGui.QIcon(path + 'Rails/4x4 Circle Bottom Right.png')],
             ['4x4 Circle Bottom Right Corner', QtGui.QIcon(path + 'Rails/4x4 Circle Bottom Right Corner.png')],
 
-            ['End Stop', QtGui.QIcon()],
+            ['End Stop', QtGui.QIcon(path + 'Rails/End Stop.png')],
         ]
 
         CoinParams = [
@@ -2212,15 +2212,15 @@ class paletteWidget(QtWidgets.QWidget):
             ['Solid-on-Top',            QtGui.QIcon(path + 'Collisions/SolidOnTop.png'),     'The tile can only be stood on.'],
             ['Solid-on-Bottom',         QtGui.QIcon(path + 'Collisions/SolidOnBottom.png'),  'The tile can only be hit from below.'],
             ['Solid Top+Bottom',        QtGui.QIcon(path + 'Collisions/SolidOnTopBottom.png'), 'Can be stood on and hit from below, but not any other side.'],
-            ['Solid, Force Slide',      QtGui.QIcon(path + 'Collisions/SlopedSlide.png'),    'Player immediately starts sliding, cannot jump.'],
-            ['Top, Force Slide',        QtGui.QIcon(path + 'Collisions/SlopedSlide.png'),    'Solid-on-Top with forced slide.'],
-            ['Solid, No Slide',         QtGui.QIcon(path + 'Collisions/SlopedSolidOnTop.png'), 'Solid with sliding disabled.'],
-            ['Top, No Slide',           QtGui.QIcon(path + 'Collisions/SlopedSolidOnTop.png'), 'Solid-on-Top with sliding disabled.'],
+            ['Solid Slide',             QtGui.QIcon(path + 'Collisions/Slide.png'),    'Forced players into sliding and disables jumping.'],
+            ['Solid-on-Top Slide',      QtGui.QIcon(path + 'Collisions/SlideTop.png'),    'Forced players into sliding and disables jumping.'],
+            ['Solid Staircase',         QtGui.QIcon(path + 'Collisions/Staircase.png'), 'Disables sliding on slopes.'],
+            ['Solid-on-Top Staircase',  QtGui.QIcon(path + 'Collisions/StaircaseTop.png'), 'Disables sliding on slopes.'],
         ]
 
         # Quicksand is unused.
         self.terrainTypes = [
-            ['Default',        QtGui.QIcon(),                                          'No special terrain properties.'],             # 0x0
+            ['Default',        QtGui.QIcon(path + 'Terrain/Default.png'),              'No special terrain properties.'],             # 0x0
             ['Ice',            QtGui.QIcon(path + 'Terrain/Ice.png'),                  'Will be slippery.'],                          # 0x1
             ['Snow',           QtGui.QIcon(path + 'Terrain/Snow.png'),                 'Emits puffs of snow and snow footstep sounds.'], # 0x2
             ['Quicksand',      QtGui.QIcon(path + 'Terrain/Quicksand.png'),            'Emits puffs of sand. Use with Quicksand core type.'], # 0x3
@@ -2280,7 +2280,7 @@ class paletteWidget(QtWidgets.QWidget):
         collisionGroup = QtWidgets.QGroupBox('Collision')
         collisionLayout = QtWidgets.QVBoxLayout(collisionGroup)
         collisionLayout.setContentsMargins(4, 6, 4, 4)
-        self.collisionGrid = PropertyIconGrid(self.collsTypes, cols=3)
+        self.collisionGrid = PropertyIconGrid(self.collsTypes, cols=5)
         collisionLayout.addWidget(self.collisionGrid)
         mainLayout.addWidget(collisionGroup)
 
