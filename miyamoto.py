@@ -450,14 +450,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         )
 
         self.CreateAction(
-            'undo', self.HandleUndo, self.style().standardIcon(QtWidgets.QStyle.SP_ArrowBack),
+            'undo', self.HandleUndo, GetIcon('undo'),
             globals.trans.string('MenuItems', 152),
             globals.trans.string('MenuItems', 153),
             QtGui.QKeySequence.Undo,
         )
 
         self.CreateAction(
-            'redo', self.HandleRedo, self.style().standardIcon(QtWidgets.QStyle.SP_ArrowForward),
+            'redo', self.HandleRedo, GetIcon('redo'),
             globals.trans.string('MenuItems', 154),
             globals.trans.string('MenuItems', 155),
             QtGui.QKeySequence.Redo,
