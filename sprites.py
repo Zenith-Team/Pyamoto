@@ -8924,30 +8924,19 @@ class SpriteImage_Toad(SLib.SpriteImage_StaticMultiple):  # 408, 543
         super().dataChanged()
 
 
-class SpriteImage_ChainChomp(SLib.SpriteImage_StaticMultiple):  # 409
+class SpriteImage_ChainChomp(SLib.SpriteImage_Static):  # 409
     def __init__(self, parent):
         super().__init__(
             parent,
             3.75,
+            ImageCache['ChainChomp'],
+            (-8, -28),
         )
         self.yOffset = -36
 
     @staticmethod
     def loadImages():
-        SLib.loadIfNotInImageCache('ChainChomp0', 'chain_chomp_0.png')
-        SLib.loadIfNotInImageCache('ChainChomp1', 'chain_chomp_1.png')
-
-    def dataChanged(self):
-        direction = self.parent.spritedata[5] & 1
-
-        if direction == 1:
-            self.image = ImageCache['ChainChomp1']
-            self.xOffset = -4
-        else:
-            self.image = ImageCache['ChainChomp0']
-            self.xOffset = -36
-
-        super().dataChanged()
+        SLib.loadIfNotInImageCache('ChainChomp', 'chain_chomp.png')
 
 
 class SpriteImage_CastlePlatformLudwig(SLib.SpriteImage_StaticMultiple):  # 410
