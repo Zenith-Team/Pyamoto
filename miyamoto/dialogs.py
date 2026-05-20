@@ -489,6 +489,7 @@ class ZonesDialog(QtWidgets.QDialog):
         self.setWindowIcon(GetIcon('zones'))
         self._dirtyTabs = set()  # set of ZoneTab objects with unsaved changes
         self._newButtons = []    # one per zone tab, for _updateButtonStates
+        self._cloneButtons = []  # one per zone tab, for _updateButtonStates
 
         self.tabWidget = QtWidgets.QTabWidget()
         self.zoneTabs = []
@@ -546,6 +547,7 @@ class ZonesDialog(QtWidgets.QDialog):
         cloneBtn.clicked.connect(self.CloneZone)
         deleteBtn.clicked.connect(self.DeleteZone)
         self._newButtons.append(newBtn)
+        self._cloneButtons.append(cloneBtn)
 
         zoneBtnRow = QtWidgets.QHBoxLayout()
         zoneBtnRow.setContentsMargins(0, 0, 0, 0)
@@ -591,6 +593,8 @@ class ZonesDialog(QtWidgets.QDialog):
     def _updateButtonStates(self):
         enabled = len(self.zoneTabs) < 8
         for btn in self._newButtons:
+            btn.setEnabled(enabled)
+        for btn in self._cloneButtons:
             btn.setEnabled(enabled)
 
     def _renormalizeLabels(self):
@@ -657,6 +661,7 @@ class ZonesDialog(QtWidgets.QDialog):
         self.zoneTabs.pop(curindex)
         self.BGTabs.pop(curindex)
         self._newButtons.pop(curindex)
+        self._cloneButtons.pop(curindex)
         self._renormalizeLabels()
         self._updateButtonStates()
 
