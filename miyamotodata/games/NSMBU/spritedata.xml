@@ -3327,7 +3327,6 @@
 	</sprite>
 	<sprite id="198" name="Snow Effect (NSMBW) [UNUSED]" notes="Spawns a snow effect. Replaced by the snow effects in the Frosted Glacier backgrounds." />
 	<sprite id="199" name="Glow Block (NSMBW) [UNUSED]" notes="Leftover from NSMBW. Requires custom code to load the resource.">
-        <bitfield startbit="0" bitnum="0" category="behavior" title="&lt;font color=&quot;orange&quot; italic=&quot;true&quot;&gt;REQUIRES CUSTOM PATCH&lt;/font&gt;" />
     </sprite>
     <sprite id="200" name="Mushroom Platform" notes="A nice platform, available in different colors. The sprite should be positioned in the center of the platform.">
 		<list nybble="10" title="Color" comment="Sets the color of the mushroom platform." category="behavior">
@@ -4088,7 +4087,7 @@
 	</sprite>
 	<sprite id="254" name="Lighting - Underwater Lamp" notes="Looks like a porthole with a metal stripe in the middle." />
 	<sprite id="255" name="Micro Goomba" notes="A tiny version of the Goomba. They can not hurt the player directly, but they can cling to him and so adversely affect his jump height and width. " />
-	<sprite id="256" name="Pivotal-rotation-controlled Mushroom block (NSMBW) [UNUSED]" comment="Requires a custom patch to load the resources.">
+	<sprite id="256" name="Pivotal-rotation-controlled Mushroom block (NSMBW) [UNUSED]" comment="Requires custom code to load the resources.">
 		<checkbox nybble="5" title="Checked in NSMBUDX 50-04" category="behavior" />
 		<checkbox nybble="8" title="Ignore Model Rotation" category="behavior" />
 		<list nybble="10" title="Style/Size" category="behavior">
@@ -4762,8 +4761,7 @@
             <entry value="15">16 Blocks</entry>
         </list>
 	</sprite>
-    <sprite id="312" name="Line Rotating Mushroom Block (NSMBW) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing.">
-		<bitfield startbit="0" bitnum="0" title="&lt;font color=&quot;orange&quot; italic=&quot;true&quot;&gt;REQUIRES CUSTOM PATCH&lt;/font&gt;" />
+    <sprite id="312" name="Line Rotating Mushroom Block (NSMBW) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing. Requires custom code to load the resource.">
 		<value category="behavior" nybble="3-4" title="Target Event ID" comment="Event ID that will be triggered once player steps on block." />
 		<list category="behavior" nybble="5" title="Starting Rotation" comment="Starting rotation, Tilt center is at the screw of the mushroom block">
 			<entry value="0">0°</entry>
@@ -5326,8 +5324,7 @@
 			<entry value="4">-45 degrees</entry>
 		</list>
 	</sprite>
-	<sprite id="355" name="Rolling Hill with 1 Pipe (Enterable) [Crashes] [UNUSED]" notes="Diameter is 50 blocks. Crashes for two reasons; the first being the rolling hill's resources missing from the game files and the other is that the resources list in the code forgets to list one of the resources. To enter the pipe, you would need to be holding up instead of down.">
-		<bitfield startbit="0" bitnum="0" title="&lt;font color=&quot;orange&quot; italic=&quot;true&quot;&gt;REQUIRES CUSTOM PATCH&lt;/font&gt;" />
+	<sprite id="355" name="Rolling Hill with 1 Pipe (Enterable) [Crashes] [UNUSED]" notes="Diameter is 50 blocks. Crashes for two reasons; the first being the rolling hill's resources missing from the game files and the other is that the resources list in the code forgets to list one of the resources. To enter the pipe, you would need to be holding up instead of down. Requires custom code to load the resource.">
 		<value nybble="6" title="Initial Rotation" />
 		<list nybble="7" title="Type">
 			<entry value="0">Overworld</entry>
