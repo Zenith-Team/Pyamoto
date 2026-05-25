@@ -1272,7 +1272,8 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
 
         # Look up the cached pixmap.  If missing, schedule a deferred render —
         # never do any image work here (inside a paint event).
-        key = (type_id, size)
+        high_detail = globals.SpriteListPreviewHighDetail
+        key = (type_id, size, high_detail)
         pix = self._type_preview_cache.get(key)
         if pix is None:
             pmi = QtCore.QPersistentModelIndex(index)
@@ -1283,7 +1284,10 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         thumb_y    = rect.y() + (rect.height() - size) // 2
         thumb_rect = QtCore.QRect(rect.x() + pad, thumb_y, size, size)
         if pix is not None and not pix.isNull():
+            painter.save()
+            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             painter.drawPixmap(thumb_rect, pix)
+            painter.restore()
 
         text_color = (option.palette.highlightedText().color() if selected
                       else option.palette.text().color())
@@ -1314,10 +1318,10 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         pending = dict(cls._pending)
         cls._pending.clear()
 
-        for (type_id, size), entries in pending.items():
-            key = (type_id, size)
+        for (type_id, size, high_detail), entries in pending.items():
+            key = (type_id, size, high_detail)
             if key not in cls._type_preview_cache:
-                cls._type_preview_cache[key] = cls._render_type_preview(type_id, size)
+                cls._type_preview_cache[key] = cls._render_type_preview(type_id, size, high_detail)
             # Use QAbstractItemView.update(QModelIndex) for each item that had a
             # cache miss.  This calls viewport()->update(visualRect(index)) which
             # maps to [NSView setNeedsDisplayInRect:] — Cocoa always honours that
@@ -1334,9 +1338,13 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
     # ── preview rendering (safe outside paint events) ─────────────────────────
 
     @classmethod
-    def _render_type_preview(cls, type_id, thumb_size):
+    def _render_type_preview(cls, type_id, thumb_size, high_detail=False):
         """
         Build a (thumb_size × thumb_size) QPixmap for *type_id*.
+
+        When *high_detail* is True the sprite is painted at its native pixel
+        resolution then smoothly downscaled, yielding maximum-quality
+        thumbnails on high-DPI displays.
 
         For sprites with a custom SpriteImage class the image is painted;
         for sprites without one (or where the image class raises) the plain
@@ -1348,14 +1356,12 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         except Exception:
             bg = QtGui.QColor(119, 136, 153)
 
-        pix = QtGui.QPixmap(thumb_size, thumb_size)
-        pix.fill(bg)
-
         from . import spritelib as SLib
         tw    = globals.TileWidth
         scale = tw / 16
 
         proxy = _SpriteTypeProxy(type_id)
+        pix = None
         try:
             # ── build image object ─────────────────────────────────────────
             # Failures fall back to the bare SpriteImage so we always have
@@ -1387,10 +1393,14 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
                 w = h = float(tw)
                 br = QtCore.QRectF(0, 0, float(tw), float(tw))
 
+            render_size = int(max(w, h)) if high_detail else thumb_size
+            pix = QtGui.QPixmap(render_size, render_size)
+            pix.fill(bg)
+
             margin = 0.85
-            s  = min(thumb_size / w, thumb_size / h) * margin
-            ox = (thumb_size - w * s) / 2 - br.x() * s
-            oy = (thumb_size - h * s) / 2 - br.y() * s
+            s  = min(render_size / w, render_size / h) * margin
+            ox = (render_size - w * s) / 2 - br.x() * s
+            oy = (render_size - h * s) / 2 - br.y() * s
 
             # ── paint ─────────────────────────────────────────────────────
             painter = QtGui.QPainter(pix)
@@ -1433,6 +1443,8 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
                     pass
             proxy.aux.clear()
 
+        if pix is None:
+            pix = QtGui.QPixmap(thumb_size, thumb_size)
         return pix
 
     @classmethod
@@ -1497,7 +1509,10 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
         if spr is not None:
             pix = self._get_preview(spr, size)
             if pix and not pix.isNull():
+                painter.save()
+                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
                 painter.drawPixmap(thumb_rect, pix)
+                painter.restore()
 
         # Text
         text_color = (option.palette.highlightedText().color()
@@ -1516,33 +1531,35 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
 
     def _get_preview(self, spr, thumb_size):
         """Return a cached QPixmap for *spr* at *thumb_size*, rendering on miss."""
-        key    = (thumb_size, id(spr.ImageObj))
+        high_detail = globals.SpriteListPreviewHighDetail
+        key    = (thumb_size, id(spr.ImageObj), high_detail)
         cached = getattr(spr, '_list_preview_cache', None)
         if cached is not None and cached[0] == key:
             return cached[1]
-        pix = self._render_preview(spr, thumb_size)
+        pix = self._render_preview(spr, thumb_size, high_detail)
         spr._list_preview_cache = (key, pix)
         return pix
 
-    def _render_preview(self, spr, thumb_size):
+    def _render_preview(self, spr, thumb_size, high_detail=False):
         """Render the sprite image centred on the canvas background colour."""
         try:
             bg = globals.theme.color('bg')
         except Exception:
             bg = QtGui.QColor(119, 136, 153)
 
-        pix = QtGui.QPixmap(thumb_size, thumb_size)
-        pix.fill(bg)
-
         br = spr.BoundingRect
         w, h = br.width(), br.height()
         if w <= 0 or h <= 0:
-            return pix
+            return QtGui.QPixmap(thumb_size, thumb_size)
+
+        render_size = int(max(w, h)) if high_detail else thumb_size
+        pix = QtGui.QPixmap(render_size, render_size)
+        pix.fill(bg)
 
         margin = 0.85
-        s  = min(thumb_size / w, thumb_size / h) * margin
-        ox = (thumb_size - w * s) / 2 - br.x() * s
-        oy = (thumb_size - h * s) / 2 - br.y() * s
+        s  = min(render_size / w, render_size / h) * margin
+        ox = (render_size - w * s) / 2 - br.x() * s
+        oy = (render_size - h * s) / 2 - br.y() * s
 
         painter = QtGui.QPainter(pix)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)

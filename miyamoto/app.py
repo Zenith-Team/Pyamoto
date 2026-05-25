@@ -2588,6 +2588,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         globals.SpriteListPreviewSize = dlg.editorTab.spriteListPreview.currentData()
         setSetting('SpriteListPreviewSize', globals.SpriteListPreviewSize)
+
+        globals.SpriteListPreviewHighDetail = dlg.editorTab.spriteListPreviewHighDetail.isChecked()
+        setSetting('SpriteListPreviewHighDetail', globals.SpriteListPreviewHighDetail)
         self.spriteList.scheduleDelayedItemsLayout()
         self.spriteList.viewport().update()
         self.sprPicker.scheduleDelayedItemsLayout()
@@ -5691,6 +5694,7 @@ def main():
     globals.PlaceObjectFullSize = setting('PlaceObjectFullSize', False)
     globals.CategorizedSpriteData = setting('CategorizedSpriteData', False)
     globals.SpriteListPreviewSize = setting('SpriteListPreviewSize', globals.SPRITE_PREVIEW_DISABLED)
+    globals.SpriteListPreviewHighDetail = setting('SpriteListPreviewHighDetail', False)
     globals.UseRGBA8 = setting('UseRGBA8', False)
     globals.RealViewEnabled = setting('RealViewEnabled', True)
     globals.SpritesShown = setting('ShowSprites', True)

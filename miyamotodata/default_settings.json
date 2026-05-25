@@ -10,6 +10,7 @@
   "OverwriteSprite": false,
   "PlaceObjectFullSize": true,
   "SpriteListPreviewSize": 0,
+  "SpriteListPreviewHighDetail": false,
   "UseRGBA8": true,
   "OverrideTilesetSaving": false,
   "AutoSaveTilesets": false,

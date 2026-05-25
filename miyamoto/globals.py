@@ -105,6 +105,7 @@ SPRITE_PREVIEW_SMALL = 24
 SPRITE_PREVIEW_MEDIUM = 40
 SPRITE_PREVIEW_LARGE = 56
 SpriteListPreviewSize = SPRITE_PREVIEW_DISABLED
+SpriteListPreviewHighDetail = False
 PaintingEntrance = None
 PaintingEntranceListIndex = None
 NumberFont = None

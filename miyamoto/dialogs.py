@@ -1701,9 +1701,16 @@ class PreferencesDialog(QtWidgets.QDialog):
                         self.spriteListPreview.setCurrentIndex(i)
                         break
 
+                self.spriteListPreviewHighDetail = QtWidgets.QCheckBox('High Detail Mode')
+                self.spriteListPreviewHighDetail.setToolTip(
+                    'Renders preview thumbnails at the sprite\'s native resolution for '
+                    'maximum quality, then scales them down to the chosen preview size.')
+                self.spriteListPreviewHighDetail.setChecked(globals.SpriteListPreviewHighDetail)
+
                 preview_row = QtWidgets.QHBoxLayout()
                 preview_row.addWidget(QtWidgets.QLabel('Actor list preview size:'))
                 preview_row.addWidget(self.spriteListPreview)
+                preview_row.addWidget(self.spriteListPreviewHighDetail)
                 preview_row.addStretch()
 
                 ed_fps_form = QtWidgets.QFormLayout()
