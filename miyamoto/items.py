@@ -2361,7 +2361,6 @@ class EntranceItem(LevelEditorItem):
         if enttype == 21: icontype = 17  # vine entrance
         if enttype == 23: icontype = 14  # boss battle entrance
         if enttype == 24: icontype = 16  # jump out facing left
-        if enttype == 27: icontype = 3  # door entrance
 
         painter.drawPixmap(0, 0, EntranceItem.EntranceImages[icontype])
 
