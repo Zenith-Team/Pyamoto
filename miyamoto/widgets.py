@@ -1285,7 +1285,8 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         thumb_rect = QtCore.QRect(rect.x() + pad, thumb_y, size, size)
         if pix is not None and not pix.isNull():
             painter.save()
-            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+            if high_detail:
+                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             painter.drawPixmap(thumb_rect, pix)
             painter.restore()
 
@@ -1404,8 +1405,9 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
 
             # ── paint ─────────────────────────────────────────────────────
             painter = QtGui.QPainter(pix)
-            painter.setRenderHint(QtGui.QPainter.Antialiasing)
-            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+            if high_detail:
+                painter.setRenderHint(QtGui.QPainter.Antialiasing)
+                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             painter.save()
             painter.translate(ox, oy)
             painter.scale(s, s)
@@ -1510,7 +1512,8 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
             pix = self._get_preview(spr, size)
             if pix and not pix.isNull():
                 painter.save()
-                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+                if globals.SpriteListPreviewHighDetail:
+                    painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
                 painter.drawPixmap(thumb_rect, pix)
                 painter.restore()
 
@@ -1562,8 +1565,9 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
         oy = (render_size - h * s) / 2 - br.y() * s
 
         painter = QtGui.QPainter(pix)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+        if high_detail:
+            painter.setRenderHint(QtGui.QPainter.Antialiasing)
+            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
         painter.save()
         painter.translate(ox, oy)
         painter.scale(s, s)
