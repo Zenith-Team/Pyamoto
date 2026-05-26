@@ -7322,7 +7322,7 @@
 			<entry value="15">750</entry>
 		</list>
 	</sprite>
-	<sprite id="640" name="Fire Chomp - NSLU" />
+	<sprite id="640" name="Flame Chomp - NSLU" />
 	<sprite id="641" name="Chain Chomp - NSLU">
 		<value nybble="12" title="Unknown Value 12" />
 	</sprite>
