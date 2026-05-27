@@ -2226,7 +2226,7 @@ class EntranceItem(LevelEditorItem):
         if EntranceItem.EntranceImages is None:
             ei = []
             src = QtGui.QPixmap(os.path.join(globals.miyamoto_path, 'miyamotodata', 'entrances.png'))
-            for i in range(18):
+            for i in range(17):
                 ei.append(src.copy(i * globals.TileWidth, 0, globals.TileWidth, globals.TileWidth))
             EntranceItem.EntranceImages = ei
 
@@ -2346,21 +2346,21 @@ class EntranceItem(LevelEditorItem):
         enttype = self.enttype
         if enttype == 0 or enttype == 1: icontype = 1  # normal
         if enttype == 2: icontype = 2  # door exit
-        if enttype == 3: icontype = 4  # pipe up
-        if enttype == 4: icontype = 5  # pipe down
-        if enttype == 5: icontype = 6  # pipe left
-        if enttype == 6: icontype = 7  # pipe right
-        if enttype == 8: icontype = 12  # ground pound
-        if enttype == 9: icontype = 13  # sliding
+        if enttype == 3: icontype = 3  # pipe up
+        if enttype == 4: icontype = 4  # pipe down
+        if enttype == 5: icontype = 5  # pipe left
+        if enttype == 6: icontype = 6  # pipe right
+        if enttype == 8: icontype = 11  # ground pound
+        if enttype == 9: icontype = 12  # sliding
         # 0F/15 is unknown?
-        if enttype == 16: icontype = 8  # mini pipe up
-        if enttype == 17: icontype = 9  # mini pipe down
-        if enttype == 18: icontype = 10  # mini pipe left
-        if enttype == 19: icontype = 11  # mini pipe right
-        if enttype == 20: icontype = 15  # jump out facing right
-        if enttype == 21: icontype = 17  # vine entrance
-        if enttype == 23: icontype = 14  # boss battle entrance
-        if enttype == 24: icontype = 16  # jump out facing left
+        if enttype == 16: icontype = 7  # mini pipe up
+        if enttype == 17: icontype = 8  # mini pipe down
+        if enttype == 18: icontype = 9  # mini pipe left
+        if enttype == 19: icontype = 10  # mini pipe right
+        if enttype == 20: icontype = 14  # jump out facing right
+        if enttype == 21: icontype = 16  # vine entrance
+        if enttype == 23: icontype = 13  # boss battle entrance
+        if enttype == 24: icontype = 15  # jump out facing left
 
         painter.drawPixmap(0, 0, EntranceItem.EntranceImages[icontype])
 
