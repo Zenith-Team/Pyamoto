@@ -2000,7 +2000,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 mod_text_col.addWidget(mod_title)
                 mod_text_col.addWidget(mod_sub)
 
-                open_folder_btn = QtWidgets.QPushButton(GetIcon('folderpath'), '')
+                open_folder_btn = QtWidgets.QPushButton(GetIcon('open'), '')
                 open_folder_btn.setToolTip('Open Mods Folder')
                 open_folder_btn.setFixedSize(26, 26)
                 open_folder_btn.setIconSize(QtCore.QSize(15, 15))
@@ -2118,7 +2118,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 insp_btn_row.setContentsMargins(0, 4, 0, 0)
                 configure_btn = QtWidgets.QPushButton(GetIcon('settings'), 'Configure…')
                 configure_btn.setIconSize(QtCore.QSize(14, 14))
-                open_mod_folder_btn = QtWidgets.QPushButton(GetIcon('folderpath'), 'Open Folder')
+                open_mod_folder_btn = QtWidgets.QPushButton(GetIcon('open'), 'Open Folder')
                 open_mod_folder_btn.setIconSize(QtCore.QSize(14, 14))
                 insp_btn_row.addWidget(configure_btn)
                 insp_btn_row.addWidget(open_mod_folder_btn)
