@@ -411,7 +411,7 @@ def getMusic():
             if not found:
                 songs.append([songid, name])
 
-    return sorted(songs, key=lambda song: int(song[0]))
+    return songs
 
 
 def FindGameDef(name, skip=None):
