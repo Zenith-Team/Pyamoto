@@ -2700,7 +2700,7 @@ class displayWidget(QtWidgets.QListView):
         menu.addAction("Copy image to clipboard",        lambda: self._copyImage(tileIdx))
         act = menu.addAction("Paste image", lambda: self._pasteImage(tileIdx))
         act.setEnabled(hasImage)
-        menu.addAction("Replace image...",  lambda: self._replaceImage(tileIdx))
+        menu.addAction("Import image...",  lambda: self._replaceImage(tileIdx))
         menu.addAction("Export image...",  lambda: self._saveImage(tileIdx))
         menu.addSeparator()
         menu.addAction("Copy properties to clipboard",   lambda: self._copyProperties(tileIdx))
