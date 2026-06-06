@@ -21,7 +21,7 @@ Qt = QtCore.Qt
 from .bytes import bytes_to_string, to_bytes
 from . import globals
 from .items import ZoneItem
-from .misc import HexSpinBox, BGName, setting, hasLevelNameSources
+from .misc import HexSpinBox, BGName, setting, setSetting, hasLevelNameSources
 from .ui import MiyamotoTheme, toQColor, GetIcon, createHorzLine
 from .widgets import LoadingTab, TilesetsTab
 from .verifications import SetDirty
@@ -63,7 +63,7 @@ class InputBox(QtWidgets.QDialog):
 
 class AboutDialog(QtWidgets.QDialog):
     """
-    The About info for Miyamoto
+    The About info for Pyamoto
     """
 
     def __init__(self):
@@ -72,47 +72,111 @@ class AboutDialog(QtWidgets.QDialog):
         """
         super().__init__()
         self.setWindowTitle('About Pyamoto')
-        self.setWindowIcon(GetIcon('help'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
-        # Open the readme file
-        f = open('readme.md', 'r')
-        readme = f.read()
-        f.close()
-        del f
+        import platform as _platform
+        icon_name = 'pyamoto1024mac.png' if _platform.system() == 'Darwin' else 'pyamoto1024.png'
+        icon_path = os.path.join(globals.miyamoto_path, 'miyamotodata', icon_name)
+        if os.path.isfile(icon_path):
+            self.setWindowIcon(QtGui.QIcon(icon_path))
+        else:
+            self.setWindowIcon(GetIcon('help'))
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(36, 28, 36, 20)
+        layout.setSpacing(0)
+
+        # Logo
+        if os.path.isfile(icon_path):
+            logo = QtWidgets.QLabel()
+            logo.setAlignment(Qt.AlignHCenter)
+            dpr = QtWidgets.QApplication.instance().devicePixelRatio()
+            physical = int(108 * dpr)
+            pix = QtGui.QPixmap(icon_path).scaled(physical, physical, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pix.setDevicePixelRatio(dpr)
+            logo.setPixmap(pix)
+            logo.setFixedHeight(108)
+            layout.addWidget(logo)
+            layout.addSpacing(14)
+
+        # Heading
+        heading = QtWidgets.QLabel('Pyamoto Level Editor')
+        heading.setAlignment(Qt.AlignHCenter)
+        hf = heading.font()
+        hf.setPointSize(hf.pointSize() + 5)
+        hf.setBold(True)
+        heading.setFont(hf)
+        layout.addWidget(heading)
+        layout.addSpacing(4)
+
+        # Version
+        ver = QtWidgets.QLabel('v' + globals.MiyamotoVersion)
+        ver.setAlignment(Qt.AlignHCenter)
+        ver.setStyleSheet('color: palette(mid);')
+        layout.addWidget(ver)
+        layout.addSpacing(16)
 
         # Description
-        description = '<html><head><style type=\'text/CSS\'>'
-        description += 'body {font-family: Calibri}'
-        description += '.main {font-size: 12px}'
-        description += '</style></head><body>'
-        description += '<center><h1><i>Pyamoto</i> Level Editor</h1><div class=\'main\'>'
-        description += '<i>Pyamoto Level Editor</i> is an advanced fork of the original Miyamoto editor with the purpose of improving functionality and usability.<br>'
-        description += '</div></center></body></html>'
-        description += 'Need help? Check out <a href=\'https://github.com/Zenith-Team/Pyamoto\'>the Github repository</a>, and <a href=\'https://go.nsmbu.net/discord\'>our Discord server</a><br>'
+        desc = QtWidgets.QLabel(
+            'An advanced fork of the original Miyamoto editor with the purpose of '
+            'improving functionality and usability for creating New Super Mario Bros. U levels.')
+        desc.setAlignment(Qt.AlignHCenter)
+        desc.setWordWrap(True)
+        desc.setStyleSheet('color: palette(text);')
+        layout.addWidget(desc)
+        layout.addSpacing(16)
 
-        # Description label
-        descLabel = QtWidgets.QLabel()
-        descLabel.setText(description)
-        descLabel.setMinimumWidth(512)
-        descLabel.setWordWrap(True)
+        # Separator
+        sep = QtWidgets.QFrame()
+        sep.setFrameShape(QtWidgets.QFrame.HLine)
+        sep.setFrameShadow(QtWidgets.QFrame.Sunken)
+        layout.addWidget(sep)
+        layout.addSpacing(12)
 
-        # Readme.md viewer
-        readmeView = QtWidgets.QPlainTextEdit()
-        readmeView.setPlainText(readme)
-        readmeView.setReadOnly(True)
+        # Resources heading
+        res_hdr = QtWidgets.QLabel('Resources')
+        hdr_font = res_hdr.font()
+        hdr_font.setPointSize(hdr_font.pointSize() - 1)
+        hdr_font.setBold(True)
+        res_hdr.setFont(hdr_font)
+        res_hdr.setStyleSheet('color: palette(mid);')
+        res_hdr.setAlignment(Qt.AlignHCenter)
+        layout.addWidget(res_hdr)
+        layout.addSpacing(8)
 
-        # Buttonbox
-        buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
-        buttonBox.accepted.connect(self.accept)
+        # Links
+        links = QtWidgets.QLabel(
+            '<html><body style="text-align:center;">'
+            '&#x1F30D; <a href="https://github.com/Zenith-Team/Pyamoto">GitHub</a>'
+            ' &nbsp;&middot;&nbsp; '
+            '&#x1F4AC; <a href="https://go.nsmbu.net/discord">Discord</a>'
+            ' &nbsp;&middot;&nbsp; '
+            '&#x1F4D6; <a href="https://zenith.nsmbu.net/">Wiki</a>'
+            '</body></html>')
+        links.setTextFormat(Qt.RichText)
+        links.setOpenExternalLinks(True)
+        links.setAlignment(Qt.AlignHCenter)
+        layout.addWidget(links)
+        layout.addSpacing(16)
 
-        # Main layout
-        L = QtWidgets.QGridLayout()
-        L.addWidget(descLabel, 0, 1)
-        L.addWidget(readmeView, 1, 1)
-        L.addWidget(buttonBox, 2, 0, 1, 2)
-        L.setRowStretch(1, 1)
-        L.setColumnStretch(1, 1)
-        self.setLayout(L)
+        # Credits
+        credits = QtWidgets.QLabel(
+            '<html><body style="text-align:center;">'
+            'Maintained by <b>Zenith Team</b>.<br>'
+            '</body></html>')
+        credits.setAlignment(Qt.AlignHCenter)
+        credits.setStyleSheet('color: palette(mid); font-size: 11px;')
+        layout.addWidget(credits)
+        layout.addSpacing(20)
+
+        # OK button
+        btn = QtWidgets.QPushButton('OK')
+        btn.setFixedHeight(36)
+        btn.clicked.connect(self.accept)
+        layout.addWidget(btn)
+
+        self.adjustSize()
+        self.setFixedSize(440, self.sizeHint().height())
 
 
 class ObjectShiftDialog(QtWidgets.QDialog):
@@ -1508,8 +1572,11 @@ class PreferencesDialog(QtWidgets.QDialog):
         # Create tabs
         self.infoLabel = QtWidgets.QLabel()
         self.generalTab = self.getGeneralTab()   # merged General + Editor + Tilesets
+        self._initial_showActorNotes = self.generalTab.showActorNotes.isChecked()
+        self._initial_showInfoIcons = self.generalTab.showInfoIcons.isChecked()
         self.toolbarTab = self.getToolbarTab()
         self.themesTab = self.getThemesTab(QtWidgets.QWidget)()
+        self.resourcesTab = self.getResourcesTab()
         self.gameSetupTab = self.getGameSetupTab()  # merged Games + Mods
 
         # Backward-compat aliases so app.py attribute access still works
@@ -1519,6 +1586,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.modsTab = self.gameSetupTab
 
         self.tabWidget.addTab(self.generalTab, 'General')
+        self.tabWidget.addTab(self.resourcesTab, 'Resources')
         self.tabWidget.addTab(self.toolbarTab, 'Toolbar')
         self.tabWidget.addTab(self.themesTab, 'Themes')
         self.tabWidget.addTab(self.gameSetupTab, 'Game Setup')
@@ -1539,7 +1607,11 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.tabChanged()
 
     def needsRestart(self):
-        """Returns True only if the user changed a setting that requires a restart (theme or toolbar)."""
+        """Returns True if the user changed a setting that requires a restart (theme, toolbar, actor notes, or info icons)."""
+        if self.editorTab.showActorNotes.isChecked() != self._initial_showActorNotes:
+            return True
+        if self.editorTab.showInfoIcons.isChecked() != self._initial_showInfoIcons:
+            return True
         if self.themesTab.themeBox.currentText() != self.themesTab._initial_theme:
             return True
         if self.themesTab.NonWinStyle.currentText() != self.themesTab._initial_style:
@@ -1599,14 +1671,47 @@ class PreferencesDialog(QtWidgets.QDialog):
                 gen_form = QtWidgets.QFormLayout()
                 gen_form.addRow('File opening behavior:', self.openMethod)
                 gen_form.addRow('Launch behavior:', self.launchBehavior)
+
+                self.useOuterSarcFormat = QtWidgets.QCheckBox('Use Outer SARC Format')
+                self.useOuterSarcFormat.setToolTip(
+                    'Allows compatibility with legacy editors. '
+                    'When enabled, the level is saved in Miyamoto\'s outer-SARC format '
+                    'with a "levelname" file.')
+                self.useOuterSarcFormat.setChecked(globals.UseOuterSarcFormat)
+
+                if not globals.IsNSMBUDX:
+                    self.modifyInnerName = QtWidgets.QCheckBox('Modify Internal Name')
+                    self.modifyInnerName.setToolTip(
+                        'When enabled, you are prompted for the internal SARC name on save. '
+                        'When disabled, the filename (without extension) is used automatically.')
+                    self.modifyInnerName.setChecked(globals.ModifyInnerName)
+                    self.modifyInnerName.setVisible(globals.UseOuterSarcFormat)
+                    self.useOuterSarcFormat.toggled.connect(
+                        lambda checked: self.modifyInnerName.setVisible(checked))
+
                 gen_lay = QtWidgets.QVBoxLayout()
                 gen_lay.addLayout(gen_form)
                 gen_lay.addWidget(self.checkForUpdates)
+                gen_lay.addWidget(self.useOuterSarcFormat)
+                if not globals.IsNSMBUDX:
+                    gen_lay.addWidget(self.modifyInnerName)
                 gen_group = QtWidgets.QGroupBox('General')
                 gen_group.setLayout(gen_lay)
                 vbox.addWidget(gen_group)
 
                 # ── Editor section ───────────────────────────────────────────
+                self.showActorNotes = QtWidgets.QCheckBox('Show actor notes box')
+                self.showActorNotes.setToolTip(
+                    'When enabled, actor notes are shown in a text box within the properties panel. '
+                    'When disabled, a \"Notes\" button is shown instead which displays notes in a tooltip.')
+                self.showActorNotes.setChecked(setting('ShowActorNotes', True))
+
+                self.showInfoIcons = QtWidgets.QCheckBox('Show info icons on sprite data fields')
+                self.showInfoIcons.setToolTip(
+                    'When enabled, a small info icon is shown next to sprite data field '
+                    'labels that have a tooltip comment.')
+                self.showInfoIcons.setChecked(setting('ShowInfoIcons', True))
+
                 self.categorizedSpriteData = QtWidgets.QCheckBox('Categorized sprite data')
                 self.categorizedSpriteData.setToolTip(
                     'When enabled, actor flags in the sprite data editor are grouped into '
@@ -1614,7 +1719,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                     'easier navigation.')
                 self.categorizedSpriteData.setChecked(globals.CategorizedSpriteData)
 
-                self.overwriteActors = QtWidgets.QCheckBox("Don't overwrite actors in the level archive")
+                self.overwriteActors = QtWidgets.QCheckBox("Don't overwrite actor models in the level archive")
                 self.overwriteActors.setToolTip(
                     "When enabled, actors already in the level's archive will not be replaced "
                     'by actors from the game data folder.')
@@ -1637,9 +1742,16 @@ class PreferencesDialog(QtWidgets.QDialog):
                         self.spriteListPreview.setCurrentIndex(i)
                         break
 
+                self.spriteListPreviewHighDetail = QtWidgets.QCheckBox('High Detail Mode')
+                self.spriteListPreviewHighDetail.setToolTip(
+                    'Renders preview thumbnails at the sprite\'s native resolution for '
+                    'maximum quality, then scales them down to the chosen preview size.')
+                self.spriteListPreviewHighDetail.setChecked(globals.SpriteListPreviewHighDetail)
+
                 preview_row = QtWidgets.QHBoxLayout()
                 preview_row.addWidget(QtWidgets.QLabel('Actor list preview size:'))
                 preview_row.addWidget(self.spriteListPreview)
+                preview_row.addWidget(self.spriteListPreviewHighDetail)
                 preview_row.addStretch()
 
                 ed_fps_form = QtWidgets.QFormLayout()
@@ -1647,6 +1759,8 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                 ed_lay = QtWidgets.QVBoxLayout()
                 ed_lay.addLayout(ed_fps_form)
+                ed_lay.addWidget(self.showActorNotes)
+                ed_lay.addWidget(self.showInfoIcons)
                 ed_lay.addWidget(self.categorizedSpriteData)
                 ed_lay.addWidget(self.overwriteActors)
                 ed_lay.addWidget(self.placeFullSize)
@@ -1816,7 +1930,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         from .verifications import isValidGamePath
 
         class GameSetupTab(QtWidgets.QWidget):
-            info = 'Select your base game, manage mods, and configure game paths.'
+            info = '<b>Game Setup</b><br>Select your base game, manage mods, and configure game paths.'
 
             def __init__(self_inner):
                 super().__init__()
@@ -1825,30 +1939,22 @@ class PreferencesDialog(QtWidgets.QDialog):
                 vbox.setSpacing(12)
                 vbox.setContentsMargins(8, 8, 8, 8)
 
-                # ── Game Selection ───────────────────────────────────────────
+                # ── Game Paths ───────────────────────────────────────────────
                 self_inner._path_edits = {}
-                self_inner._game_radios = {}
 
-                games_group = QtWidgets.QGroupBox('Game')
+                games_group = QtWidgets.QGroupBox('Game Paths')
                 games_vbox = QtWidgets.QVBoxLayout(games_group)
                 games_vbox.setSpacing(6)
 
-                radio_group = QtWidgets.QButtonGroup(games_group)
-                current_base = setting('LastBaseGame', 'NSMBU')
-
                 base_games = _gd.getAvailableBaseGames()
                 for idx_g, (def_, folder) in enumerate(base_games):
-                    # Radio button = the game selector
-                    radio = QtWidgets.QRadioButton(def_.name)
-                    radio.setChecked(folder == current_base)
-                    radio_group.addButton(radio)
-                    self_inner._game_radios[folder] = radio
-                    games_vbox.addWidget(radio)
+                    game_lbl = QtWidgets.QLabel(def_.name)
+                    game_lbl.setStyleSheet('font-weight: bold;')
+                    games_vbox.addWidget(game_lbl)
 
-                    # Path row indented under its radio button
                     indent_w = QtWidgets.QWidget()
                     indent_lay = QtWidgets.QVBoxLayout(indent_w)
-                    indent_lay.setContentsMargins(22, 0, 0, 0)
+                    indent_lay.setContentsMargins(8, 0, 0, 0)
                     indent_lay.setSpacing(2)
 
                     path_row = QtWidgets.QHBoxLayout()
@@ -1909,7 +2015,27 @@ class PreferencesDialog(QtWidgets.QDialog):
                 mod_text_col.addWidget(mod_title)
                 mod_text_col.addWidget(mod_sub)
 
-                open_folder_btn = QtWidgets.QPushButton(GetIcon('folderpath'), '')
+                add_mod_menu = QtWidgets.QMenu()
+                add_mod_menu.setToolTipsVisible(True)
+                _act_new = add_mod_menu.addAction(
+                    GetIcon('new'), 'New Mod…', lambda: _new_mod())
+                _act_new.setToolTip('Create a new empty mod.')
+                _act_import = add_mod_menu.addAction(
+                    GetIcon('openfromfile'), 'Import Mod Folder…', lambda: _import_mod())
+                _act_import.setToolTip('Copy a mod folder to the Pyamoto user mods.')
+                _act_link = add_mod_menu.addAction(
+                    GetIcon('folderpath'), 'Link Mod Folder…', lambda: _link_mod())
+                _act_link.setToolTip('Symlink an external folder. Any edits will affect the source folder.')
+
+                new_mod_btn = QtWidgets.QToolButton()
+                new_mod_btn.setIcon(GetIcon('add'))
+                new_mod_btn.setFixedSize(26, 26)
+                new_mod_btn.setIconSize(QtCore.QSize(15, 15))
+                new_mod_btn.setToolTip('Add Mod')
+                new_mod_btn.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+                new_mod_btn.setMenu(add_mod_menu)
+
+                open_folder_btn = QtWidgets.QPushButton(GetIcon('open'), '')
                 open_folder_btn.setToolTip('Open Mods Folder')
                 open_folder_btn.setFixedSize(26, 26)
                 open_folder_btn.setIconSize(QtCore.QSize(15, 15))
@@ -1921,6 +2047,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                 util_row = QtWidgets.QHBoxLayout()
                 util_row.setSpacing(3)
+                util_row.addWidget(new_mod_btn)
                 util_row.addWidget(open_folder_btn)
                 util_row.addWidget(refresh_btn)
 
@@ -1948,12 +2075,9 @@ class PreferencesDialog(QtWidgets.QDialog):
                 avail_lbl = QtWidgets.QLabel('Available')
                 add_btn = QtWidgets.QPushButton('Add →')
                 add_btn.setStyleSheet('font-size: 11px; padding: 1px 6px;')
-                new_mod_btn = QtWidgets.QPushButton('+ New')
-                new_mod_btn.setIconSize(QtCore.QSize(13, 13))
-                new_mod_btn.setStyleSheet('font-size: 11px; padding: 1px 6px;')
+
                 avail_header.addWidget(avail_lbl)
                 avail_header.addStretch(1)
-                avail_header.addWidget(new_mod_btn)
                 avail_header.addWidget(add_btn)
 
                 avail_list = QtWidgets.QListWidget()
@@ -2027,7 +2151,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 insp_btn_row.setContentsMargins(0, 4, 0, 0)
                 configure_btn = QtWidgets.QPushButton(GetIcon('settings'), 'Configure…')
                 configure_btn.setIconSize(QtCore.QSize(14, 14))
-                open_mod_folder_btn = QtWidgets.QPushButton(GetIcon('folderpath'), 'Open Folder')
+                open_mod_folder_btn = QtWidgets.QPushButton(GetIcon('open'), 'Open Folder')
                 open_mod_folder_btn.setIconSize(QtCore.QSize(14, 14))
                 insp_btn_row.addWidget(configure_btn)
                 insp_btn_row.addWidget(open_mod_folder_btn)
@@ -2042,16 +2166,25 @@ class PreferencesDialog(QtWidgets.QDialog):
                 # ── Populate lists ────────────────────────────────────────────
                 active_set = set(current_mods)
                 for def_, folder in all_mods:
-                    if folder not in active_set:
-                        item = QtWidgets.QListWidgetItem(def_.name)
-                        item.setData(Qt.UserRole, folder)
-                        item.setData(Qt.UserRole + 1, def_.description)
+                    is_broken = bool(getattr(def_, 'error', None))
+                    if not is_broken and folder in active_set:
+                        continue
+                    item = QtWidgets.QListWidgetItem(def_.name)
+                    item.setData(Qt.UserRole, folder)
+                    item.setData(Qt.UserRole + 1, def_.description)
+                    item.setData(Qt.UserRole + 2, def_.error if is_broken else None)
+                    if is_broken:
+                        item.setForeground(QtGui.QColor('#cc3333'))
+                        item.setToolTip(f'⚠ {def_.error}')
+                    else:
                         item.setToolTip(def_.description)
-                        avail_list.addItem(item)
+                    avail_list.addItem(item)
 
                 for folder in current_mods:
                     if folder in all_folders:
                         def_ = all_folders[folder]
+                        if getattr(def_, 'error', None):
+                            continue
                         item = QtWidgets.QListWidgetItem(def_.name if hasattr(def_, 'name') else folder)
                         item.setData(Qt.UserRole, folder)
                         item.setData(Qt.UserRole + 1, getattr(def_, 'description', ''))
@@ -2063,7 +2196,13 @@ class PreferencesDialog(QtWidgets.QDialog):
                     self_inner._current_mod_folder = folder
                     insp_name.setText(display_name)
                     sel = avail_list.currentItem() or active_list.currentItem()
-                    insp_desc.setText((sel.data(Qt.UserRole + 1) if sel else '') or '')
+                    error = sel.data(Qt.UserRole + 2) if sel else None
+                    if error:
+                        insp_desc.setText(f'Error: {error}')
+                        insp_desc.setStyleSheet('color: red; font-size: 11px;')
+                    else:
+                        insp_desc.setText((sel.data(Qt.UserRole + 1) if sel else '') or '')
+                        insp_desc.setStyleSheet('color: palette(mid); font-size: 11px;')
                     inspector.setVisible(True)
 
                 def _on_avail_selection():
@@ -2147,6 +2286,78 @@ class PreferencesDialog(QtWidgets.QDialog):
                     item_n.setToolTip(mod_desc_n)
                     avail_list.addItem(item_n)
                     avail_list.setCurrentItem(item_n)
+
+                def _add_folder_entry(slug, user_patches):
+                    """Read main.xml from a newly added mod folder and insert it into the list."""
+                    import xml.etree.ElementTree as _ET
+                    main_xml = os.path.join(user_patches, slug, 'main.xml')
+                    try:
+                        root_x = _ET.parse(main_xml).getroot()
+                        mod_name = root_x.get('name', slug)
+                        mod_desc = root_x.get('description', '')
+                    except Exception:
+                        mod_name = slug
+                        mod_desc = ''
+                    item_n = QtWidgets.QListWidgetItem(mod_name)
+                    item_n.setData(Qt.UserRole, slug)
+                    item_n.setData(Qt.UserRole + 1, mod_desc)
+                    item_n.setToolTip(mod_desc)
+                    avail_list.addItem(item_n)
+                    avail_list.setCurrentItem(item_n)
+
+                def _import_mod():
+                    """Copy an external mod folder into the userdata patches directory."""
+                    import re as _re, shutil as _sh
+                    src = QtWidgets.QFileDialog.getExistingDirectory(
+                        self_inner, 'Select Mod Folder to Import', '')
+                    if not src:
+                        return
+                    src = os.path.normpath(src)
+                    if not os.path.isfile(os.path.join(src, 'main.xml')):
+                        QtWidgets.QMessageBox.warning(
+                            self_inner, 'Import Mod Folder',
+                            'The selected folder does not contain a main.xml.\n'
+                            'Please select a valid mod folder.')
+                        return
+                    user_patches = os.path.join(globals.user_data_path, 'patches')
+                    slug = _re.sub(r'[^\w\-]', '_', os.path.basename(src)).strip('_') or 'mod'
+                    base_slug, ctr = slug, 1
+                    while os.path.exists(os.path.join(user_patches, slug)):
+                        slug = f'{base_slug}_{ctr}'; ctr += 1
+                    try:
+                        _sh.copytree(src, os.path.join(user_patches, slug))
+                    except Exception as e:
+                        QtWidgets.QMessageBox.critical(
+                            self_inner, 'Import Mod Folder', f'Copy failed:\n{e}')
+                        return
+                    _add_folder_entry(slug, user_patches)
+
+                def _link_mod():
+                    """Create a symlink in the userdata patches directory pointing to an external mod folder."""
+                    import re as _re
+                    src = QtWidgets.QFileDialog.getExistingDirectory(
+                        self_inner, 'Select Mod Folder to Link', '')
+                    if not src:
+                        return
+                    src = os.path.normpath(src)
+                    if not os.path.isfile(os.path.join(src, 'main.xml')):
+                        QtWidgets.QMessageBox.warning(
+                            self_inner, 'Link Mod Folder',
+                            'The selected folder does not contain a main.xml.\n'
+                            'Please select a valid mod folder.')
+                        return
+                    user_patches = os.path.join(globals.user_data_path, 'patches')
+                    slug = _re.sub(r'[^\w\-]', '_', os.path.basename(src)).strip('_') or 'mod'
+                    base_slug, ctr = slug, 1
+                    while os.path.exists(os.path.join(user_patches, slug)):
+                        slug = f'{base_slug}_{ctr}'; ctr += 1
+                    try:
+                        os.symlink(src, os.path.join(user_patches, slug))
+                    except Exception as e:
+                        QtWidgets.QMessageBox.critical(
+                            self_inner, 'Link Mod Folder', f'Symlink failed:\n{e}')
+                        return
+                    _add_folder_entry(slug, user_patches)
 
                 def _open_configure():
                     """Show Configure modal for the currently selected mod."""
@@ -2261,15 +2472,34 @@ class PreferencesDialog(QtWidgets.QDialog):
                     avail_list.blockSignals(True)
                     active_list.blockSignals(True)
                     avail_list.clear()
-                    active_list.clearSelection()
-                    active_list.setCurrentItem(None)
-                    for def_, folder in _gd.getAvailableMods():
-                        if folder not in current_active:
-                            item = QtWidgets.QListWidgetItem(def_.name)
+                    active_list.clear()
+                    # Rebuild active list (dropping any broken mods)
+                    all_mods = _gd.getAvailableMods()
+                    all_folders = {f: d for d, f in all_mods}
+                    for folder in current_active:
+                        if folder in all_folders:
+                            def_ = all_folders[folder]
+                            if getattr(def_, 'error', None):
+                                continue
+                            item = QtWidgets.QListWidgetItem(def_.name if hasattr(def_, 'name') else folder)
                             item.setData(Qt.UserRole, folder)
-                            item.setData(Qt.UserRole + 1, def_.description)
+                            item.setData(Qt.UserRole + 1, getattr(def_, 'description', ''))
+                            active_list.addItem(item)
+                    # Rebuild available list
+                    for def_, folder in all_mods:
+                        is_broken = bool(getattr(def_, 'error', None))
+                        if not is_broken and folder in current_active:
+                            continue
+                        item = QtWidgets.QListWidgetItem(def_.name)
+                        item.setData(Qt.UserRole, folder)
+                        item.setData(Qt.UserRole + 1, def_.description)
+                        item.setData(Qt.UserRole + 2, def_.error if is_broken else None)
+                        if is_broken:
+                            item.setForeground(QtGui.QColor('#cc3333'))
+                            item.setToolTip(f'⚠ {def_.error}')
+                        else:
                             item.setToolTip(def_.description)
-                            avail_list.addItem(item)
+                        avail_list.addItem(item)
                     avail_list.blockSignals(False)
                     active_list.blockSignals(False)
                     # Reset inspector state cleanly after the rebuild.
@@ -2280,17 +2510,16 @@ class PreferencesDialog(QtWidgets.QDialog):
                 active_list.currentItemChanged.connect(lambda *_: _on_active_selection())
                 add_btn.clicked.connect(_add_mod)
                 remove_btn.clicked.connect(_remove_mod)
-                new_mod_btn.clicked.connect(_new_mod)
                 configure_btn.clicked.connect(_open_configure)
                 open_mod_folder_btn.clicked.connect(_open_mod_folder)
                 open_folder_btn.clicked.connect(_open_mods_folder)
                 refresh_btn.clicked.connect(_refresh_mods)
 
             def getSelectedBaseGame(self_inner):
-                for folder, radio in self_inner._game_radios.items():
-                    if radio.isChecked():
+                for folder, edit in self_inner._path_edits.items():
+                    if isValidGamePath(edit.text().strip()):
                         return folder
-                return 'NSMBU'
+                return setting('LastBaseGame', 'NSMBU')
 
             def getActiveMods(self_inner):
                 result = []
@@ -2514,6 +2743,160 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         return ThemesTab
 
+    def getResourcesTab(self):
+        """Returns the Resources tab — download game data and object library with editable install paths."""
+
+        class ResourcesTab(QtWidgets.QWidget):
+            info = '<b>Resources</b><br>Download game data and the object library, and manage their install locations.'
+
+            def __init__(self_inner):
+                super().__init__()
+                from .firstRunWizard import (
+                    _DownloadRow, _data_present, _objects_present,
+                    DATA_DOWNLOAD_URL, OBJECTS_DOWNLOAD_URL,
+                )
+                from .verifications import isValidObjectsPath
+
+                scroll = QtWidgets.QScrollArea()
+                scroll.setWidgetResizable(True)
+                scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+                container = QtWidgets.QWidget()
+                cvbox = QtWidgets.QVBoxLayout(container)
+                cvbox.setSpacing(14)
+                cvbox.setContentsMargins(4, 4, 4, 4)
+
+                # ── Game Data ────────────────────────────────────────────────
+                data_default = os.path.join(globals.user_data_path, 'data')
+                data_saved = setting('DataPath', '') or data_default
+
+                self_inner.dataRow = _DownloadRow(
+                    title="Game Data",
+                    description="Core resources required by Pyamoto to create levels.",
+                    url=DATA_DOWNLOAD_URL,
+                    tmp_name="_data_download.zip",
+                    extract_dir=data_saved,
+                    required=True,
+                )
+                cvbox.addWidget(self_inner.dataRow)
+
+                data_loc_group = QtWidgets.QGroupBox("Game Data Install Location")
+                data_loc_lay = QtWidgets.QVBoxLayout(data_loc_group)
+                data_loc_lay.setSpacing(4)
+
+                data_path_row = QtWidgets.QHBoxLayout()
+                self_inner.dataPathEdit = QtWidgets.QLineEdit()
+                self_inner.dataPathEdit.setText(data_saved)
+                data_browse_btn = QtWidgets.QPushButton("Browse…")
+                data_browse_btn.setFixedWidth(90)
+                data_path_row.addWidget(self_inner.dataPathEdit)
+                data_path_row.addWidget(data_browse_btn)
+                data_loc_lay.addLayout(data_path_row)
+
+                data_valid_lbl = QtWidgets.QLabel()
+                data_valid_lbl.setStyleSheet("font-size: 11px;")
+                data_loc_lay.addWidget(data_valid_lbl)
+                cvbox.addWidget(data_loc_group)
+
+                def _update_data_status():
+                    p = self_inner.dataPathEdit.text().strip()
+                    if p and os.path.isdir(p) and os.listdir(p):
+                        data_valid_lbl.setText("✓ Data found at this location")
+                        data_valid_lbl.setStyleSheet("color: #27ae60; font-size: 11px;")
+                    elif p:
+                        data_valid_lbl.setText("✗ No data found at this location")
+                        data_valid_lbl.setStyleSheet("color: #c0392b; font-size: 11px;")
+                    else:
+                        data_valid_lbl.setText("")
+                    self_inner.dataRow.extract_dir = p or data_default
+
+                self_inner.dataPathEdit.textChanged.connect(_update_data_status)
+                _update_data_status()
+
+                def _browse_data():
+                    p = QtWidgets.QFileDialog.getExistingDirectory(
+                        self_inner, "Select Game Data Folder", self_inner.dataPathEdit.text())
+                    if p:
+                        self_inner.dataPathEdit.setText(p)
+                data_browse_btn.clicked.connect(_browse_data)
+
+                self_inner.dataRow._onFinishedExtra = lambda: (
+                    setattr(globals, 'actor_data_path',
+                            self_inner.dataPathEdit.text().strip().replace("\\", "/"))
+                )
+
+                # ── Object Library ───────────────────────────────────────────
+                obj_default = os.path.join(globals.user_data_path, 'Objects')
+                obj_saved = setting('ObjPath', '') or obj_default
+
+                self_inner.objRow = _DownloadRow(
+                    title="Object Library",
+                    description="Add individual objects from the game's tilesets to your level.",
+                    url=OBJECTS_DOWNLOAD_URL,
+                    tmp_name="_objects_download.zip",
+                    extract_dir=obj_saved,
+                    required=False,
+                )
+                cvbox.addWidget(self_inner.objRow)
+
+                obj_loc_group = QtWidgets.QGroupBox("Object Library Install Location")
+                obj_loc_lay = QtWidgets.QVBoxLayout(obj_loc_group)
+                obj_loc_lay.setSpacing(4)
+
+                obj_path_row = QtWidgets.QHBoxLayout()
+                self_inner.objPathEdit = QtWidgets.QLineEdit()
+                self_inner.objPathEdit.setText(obj_saved)
+                obj_browse_btn = QtWidgets.QPushButton("Browse…")
+                obj_browse_btn.setFixedWidth(90)
+                obj_path_row.addWidget(self_inner.objPathEdit)
+                obj_path_row.addWidget(obj_browse_btn)
+                obj_loc_lay.addLayout(obj_path_row)
+
+                obj_valid_lbl = QtWidgets.QLabel()
+                obj_valid_lbl.setStyleSheet("font-size: 11px;")
+                obj_loc_lay.addWidget(obj_valid_lbl)
+                cvbox.addWidget(obj_loc_group)
+
+                def _update_obj_status():
+                    p = self_inner.objPathEdit.text().strip()
+                    if p and isValidObjectsPath(p):
+                        obj_valid_lbl.setText("✓ Objects found at this location")
+                        obj_valid_lbl.setStyleSheet("color: #27ae60; font-size: 11px;")
+                    elif p:
+                        obj_valid_lbl.setText("✗ No valid objects found at this location")
+                        obj_valid_lbl.setStyleSheet("color: #c0392b; font-size: 11px;")
+                    else:
+                        obj_valid_lbl.setText("")
+                    self_inner.objRow.extract_dir = p or obj_default
+
+                self_inner.objPathEdit.textChanged.connect(_update_obj_status)
+                _update_obj_status()
+
+                def _browse_obj():
+                    p = QtWidgets.QFileDialog.getExistingDirectory(
+                        self_inner, "Select Object Library Folder", self_inner.objPathEdit.text())
+                    if p:
+                        self_inner.objPathEdit.setText(p)
+                obj_browse_btn.clicked.connect(_browse_obj)
+
+                def _on_obj_downloaded():
+                    p = self_inner.objPathEdit.text().strip()
+                    if p and isValidObjectsPath(p):
+                        setSetting('ObjPath', p)
+                self_inner.objRow._onFinishedExtra = _on_obj_downloaded
+
+                cvbox.addStretch(1)
+                scroll.setWidget(container)
+                outer = QtWidgets.QVBoxLayout(self_inner)
+                outer.setContentsMargins(0, 0, 0, 0)
+                outer.addWidget(scroll)
+
+                if _data_present():
+                    self_inner.dataRow.setAlreadyPresent()
+                if _objects_present():
+                    self_inner.objRow.setAlreadyPresent()
+
+        return ResourcesTab()
+
 
 class WelcomeDialog(QtWidgets.QDialog):
     """
@@ -2577,16 +2960,16 @@ class WelcomeDialog(QtWidgets.QDialog):
         # Action buttons
         _has_name_sources = hasLevelNameSources()
         for label, action in (
-            ('Open Level by File…', self.ACTION_OPEN_FILE),
-            ('Open Level by Name…', self.ACTION_OPEN_NAME),
             ('New Level',           self.ACTION_NEW_LEVEL),
+            ('Open Level by Name…', self.ACTION_OPEN_NAME),
+            ('Open Level by File…', self.ACTION_OPEN_FILE),
         ):
             btn = QtWidgets.QPushButton(label)
             btn.setFixedHeight(36)
             btn.clicked.connect(lambda _checked, a=action: self._choose(a))
             if action == self.ACTION_OPEN_NAME and not _has_name_sources:
                 btn.setEnabled(False)
-                btn.setToolTip('No game path configured — set one in Interactive Setup first.')
+                btn.setToolTip('No game path configured. Set one in Interactive Setup first.')
             layout.addWidget(btn)
             layout.addSpacing(6)
 
@@ -2668,9 +3051,10 @@ class WelcomeDialog(QtWidgets.QDialog):
 
 class ChooseLevelNameDialog(QtWidgets.QDialog):
     """
-    Dialog to open a level by name.  Shows one tab per loaded patch (base game + active mods
-    that provide levelnames or have levels in their game path), each with its own level list
-    and game path.  Right-clicking a level in a user-patch tab lets you assign it a name.
+    Dialog to open a level by name.  A dropdown lists all base games with configured paths
+    plus active mods that provide level names or have levels in their game path.  Selecting
+    a game entry shows a Copy Level to Mod button; selecting a user-patch mod entry shows an
+    Edit Level Info button.  The last-used source is persisted across sessions.
     """
 
     def __init__(self):
@@ -2683,12 +3067,21 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         self.current_display_name = None
         self.current_tab_name = None
 
-        tabs = QtWidgets.QTabWidget()
-        self._tabs = tabs
-        self._tab_game_paths = []       # game path per tab (parallel)
-        self._tab_user_patches = []     # user-patch folder name per tab, or None
+        # Per-source parallel data
+        self._source_game_paths = []
+        self._source_user_patches = []
+        self._source_keys = []
+        self._source_is_game = []
 
-        self._buildTabs()
+        # Source selector dropdown
+        self._source_combo = QtWidgets.QComboBox()
+        self._source_combo.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+        # Stacked content area — one tree widget per source
+        self._stack = QtWidgets.QStackedWidget()
+
+        select_idx = self._buildEntries()
 
         self.buttonBox = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
@@ -2696,52 +3089,85 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        # "Edit Level Info…" button — visible only for user-patch tabs, enabled on selection
-        self._rename_btn = QtWidgets.QPushButton('Edit Level Info…')
+        # "Edit Level Info" icon button — visible only for user-patch mod sources
+        self._rename_btn = QtWidgets.QPushButton(GetIcon('info'), '')
+        self._rename_btn.setFixedSize(26, 26)
+        self._rename_btn.setIconSize(QtCore.QSize(15, 15))
+        self._rename_btn.setToolTip('Edit Level Info')
         self._rename_btn.setEnabled(False)
         self._rename_btn.setVisible(False)
-        self._rename_btn.clicked.connect(self._doRename)
+        self._rename_btn.clicked.connect(self._doEditLevelInfo)
         self.buttonBox.addButton(self._rename_btn, QtWidgets.QDialogButtonBox.ActionRole)
 
-        tabs.currentChanged.connect(self._onTabChanged)
+        # "Edit Worlds" icon button — visible for user-patch mod sources, always enabled
+        self._worlds_btn = QtWidgets.QPushButton(GetIcon('layer'), '')
+        self._worlds_btn.setFixedSize(26, 26)
+        self._worlds_btn.setIconSize(QtCore.QSize(15, 15))
+        self._worlds_btn.setToolTip('Edit Worlds')
+        self._worlds_btn.setEnabled(False)
+        self._worlds_btn.setVisible(False)
+        self._worlds_btn.clicked.connect(self._doEditWorlds)
+        self.buttonBox.addButton(self._worlds_btn, QtWidgets.QDialogButtonBox.ActionRole)
+
+        # "Copy Level to Mod" icon button — visible only for game sources
+        self._copy_btn = QtWidgets.QPushButton(GetIcon('copy'), '')
+        self._copy_btn.setFixedSize(26, 26)
+        self._copy_btn.setIconSize(QtCore.QSize(15, 15))
+        self._copy_btn.setToolTip("Copy Level to Mod")
+        self._copy_btn.setEnabled(False)
+        self._copy_btn.setVisible(False)
+        self._copy_btn.clicked.connect(self._doCopyToMod)
+        self.buttonBox.addButton(self._copy_btn, QtWidgets.QDialogButtonBox.ActionRole)
+
+        self._source_combo.currentIndexChanged.connect(self._onSourceChanged)
 
         layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(tabs)
+        layout.addWidget(self._source_combo)
+        layout.addWidget(self._stack)
         layout.addWidget(self.buttonBox)
         self.setLayout(layout)
         self.setMinimumWidth(360)
         self.setMinimumHeight(420)
 
-    # ── Tab builder ────────────────────────────────────────────────────────
-    def _buildTabs(self):
+        # Restore last-used source, then sync UI state
+        if select_idx != self._source_combo.currentIndex():
+            self._source_combo.setCurrentIndex(select_idx)
+        self._onSourceChanged(self._source_combo.currentIndex())
+
+    # ── Entry builder ──────────────────────────────────────────────────────
+    def _buildEntries(self):
+        """Populate source combo + stack from all configured games and active mods.
+        Returns the index to pre-select (from LastOpenLevelSource)."""
         from . import gamedefs as _gd
         from .loading import LoadLevelNamesForDef
 
-        base_game_folder = setting('LastBaseGame', 'NSMBU')
         active_mods = setting('LastMods') or []
         if isinstance(active_mods, str):
             active_mods = [active_mods]
 
-        # entries: (label, names_list, game_path, user_patch_folder_or_None)
+        # entries: (key, label, names_list, game_path, user_patch_folder_or_None, is_game)
         entries = []
 
-        # ── Base game ───────────────────────────────────────────────────────
-        base_def = _gd.MiyamotoGameDefinition(base_game_folder, source='game')
-        base_names = LoadLevelNamesForDef(base_def)
-        if not base_names:
-            try:
-                from xml.etree import ElementTree as _et
-                from .loading import LoadLevelNames_Category
-                tree = _et.parse(os.path.join(globals.miyamoto_path, 'miyamotodata', 'levelnames.xml'))
-                base_names = LoadLevelNames_Category(tree.getroot())
-            except Exception:
-                base_names = []
-        if not base_names:
-            base_names = self._scanGamePathForLevels(base_def.GetGamePath())
-        if base_names:
-            entries.append((base_def.name, base_names, base_def.GetGamePath(), None))
+        # ── All base games that have a non-empty game path ──────────────────
+        for def_, folder in _gd.getAvailableBaseGames():
+            game_path = def_.GetGamePath()
+            if not game_path:
+                continue
+            names = LoadLevelNamesForDef(def_)
+            if not names:
+                try:
+                    from xml.etree import ElementTree as _et
+                    from .loading import LoadLevelNames_Category
+                    _tree = _et.parse(os.path.join(globals.miyamoto_path, 'miyamotodata', 'levelnames.xml'))
+                    names = LoadLevelNames_Category(_tree.getroot())
+                except Exception:
+                    names = []
+            if not names:
+                names = self._scanGamePathForLevels(game_path)
+            if names:
+                entries.append((folder, def_.name, names, game_path, None, True))
 
-        # ── Active mods ─────────────────────────────────────────────────────
+        # ── Active mods with level data ─────────────────────────────────────
         _user_patches_dir = os.path.join(globals.user_data_path, 'patches')
         for mod_folder in active_mods:
             if not mod_folder:
@@ -2749,27 +3175,40 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
             mod_def = _gd.MiyamotoGameDefinition(mod_folder, source='mod')
             if not mod_def.custom:
                 continue
-            mod_names = LoadLevelNamesForDef(mod_def)
-            if not mod_names:
-                mod_names = self._scanGamePathForLevels(mod_def.GetGamePath())
+            mod_gpath = mod_def.GetGamePath()
+            mod_names = self._loadNamesForMod(mod_def, mod_gpath)
             if not mod_names:
                 continue
             is_user = os.path.isfile(
                 os.path.join(_user_patches_dir, mod_folder, 'main.xml'))
-            entries.append((mod_def.name, mod_names, mod_def.GetGamePath(),
-                            mod_folder if is_user else None))
+            key = 'mod:' + mod_folder
+            entries.append((key, mod_def.name, mod_names, mod_gpath,
+                            mod_folder if is_user else None, False))
 
         del _gd
 
         if not entries:
             gpath = globals.gamedef.GetGamePath() if globals.gamedef else ''
-            entries.append(('Levels', globals.LevelNames, gpath, None))
+            entries.append(('fallback', 'Levels', globals.LevelNames or [], gpath, None, True))
 
-        for label, names, gpath, user_patch in entries:
+        # Determine which entry to restore
+        last_source = setting('LastOpenLevelSource', '')
+        select_idx = 0
+        for i, (key, *_rest) in enumerate(entries):
+            if key == last_source:
+                select_idx = i
+                break
+
+        for key, label, names, gpath, user_patch, is_game in entries:
             tree = self._makeTree(names, gpath, user_patch)
-            self._tabs.addTab(tree, label)
-            self._tab_game_paths.append(gpath)
-            self._tab_user_patches.append(user_patch)
+            self._stack.addWidget(tree)
+            self._source_combo.addItem(label)
+            self._source_game_paths.append(gpath)
+            self._source_user_patches.append(user_patch)
+            self._source_keys.append(key)
+            self._source_is_game.append(is_game)
+
+        return select_idx
 
     # ── Tree builder ───────────────────────────────────────────────────────
     def _makeTree(self, names, game_path='', user_patch_folder=None):
@@ -2777,7 +3216,9 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         tree.setColumnCount(1)
         tree.setHeaderHidden(True)
         tree.setIndentation(16)
+        tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         tree.currentItemChanged.connect(self._onItemChange)
+        tree.itemSelectionChanged.connect(self._updateActionBtns)
         tree.itemActivated.connect(self._onItemActivated)
         tree.addTopLevelItems(self._parseCategory(names, game_path))
 
@@ -2819,79 +3260,534 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
                 if fname.lower().endswith(ext):
                     files.append([fname, fname[:-len(ext)]])  # display full filename, code is stem
                     break
-        return [['Unnamed', files]] if files else []
+        return [['Uncategorized', files]] if files else []
 
-    # ── Rename level (user patches only) ──────────────────────────────────
-    def _promptRename(self, item, user_patch_folder):
-        """Show the rename dialog for a tree leaf item (called from context menu)."""
-        if item is None or item.data(0, Qt.UserRole) is None:
+    @staticmethod
+    def _loadNamesForMod(mod_def, game_path):
+        """Load level names from the mod's levelnames.xml and supplement with any
+        game-path files not already listed in a category (shown as 'Uncategorized')."""
+        from .loading import LoadLevelNamesForDef, LoadLevelNames_Category
+        import xml.etree.ElementTree as _ET
+
+        names = LoadLevelNamesForDef(mod_def)
+
+        # User-created mods don't declare levelnames in main.xml, so fall back to
+        # reading levelnames.xml directly from the user patch directory.
+        if not names and getattr(mod_def, 'gamepath', None):
+            from . import globals as _gl
+            direct_ln = os.path.join(
+                _gl.user_data_path, 'patches', mod_def.gamepath, 'levelnames.xml')
+            if os.path.isfile(direct_ln):
+                try:
+                    names = LoadLevelNames_Category(_ET.parse(direct_ln).getroot())
+                except Exception:
+                    pass
+
+        if game_path and os.path.isdir(game_path):
+            covered = set()
+            def _collect(items):
+                for it in items:
+                    if isinstance(it[1], str):
+                        covered.add(it[1])
+                    else:
+                        _collect(it[1])
+            _collect(names)
+
+            extra = []
+            for fname in sorted(os.listdir(game_path)):
+                for ext in ('.szs', '.sarc'):
+                    if fname.lower().endswith(ext):
+                        code = fname[:-len(ext)]
+                        if code not in covered:
+                            extra.append([fname, code])
+                        break
+            if extra:
+                uncat = next((n for n in names if n[0] == 'Uncategorized'), None)
+                if uncat is not None:
+                    uncat[1] = uncat[1] + extra
+                else:
+                    names = names + [['Uncategorized', extra]]
+
+        return names
+
+    # ── Edit Level Info (user patches only) ───────────────────────────────
+    def _doEditLevelInfo(self):
+        """Show the Edit Level Info dialog for selected level(s)."""
+        idx = self._source_combo.currentIndex()
+        if idx >= len(self._source_user_patches):
             return
-        code = item.data(0, Qt.UserRole)
-        current_display = item.text(0)
-        suggest = '' if current_display == code else current_display
-        new_name, ok = QtWidgets.QInputDialog.getText(
-            self, 'Name Level',
-            f'Enter a display name for {code}:',
-            text=suggest)
-        if not ok or not new_name.strip():
+        user_patch_folder = self._source_user_patches[idx]
+        if user_patch_folder is None:
             return
-        new_name = new_name.strip()
+        tree = self._stack.widget(idx)
+        if not isinstance(tree, QtWidgets.QTreeWidget):
+            return
+
+        selected = [it for it in tree.selectedItems()
+                    if it.data(0, Qt.UserRole) is not None]
+        if not selected:
+            return
+
         from .patchxml import PatchXmlEditor
         user_patch_dir = os.path.join(globals.user_data_path, 'patches', user_patch_folder)
-        PatchXmlEditor(user_patch_dir).set_level_name(code, new_name)
-        item.setText(0, new_name)
+        editor = PatchXmlEditor(user_patch_dir)
+        worlds = editor.get_worlds()
+        gpath = self._source_game_paths[idx] if idx < len(self._source_game_paths) else ''
+
+        def _world_combo():
+            combo = QtWidgets.QComboBox()
+            combo.addItem('— Uncategorized —', userData=None)
+            for w in worlds:
+                combo.addItem(w, userData=w)
+            return combo
+
+        def _apply_world(combo, items):
+            new_world = combo.currentData()
+            for it in items:
+                code = it.data(0, Qt.UserRole)
+                if new_world is None:
+                    editor.remove_level(code)
+                else:
+                    existing_name = editor.get_level_name(code) or code
+                    editor.set_level_info(code, existing_name, new_world)
+
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle('Edit Level Info')
+        dlg.setMinimumWidth(320)
+        lay = QtWidgets.QVBoxLayout(dlg)
+        lay.setSpacing(8)
+
+        form = QtWidgets.QFormLayout()
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        name_edit = None
+        if len(selected) == 1:
+            item = selected[0]
+            code = item.data(0, Qt.UserRole)
+            current_name = editor.get_level_name(code) or ''
+
+            filename = code
+            for _ext in ('.szs', '.sarc'):
+                if gpath and os.path.isfile(os.path.join(gpath, code + _ext)):
+                    filename = code + _ext
+                    break
+
+            form.addRow('File:', QtWidgets.QLabel(f'<code>{filename}</code>'))
+            name_edit = QtWidgets.QLineEdit(current_name)
+            name_edit.setPlaceholderText('Display name…')
+            form.addRow('Display name:', name_edit)
+        else:
+            form.addRow('Levels:', QtWidgets.QLabel(f'<b>{len(selected)}</b> selected'))
+
+        world_combo = _world_combo()
+        if len(selected) == 1:
+            current_world = editor.get_level_world(code)
+            if current_world and current_world in worlds:
+                world_combo.setCurrentText(current_world)
+        form.addRow('World:', world_combo)
+
+        lay.addLayout(form)
+
+        notice_text = ('The level filename will remain unchanged.'
+                       if len(selected) == 1 else 'Level names will not be changed.')
+        notice = QtWidgets.QLabel(notice_text)
+        notice.setStyleSheet('color: palette(mid); font-size: 11px;')
+        lay.addWidget(notice)
+
+        btns = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        lay.addWidget(btns)
+
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+
+        if len(selected) == 1:
+            new_world = world_combo.currentData()
+            if new_world is None:
+                editor.remove_level(code)
+            else:
+                editor.set_level_info(code, name_edit.text().strip() or code, new_world)
+        else:
+            _apply_world(world_combo, selected)
+
+        self._refreshCurrentSource()
 
     # ── Selection signals ──────────────────────────────────────────────────
-    def _onTabChanged(self, index):
+    def _onSourceChanged(self, index):
         self.currentlevel = None
-        self.current_game_path = self._tab_game_paths[index] if index < len(self._tab_game_paths) else ''
+        self.current_display_name = None
+        self.current_game_path = (self._source_game_paths[index]
+                                  if index < len(self._source_game_paths) else '')
+        self.current_tab_name = (self._source_combo.itemText(index)
+                                 if index >= 0 else '')
         self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
-        self._updateRenameBtn()
+        if 0 <= index < self._stack.count():
+            self._stack.setCurrentIndex(index)
+        self._updateActionBtns()
 
-    def _onItemChange(self, current, previous):
+    def _onItemChange(self, current, _previous):
         if current is None:
             return
         self.currentlevel = current.data(0, Qt.UserRole)
-        idx = self._tabs.currentIndex()
-        self.current_game_path = self._tab_game_paths[idx] if idx < len(self._tab_game_paths) else ''
-        self.current_tab_name = self._tabs.tabText(idx)
+        idx = self._source_combo.currentIndex()
+        self.current_game_path = (self._source_game_paths[idx]
+                                  if idx < len(self._source_game_paths) else '')
+        self.current_tab_name = (self._source_combo.itemText(idx) if idx >= 0 else '')
         self.current_display_name = current.text(0)
         ok = self.currentlevel is not None
         self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(ok)
         if ok:
             self.currentlevel = str(self.currentlevel)
-        self._updateRenameBtn()
+        self._updateActionBtns()
 
-    def _updateRenameBtn(self):
-        idx = self._tabs.currentIndex()
-        is_user_patch = (idx < len(self._tab_user_patches)
-                         and self._tab_user_patches[idx] is not None)
+    def _updateActionBtns(self):
+        idx = self._source_combo.currentIndex()
+        is_user_patch = (idx < len(self._source_user_patches)
+                         and self._source_user_patches[idx] is not None)
+        is_game = (idx < len(self._source_is_game) and self._source_is_game[idx])
+
+        # "Edit Level Info" — user-patch mod sources only, requires 1+ levels selected
         self._rename_btn.setVisible(is_user_patch)
         if is_user_patch:
-            tree = self._tabs.widget(idx)
-            item = tree.currentItem() if isinstance(tree, QtWidgets.QTreeWidget) else None
-            self._rename_btn.setEnabled(item is not None
-                                        and item.data(0, Qt.UserRole) is not None)
+            tree = self._stack.widget(idx)
+            if isinstance(tree, QtWidgets.QTreeWidget):
+                sel_levels = [it for it in tree.selectedItems()
+                              if it.data(0, Qt.UserRole) is not None]
+            else:
+                sel_levels = []
+            self._rename_btn.setEnabled(len(sel_levels) > 0)
 
-    def _doRename(self):
-        idx = self._tabs.currentIndex()
-        if idx >= len(self._tab_user_patches):
+        # "Edit Worlds" — user-patch mod sources only, always enabled
+        self._worlds_btn.setVisible(is_user_patch)
+        self._worlds_btn.setEnabled(is_user_patch)
+
+        # "Copy Level to Mod" — game sources only
+        self._copy_btn.setVisible(is_game)
+        if is_game:
+            self._copy_btn.setEnabled(
+                self.currentlevel is not None and bool(self.current_game_path))
+
+    # ── Edit Worlds (user patches only) ───────────────────────────────────
+    def _doEditWorlds(self):
+        """Show the Edit Worlds dialog for the current user-patch source."""
+        idx = self._source_combo.currentIndex()
+        if idx >= len(self._source_user_patches):
             return
-        user_patch_folder = self._tab_user_patches[idx]
+        user_patch_folder = self._source_user_patches[idx]
         if user_patch_folder is None:
             return
-        tree = self._tabs.widget(idx)
-        if not isinstance(tree, QtWidgets.QTreeWidget):
-            return
-        self._promptRename(tree.currentItem(), user_patch_folder)
 
-    def _onItemActivated(self, item, column):
+        from .patchxml import PatchXmlEditor
+        user_patch_dir = os.path.join(globals.user_data_path, 'patches', user_patch_folder)
+        editor = PatchXmlEditor(user_patch_dir)
+        original_worlds = editor.get_worlds()
+
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle('Edit Worlds')
+        dlg.setMinimumWidth(360)
+        dlg.setMinimumHeight(300)
+        lay = QtWidgets.QVBoxLayout(dlg)
+        lay.setSpacing(8)
+
+        hint = QtWidgets.QLabel('Double-click a world to rename it.')
+        hint.setStyleSheet('color: palette(mid); font-size: 11px;')
+        lay.addWidget(hint)
+
+        _LOCKED = '_locked_uncategorized'
+
+        list_w = QtWidgets.QListWidget()
+        list_w.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        list_w.setDefaultDropAction(Qt.MoveAction)
+        for name in original_worlds:
+            if name == 'Uncategorized':
+                continue  # rendered as locked row below
+            it = QtWidgets.QListWidgetItem(name)
+            it.setData(Qt.UserRole, name)
+            it.setFlags(it.flags() | Qt.ItemIsEditable)
+            list_w.addItem(it)
+
+        # Locked "Uncategorized" row — always last, never editable/draggable
+        uncat_it = QtWidgets.QListWidgetItem('Uncategorized')
+        uncat_it.setData(Qt.UserRole, _LOCKED)
+        uncat_it.setFlags(
+            (uncat_it.flags() & ~Qt.ItemIsEditable & ~Qt.ItemIsDragEnabled))
+        _font = uncat_it.font()
+        _font.setItalic(True)
+        uncat_it.setFont(_font)
+        uncat_it.setForeground(QtGui.QColor('gray'))
+        list_w.addItem(uncat_it)
+
+        lay.addWidget(list_w)
+
+        btn_row = QtWidgets.QHBoxLayout()
+        btn_row.setSpacing(4)
+        add_btn    = QtWidgets.QPushButton(GetIcon('add'), '')
+        remove_btn = QtWidgets.QPushButton(GetIcon('delete'), '')
+        up_btn     = QtWidgets.QPushButton('▲')
+        down_btn   = QtWidgets.QPushButton('▼')
+        for b in (add_btn, remove_btn):
+            b.setFixedSize(26, 26)
+            b.setIconSize(QtCore.QSize(14, 14))
+        add_btn.setToolTip('Add World')
+        remove_btn.setToolTip('Remove selected world')
+        up_btn.setFixedWidth(30)
+        down_btn.setFixedWidth(30)
+        btn_row.addWidget(add_btn)
+        btn_row.addWidget(remove_btn)
+        btn_row.addStretch(1)
+        btn_row.addWidget(up_btn)
+        btn_row.addWidget(down_btn)
+        lay.addLayout(btn_row)
+
+        sep = QtWidgets.QFrame()
+        sep.setFrameShape(QtWidgets.QFrame.HLine)
+        sep.setFrameShadow(QtWidgets.QFrame.Sunken)
+        lay.addWidget(sep)
+
+        btns = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        lay.addWidget(btns)
+
+        def _is_locked(it):
+            return it is not None and it.data(Qt.UserRole) == _LOCKED
+
+        def _update_btns():
+            it = list_w.currentItem()
+            locked = _is_locked(it)
+            remove_btn.setEnabled(it is not None and not locked)
+            up_btn.setEnabled(it is not None and not locked and list_w.currentRow() > 0)
+            down_btn.setEnabled(it is not None and not locked
+                                and list_w.currentRow() < list_w.count() - 2)
+
+        list_w.currentItemChanged.connect(lambda *_: _update_btns())
+        _update_btns()
+
+        def _add():
+            new_name, ok = QtWidgets.QInputDialog.getText(dlg, 'Add World', 'World name:')
+            if not ok or not new_name.strip():
+                return
+            # Insert before the locked Uncategorized row
+            it = QtWidgets.QListWidgetItem(new_name.strip())
+            it.setData(Qt.UserRole, None)
+            it.setFlags(it.flags() | Qt.ItemIsEditable)
+            list_w.insertItem(list_w.count() - 1, it)
+            list_w.setCurrentItem(it)
+
+        def _remove():
+            row = list_w.currentRow()
+            it = list_w.item(row)
+            if row >= 0 and not _is_locked(it):
+                list_w.takeItem(row)
+
+        def _move_up():
+            row = list_w.currentRow()
+            it = list_w.item(row)
+            if row > 0 and not _is_locked(it):
+                it = list_w.takeItem(row)
+                list_w.insertItem(row - 1, it)
+                list_w.setCurrentRow(row - 1)
+
+        def _move_down():
+            row = list_w.currentRow()
+            it = list_w.item(row)
+            # Stop before Uncategorized (always last)
+            if 0 <= row < list_w.count() - 2 and not _is_locked(it):
+                it = list_w.takeItem(row)
+                list_w.insertItem(row + 1, it)
+                list_w.setCurrentRow(row + 1)
+
+        add_btn.clicked.connect(_add)
+        remove_btn.clicked.connect(_remove)
+        up_btn.clicked.connect(_move_up)
+        down_btn.clicked.connect(_move_down)
+
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+
+        edits = []
+        for i in range(list_w.count()):
+            it = list_w.item(i)
+            if _is_locked(it):
+                continue
+            new_name = it.text().strip()
+            if new_name:
+                edits.append((it.data(Qt.UserRole), new_name))
+
+        editor.apply_world_edits(edits)
+        self._refreshCurrentSource()
+
+    def _refreshCurrentSource(self):
+        """Rebuild the tree widget for the currently selected source."""
+        from . import gamedefs as _gd
+
+        idx = self._source_combo.currentIndex()
+        if not (0 <= idx < len(self._source_keys)):
+            return
+
+        key = self._source_keys[idx]
+        gpath = self._source_game_paths[idx]
+        user_patch = self._source_user_patches[idx]
+
+        if key.startswith('mod:'):
+            mod_folder = key[4:]
+            def_ = _gd.MiyamotoGameDefinition(mod_folder, source='mod')
+            names = self._loadNamesForMod(def_, gpath)
+        else:
+            from .loading import LoadLevelNamesForDef
+            def_ = _gd.MiyamotoGameDefinition(key, source='game')
+            names = LoadLevelNamesForDef(def_)
+            if not names:
+                names = self._scanGamePathForLevels(gpath)
+
+        new_tree = self._makeTree(names or [], gpath, user_patch)
+        old_widget = self._stack.widget(idx)
+        self._stack.removeWidget(old_widget)
+        self._stack.insertWidget(idx, new_tree)
+        self._stack.setCurrentIndex(idx)
+        if old_widget:
+            old_widget.deleteLater()
+
+        self.currentlevel = None
+        self.current_display_name = None
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+        self._updateActionBtns()
+
+    def _onItemActivated(self, item, _column):
         self.currentlevel = item.data(0, Qt.UserRole)
         if self.currentlevel is not None:
             self.currentlevel = str(self.currentlevel)
-            idx = self._tabs.currentIndex()
-            self.current_game_path = self._tab_game_paths[idx] if idx < len(self._tab_game_paths) else ''
+            idx = self._source_combo.currentIndex()
+            self.current_game_path = (self._source_game_paths[idx]
+                                      if idx < len(self._source_game_paths) else '')
             self.accept()
+
+    # ── Copy level to mod ──────────────────────────────────────────────────
+    def _doCopyToMod(self):
+        """Copy the selected game level file into a mod's configured game path."""
+        if not self.currentlevel or not self.current_game_path:
+            return
+
+        active_mods = setting('LastMods') or []
+        if isinstance(active_mods, str):
+            active_mods = [active_mods]
+
+        from . import gamedefs as _gd
+        usable = []  # (display_name, folder, dest_dir)
+        for folder in active_mods:
+            if not folder:
+                continue
+            mod_def = _gd.MiyamotoGameDefinition(folder, source='mod')
+            if not mod_def.custom:
+                continue
+            mod_path = mod_def.GetGamePath()
+            if mod_path and os.path.isdir(mod_path):
+                usable.append((mod_def.name, folder, mod_path))
+        del _gd
+
+        if not usable:
+            has_any_mods = any(m for m in active_mods if m)
+            if has_any_mods:
+                msg = ('Your active mods do not have a game path configured.\n'
+                       'Open Game Setup and set a game path for your mod first.')
+            else:
+                msg = 'No mods installed! Use Game Setup to create one.'
+            QtWidgets.QMessageBox.information(self, 'Copy Level to Mod', msg)
+            return
+
+        # Show mod-selection dialog
+        dlg = QtWidgets.QDialog(self)
+        dlg.setWindowTitle('Copy Level to Mod')
+        dlg.setMinimumWidth(340)
+        lay = QtWidgets.QVBoxLayout(dlg)
+        lay.setSpacing(10)
+
+        lbl = QtWidgets.QLabel(f'Copy <b>{self.currentlevel}</b> to which mod?')
+        lay.addWidget(lbl)
+
+        mod_combo = QtWidgets.QComboBox()
+        for name, folder, _ in usable:
+            mod_combo.addItem(name, folder)
+        lay.addWidget(mod_combo)
+
+        btns = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Cancel)
+        copy_btn = btns.addButton('Copy', QtWidgets.QDialogButtonBox.AcceptRole)
+        copy_btn.setDefault(True)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        lay.addWidget(btns)
+
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+
+        sel_folder = mod_combo.currentData()
+        sel_entry = next((m for m in usable if m[1] == sel_folder), None)
+        if not sel_entry:
+            return
+        dest_dir = sel_entry[2]
+
+        # Find the source file (try .szs then .sarc)
+        code = self.currentlevel
+        game_path = self.current_game_path
+        ext = next(
+            (e for e in ('.szs', '.sarc')
+             if os.path.isfile(os.path.join(game_path, code + e))),
+            None)
+        if ext is None:
+            QtWidgets.QMessageBox.warning(
+                self, 'Copy Level to Mod',
+                f'Level file not found in game path:\n{code}')
+            return
+
+        src = os.path.join(game_path, code + ext)
+        dest = os.path.join(dest_dir, code + ext)
+
+        if os.path.exists(dest):
+            conf = QtWidgets.QDialog(self)
+            conf.setWindowTitle('Copy Level to Mod')
+            conf_lay = QtWidgets.QVBoxLayout(conf)
+            conf_lay.setSpacing(12)
+            conf_lay.addWidget(QtWidgets.QLabel(
+                f'<b>{code + ext}</b> already exists in the mod\'s game path.'))
+            conf_btns = QtWidgets.QDialogButtonBox()
+            overwrite_btn = conf_btns.addButton('Overwrite', QtWidgets.QDialogButtonBox.AcceptRole)
+            keep_btn      = conf_btns.addButton('Keep Both',  QtWidgets.QDialogButtonBox.ActionRole)
+            cancel_btn    = conf_btns.addButton('Cancel',     QtWidgets.QDialogButtonBox.RejectRole)
+            _choice = [None]
+            overwrite_btn.clicked.connect(lambda: (_choice.__setitem__(0, 'overwrite'), conf.accept()))
+            keep_btn.clicked.connect(     lambda: (_choice.__setitem__(0, 'keep'),      conf.accept()))
+            cancel_btn.clicked.connect(conf.reject)
+            conf_lay.addWidget(conf_btns)
+            if conf.exec_() != QtWidgets.QDialog.Accepted or _choice[0] is None:
+                return
+            if _choice[0] == 'keep':
+                n = 1
+                while True:
+                    candidate = os.path.join(dest_dir, f'{code} ({n}){ext}')
+                    if not os.path.exists(candidate):
+                        dest = candidate
+                        break
+                    n += 1
+
+        import shutil
+        try:
+            shutil.copy2(src, dest)
+            QtWidgets.QMessageBox.information(
+                self, 'Copy Level to Mod',
+                f'Copied successfully to:\n{dest}')
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self, 'Copy Level to Mod',
+                f'Failed to copy level:\n{e}')
+
+    def accept(self):
+        idx = self._source_combo.currentIndex()
+        if 0 <= idx < len(self._source_keys):
+            setSetting('LastOpenLevelSource', self._source_keys[idx])
+        super().accept()
 
     # Legacy aliases
     def ParseCategory(self, items):

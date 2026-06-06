@@ -425,7 +425,7 @@ class _DownloadPage(QtWidgets.QWidget):
             title="Object Library",
             description=(
                 "Add individual objects from the game's tilesets to your level. "
-                "You can always download this later by re-running setup."),
+                "You can always download this later from Preferences > Resources."),
             url=OBJECTS_DOWNLOAD_URL,
             tmp_name="_objects_download.zip",
             extract_dir=os.path.join(globals.user_data_path, 'Objects'),
@@ -461,9 +461,7 @@ class _GamePathPage(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._skipped = False
-        self._paths = {}          # in-memory cache: folder_key → typed path
-        self._prev_folder = None  # folder that was last active
+        self._path_edits = {}  # folder → QLineEdit
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(32, 16, 32, 16)
@@ -483,98 +481,73 @@ class _GamePathPage(QtWidgets.QWidget):
         layout.addWidget(sub)
         layout.addSpacing(8)
 
-        # Game type selector
-        game_box = QtWidgets.QGroupBox("Game")
-        game_layout = QtWidgets.QFormLayout(game_box)
+        from . import gamedefs as _gd
 
-        # Maps combo index → (display name, settings folder key)
-        self._game_options = [
-            ("New Super Mario Bros. U", "NSMBU"),
-            ("New Super Luigi U", "NSLU"),
-        ]
-        self.gameTypeCombo = QtWidgets.QComboBox()
-        for label, _ in self._game_options:
-            self.gameTypeCombo.addItem(label)
-        game_layout.addRow(self.gameTypeCombo)
-        layout.addWidget(game_box)
+        games_group = QtWidgets.QGroupBox("Game Paths")
+        games_vbox = QtWidgets.QVBoxLayout(games_group)
+        games_vbox.setSpacing(6)
 
-        # Path entry
-        path_box = QtWidgets.QGroupBox("Game Files Location")
-        path_layout = QtWidgets.QVBoxLayout(path_box)
+        base_games = _gd.getAvailableBaseGames()
+        for idx_g, (def_, folder) in enumerate(base_games):
+            game_lbl = QtWidgets.QLabel(def_.name)
+            game_lbl.setStyleSheet('font-weight: bold;')
+            games_vbox.addWidget(game_lbl)
 
-        path_row = QtWidgets.QHBoxLayout()
-        self.pathEdit = QtWidgets.QLineEdit()
-        self.pathEdit.setPlaceholderText("Select the course_res_pack folder (game/Content/common/course_res_pack)")
-        path_row.addWidget(self.pathEdit)
-        self.browseBtn = QtWidgets.QPushButton("Browse…")
-        self.browseBtn.setFixedWidth(90)
-        self.browseBtn.clicked.connect(self._browse)
-        path_row.addWidget(self.browseBtn)
-        path_layout.addLayout(path_row)
+            indent_w = QtWidgets.QWidget()
+            indent_lay = QtWidgets.QVBoxLayout(indent_w)
+            indent_lay.setContentsMargins(8, 0, 0, 0)
+            indent_lay.setSpacing(2)
 
-        self.validLabel = QtWidgets.QLabel("")
-        self.validLabel.setStyleSheet("font-size: 11px;")
-        path_layout.addWidget(self.validLabel)
+            path_row = QtWidgets.QHBoxLayout()
+            path_edit = QtWidgets.QLineEdit()
+            path_edit.setPlaceholderText("Select the course_res_pack folder…")
+            existing = setting('GamePath_' + folder, setting('GamePath', '') if folder == 'NSMBU' else '')
+            if existing:
+                path_edit.setText(str(existing))
+            self._path_edits[folder] = path_edit
 
-        layout.addWidget(path_box)
+            valid_lbl = QtWidgets.QLabel()
+            valid_lbl.setStyleSheet('font-size: 11px;')
+
+            def _make_validator(edit, lbl):
+                def _v():
+                    p = edit.text().strip()
+                    ok = isValidGamePath(p) if p else False
+                    lbl.setText('✓ Valid game path' if ok else ('✗ No valid game files found in this folder' if p else ''))
+                    lbl.setStyleSheet('color: #27ae60; font-size: 11px;' if ok
+                                      else 'color: #c0392b; font-size: 11px;' if p
+                                      else 'font-size: 11px;')
+                    self.pathValidityChanged.emit(self.isPathValid())
+                edit.textChanged.connect(_v)
+                _v()
+
+            _make_validator(path_edit, valid_lbl)
+
+            def _make_browser(edit):
+                def _b():
+                    d = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Game Folder", edit.text())
+                    if d:
+                        edit.setText(d)
+                return _b
+
+            browse_btn = QtWidgets.QPushButton("Browse…")
+            browse_btn.setFixedWidth(90)
+            browse_btn.clicked.connect(_make_browser(path_edit))
+
+            path_row.addWidget(path_edit)
+            path_row.addWidget(browse_btn)
+            indent_lay.addLayout(path_row)
+            indent_lay.addWidget(valid_lbl)
+            games_vbox.addWidget(indent_w)
+
+            if idx_g < len(base_games) - 1:
+                games_vbox.addSpacing(4)
+
+        layout.addWidget(games_group)
         layout.addStretch(1)
 
-        # Prefill existing path for the selected game
-        self.gameTypeCombo.currentIndexChanged.connect(self._onGameChanged)
-        self._onGameChanged(0)
-        self.pathEdit.textChanged.connect(self._validate)
-        self._validate()
-
-    def _folderKey(self):
-        idx = self.gameTypeCombo.currentIndex()
-        return self._game_options[idx][1] if idx < len(self._game_options) else 'NSMBU'
-
-    def _onGameChanged(self, idx):
-        # Save the current typed path for the game that was just active
-        if self._prev_folder is not None:
-            self._paths[self._prev_folder] = self.pathEdit.text()
-
-        folder = self._game_options[idx][1] if idx < len(self._game_options) else 'NSMBU'
-        from .misc import setting as _s
-
-        # Prefer in-memory cache (user already typed something) over saved settings
-        if folder in self._paths:
-            new_path = self._paths[folder]
-        else:
-            new_path = _s('GamePath_' + folder, _s('GamePath', '') if folder == 'NSMBU' else '')
-
-        self.pathEdit.blockSignals(True)
-        self.pathEdit.setText(str(new_path) if new_path else '')
-        self.pathEdit.blockSignals(False)
-        self._validate()
-        self._prev_folder = folder
-
-    def _browse(self):
-        d = QtWidgets.QFileDialog.getExistingDirectory(
-            self, "Select Game Folder")
-        if d:
-            self.pathEdit.setText(d)
-
-    def _validate(self):
-        path = self.pathEdit.text().strip()
-        if not path:
-            self.validLabel.setText("")
-            self.pathValidityChanged.emit(False)
-            return
-        if isValidGamePath(path):
-            self.validLabel.setText("✓ Valid game path")
-            self.validLabel.setStyleSheet("color: #27ae60; font-size: 11px;")
-            self.pathValidityChanged.emit(True)
-        else:
-            self.validLabel.setText("✗ No valid game files found in this folder")
-            self.validLabel.setStyleSheet("color: #c0392b; font-size: 11px;")
-            self.pathValidityChanged.emit(False)
-
-    def getPath(self):
-        return self.pathEdit.text().strip()
-
     def isPathValid(self):
-        return isValidGamePath(self.getPath())
+        return any(isValidGamePath(e.text().strip()) for e in self._path_edits.values())
 
 
 # ---------------------------------------------------------------------------
@@ -804,13 +777,14 @@ class InteractiveSetupDialog(QtWidgets.QDialog):
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setText(
                 "Without a game path, Pyamoto cannot open levels from the original game.\n\n"
-                "You can set the game path later by re-running the setup.")
+                "You can set the game path later in Preferences > Game Setup.")
             msg.setStandardButtons(
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
             msg.button(QtWidgets.QMessageBox.Yes).setText("Skip Anyway")
             msg.button(QtWidgets.QMessageBox.Cancel).setText("Set Path")
             if msg.exec_() == QtWidgets.QMessageBox.Yes:
-                self._gamePathPage.pathEdit.clear()
+                for edit in self._gamePathPage._path_edits.values():
+                    edit.clear()
                 self._goToPage(cur + 1)
         else:
             self._goToPage(cur + 1)
@@ -857,16 +831,19 @@ class InteractiveSetupDialog(QtWidgets.QDialog):
     def applySettings(self):
         from .misc import SetGamePath
 
-        # Game path — save to per-game key and set LastBaseGame
-        path = self._gamePathPage.getPath()
-        folder_key = self._gamePathPage._folderKey()
-        if path and isValidGamePath(path):
-            setSetting('GamePath_' + folder_key, path)
-            if folder_key == 'NSMBU':
+        # Game paths — save all per-game paths
+        first_valid_folder = None
+        for folder, edit in self._gamePathPage._path_edits.items():
+            path = edit.text().strip()
+            setSetting('GamePath_' + folder, path)
+            if folder == 'NSMBU':
                 setSetting('GamePath', path)  # backward compat
-            if globals.gamedef is not None:
-                SetGamePath(path)
-        setSetting('LastBaseGame', folder_key)
+            if path and isValidGamePath(path) and first_valid_folder is None:
+                first_valid_folder = folder
+                if globals.gamedef is not None:
+                    SetGamePath(path)
+
+        setSetting('LastBaseGame', first_valid_folder or next(iter(self._gamePathPage._path_edits), 'NSMBU'))
 
         # Objects — set ObjPath if downloaded
         if self._downloadPage.objectsDownloaded():

@@ -133,6 +133,12 @@ jobs:
           $d | ConvertTo-Json | Set-Content project.json
 
       - name: Build
+        id: build
+        continue-on-error: true
+        run: python build.py build_ext --inplace build_exe
+
+      - name: Retry build (cx_Freeze winversioninfo is inconsistent)
+        if: steps.build.outcome == 'failure'
         run: python build.py build_ext --inplace build_exe
 
       - name: Package as zip

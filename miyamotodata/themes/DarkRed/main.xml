@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<theme
+		format="1.0"
+		name="Dark Red"
+		version="1.0"
+		description="A dark-colored RVLution Red."
+		creator="Baron Stijn, RoadrunnerWMC"
+		forceUiColor="true"
+		>
+		
+	<colors file="levelview.xml" />
+	<icons size="sm" folder="icosm" />
+	<icons size="lg" folder="icolg" />
+	
+</theme>

@@ -738,13 +738,16 @@ class TilesetEditor(QtWidgets.QWidget):
     def toggleOverrides(self):
         self.overrides = not self.overrides
 
-        index = self.objectList.currentIndex()
+        row = self.objectList.currentIndex().row()
 
         self.setuptile()
         SetupObjectModel(self.objmodel, self, self.tileset.objects, self.tileset.tiles)
 
-        self.objectList.setCurrentIndex(index)
-        self.tileWidget.setObject(index)
+        count = self.objmodel.rowCount()
+        if count > 0 and 0 <= row < count:
+            index = self.objmodel.index(row, 0)
+            self.objectList.setCurrentIndex(index)
+            self.tileWidget.setObject(index)
 
         self.objectList.update()
         self.tileWidget.update()
@@ -2697,7 +2700,7 @@ class displayWidget(QtWidgets.QListView):
         menu.addAction("Copy image to clipboard",        lambda: self._copyImage(tileIdx))
         act = menu.addAction("Paste image", lambda: self._pasteImage(tileIdx))
         act.setEnabled(hasImage)
-        menu.addAction("Replace image...",  lambda: self._replaceImage(tileIdx))
+        menu.addAction("Import image...",  lambda: self._replaceImage(tileIdx))
         menu.addAction("Export image...",  lambda: self._saveImage(tileIdx))
         menu.addSeparator()
         menu.addAction("Copy properties to clipboard",   lambda: self._copyProperties(tileIdx))
@@ -4311,7 +4314,7 @@ class frameByFrameTab(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self.previewTimer = QtCore.QTimer()
+        self.previewTimer = QtCore.QTimer(self)
         self.previewTimer.timeout.connect(lambda: self.frameIdxChanged(self.getNextFrame()))
 
     def update(self):

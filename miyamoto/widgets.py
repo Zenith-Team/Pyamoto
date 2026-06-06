@@ -35,7 +35,8 @@ from .items import CommentItem
 # from loading import LoadSpriteCategories, LoadEntranceNames
 
 from .misc import clipStr, setting, setSetting, drawForegroundGrid
-from .misc import extract_field_value
+from .misc import extract_field_value, extract_mask_value, insert_mask_value, mask_shift, mask_max_value
+from .strybble import strybble_encode, strybble_decode, StrybbleEncodeError
 from .clips import Clip, load_clips, save_clips
 
 from .tileset import TilesetTile, ObjectDef, objFitsInTileset
@@ -421,27 +422,6 @@ class ObjectPickerWidget(QtWidgets.QListView):
             dlgTxt += ', '.join(where)
             dlgTxt += '\nPlease remove or replace them before deleting this object.'
 
-            QtWidgets.QMessageBox.critical(self, 'Cannot Delete', dlgTxt)
-            return
-
-        ## Check if the object is referenced by a saved clip
-        usedInClip = False
-        for clip in globals.mainWindow.clipChooser._clips:
-            try:
-                layers, _ = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
-            except Exception:
-                continue
-            for layer in layers:
-                for obj in layer:
-                    if obj.tileset == idx and obj.type == objNum:
-                        usedInClip = True
-                        break
-                if usedInClip: break
-            if usedInClip: break
-
-        if usedInClip:
-            dlgTxt = "You can't delete this object because it is referenced by a saved clip."
-            dlgTxt += '\nDelete the clip first, then remove this object.'
             QtWidgets.QMessageBox.critical(self, 'Cannot Delete', dlgTxt)
             return
 
@@ -1272,7 +1252,8 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
 
         # Look up the cached pixmap.  If missing, schedule a deferred render —
         # never do any image work here (inside a paint event).
-        key = (type_id, size)
+        high_detail = globals.SpriteListPreviewHighDetail
+        key = (type_id, size, high_detail)
         pix = self._type_preview_cache.get(key)
         if pix is None:
             pmi = QtCore.QPersistentModelIndex(index)
@@ -1283,7 +1264,11 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         thumb_y    = rect.y() + (rect.height() - size) // 2
         thumb_rect = QtCore.QRect(rect.x() + pad, thumb_y, size, size)
         if pix is not None and not pix.isNull():
+            painter.save()
+            if high_detail:
+                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             painter.drawPixmap(thumb_rect, pix)
+            painter.restore()
 
         text_color = (option.palette.highlightedText().color() if selected
                       else option.palette.text().color())
@@ -1314,10 +1299,10 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         pending = dict(cls._pending)
         cls._pending.clear()
 
-        for (type_id, size), entries in pending.items():
-            key = (type_id, size)
+        for (type_id, size, high_detail), entries in pending.items():
+            key = (type_id, size, high_detail)
             if key not in cls._type_preview_cache:
-                cls._type_preview_cache[key] = cls._render_type_preview(type_id, size)
+                cls._type_preview_cache[key] = cls._render_type_preview(type_id, size, high_detail)
             # Use QAbstractItemView.update(QModelIndex) for each item that had a
             # cache miss.  This calls viewport()->update(visualRect(index)) which
             # maps to [NSView setNeedsDisplayInRect:] — Cocoa always honours that
@@ -1334,9 +1319,13 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
     # ── preview rendering (safe outside paint events) ─────────────────────────
 
     @classmethod
-    def _render_type_preview(cls, type_id, thumb_size):
+    def _render_type_preview(cls, type_id, thumb_size, high_detail=False):
         """
         Build a (thumb_size × thumb_size) QPixmap for *type_id*.
+
+        When *high_detail* is True the sprite is painted at its native pixel
+        resolution then smoothly downscaled, yielding maximum-quality
+        thumbnails on high-DPI displays.
 
         For sprites with a custom SpriteImage class the image is painted;
         for sprites without one (or where the image class raises) the plain
@@ -1348,20 +1337,18 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
         except Exception:
             bg = QtGui.QColor(119, 136, 153)
 
-        pix = QtGui.QPixmap(thumb_size, thumb_size)
-        pix.fill(bg)
-
         from . import spritelib as SLib
         tw    = globals.TileWidth
         scale = tw / 16
 
         proxy = _SpriteTypeProxy(type_id)
+        pix = None
         try:
             # ── build image object ─────────────────────────────────────────
             # Failures fall back to the bare SpriteImage so we always have
             # at least a spritebox to draw.
             image_obj = None
-            if isinstance(type_id, int):
+            if isinstance(type_id, (int, str)):
                 try:
                     imgs      = globals.gamedef.getImageClasses()
                     img_class = imgs.get(type_id)
@@ -1387,15 +1374,20 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
                 w = h = float(tw)
                 br = QtCore.QRectF(0, 0, float(tw), float(tw))
 
+            render_size = int(max(w, h)) if high_detail else thumb_size
+            pix = QtGui.QPixmap(render_size, render_size)
+            pix.fill(bg)
+
             margin = 0.85
-            s  = min(thumb_size / w, thumb_size / h) * margin
-            ox = (thumb_size - w * s) / 2 - br.x() * s
-            oy = (thumb_size - h * s) / 2 - br.y() * s
+            s  = min(render_size / w, render_size / h) * margin
+            ox = (render_size - w * s) / 2 - br.x() * s
+            oy = (render_size - h * s) / 2 - br.y() * s
 
             # ── paint ─────────────────────────────────────────────────────
             painter = QtGui.QPainter(pix)
-            painter.setRenderHint(QtGui.QPainter.Antialiasing)
-            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+            if high_detail:
+                painter.setRenderHint(QtGui.QPainter.Antialiasing)
+                painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             painter.save()
             painter.translate(ox, oy)
             painter.scale(s, s)
@@ -1433,6 +1425,8 @@ class SpritePickerItemDelegate(QtWidgets.QStyledItemDelegate):
                     pass
             proxy.aux.clear()
 
+        if pix is None:
+            pix = QtGui.QPixmap(thumb_size, thumb_size)
         return pix
 
     @classmethod
@@ -1497,7 +1491,11 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
         if spr is not None:
             pix = self._get_preview(spr, size)
             if pix and not pix.isNull():
+                painter.save()
+                if globals.SpriteListPreviewHighDetail:
+                    painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
                 painter.drawPixmap(thumb_rect, pix)
+                painter.restore()
 
         # Text
         text_color = (option.palette.highlightedText().color()
@@ -1516,37 +1514,40 @@ class SpriteListItemDelegate(QtWidgets.QStyledItemDelegate):
 
     def _get_preview(self, spr, thumb_size):
         """Return a cached QPixmap for *spr* at *thumb_size*, rendering on miss."""
-        key    = (thumb_size, id(spr.ImageObj))
+        high_detail = globals.SpriteListPreviewHighDetail
+        key    = (thumb_size, id(spr.ImageObj), high_detail)
         cached = getattr(spr, '_list_preview_cache', None)
         if cached is not None and cached[0] == key:
             return cached[1]
-        pix = self._render_preview(spr, thumb_size)
+        pix = self._render_preview(spr, thumb_size, high_detail)
         spr._list_preview_cache = (key, pix)
         return pix
 
-    def _render_preview(self, spr, thumb_size):
+    def _render_preview(self, spr, thumb_size, high_detail=False):
         """Render the sprite image centred on the canvas background colour."""
         try:
             bg = globals.theme.color('bg')
         except Exception:
             bg = QtGui.QColor(119, 136, 153)
 
-        pix = QtGui.QPixmap(thumb_size, thumb_size)
-        pix.fill(bg)
-
         br = spr.BoundingRect
         w, h = br.width(), br.height()
         if w <= 0 or h <= 0:
-            return pix
+            return QtGui.QPixmap(thumb_size, thumb_size)
+
+        render_size = int(max(w, h)) if high_detail else thumb_size
+        pix = QtGui.QPixmap(render_size, render_size)
+        pix.fill(bg)
 
         margin = 0.85
-        s  = min(thumb_size / w, thumb_size / h) * margin
-        ox = (thumb_size - w * s) / 2 - br.x() * s
-        oy = (thumb_size - h * s) / 2 - br.y() * s
+        s  = min(render_size / w, render_size / h) * margin
+        ox = (render_size - w * s) / 2 - br.x() * s
+        oy = (render_size - h * s) / 2 - br.y() * s
 
         painter = QtGui.QPainter(pix)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
+        if high_detail:
+            painter.setRenderHint(QtGui.QPainter.Antialiasing)
+            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
         painter.save()
         painter.translate(ox, oy)
         painter.scale(s, s)
@@ -1779,7 +1780,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         font.setPointSize(8)
         editbox = QtWidgets.QLabel('Edit Raw Data:')
         editbox.setFont(font)
-        edit = QtWidgets.QLineEdit()
+        edit = HexHighlightEdit()
         edit.setFocusPolicy(Qt.ClickFocus)
         edit.textEdited.connect(self.HandleRawDataEdited)
         self.raweditor = edit
@@ -1793,19 +1794,20 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         self.spriteLabel = QtWidgets.QLabel('-')
         self.spriteLabel.setWordWrap(True)
 
-        self.noteButton = QtWidgets.QToolButton()
-        self.noteButton.setIcon(GetIcon('note'))
-        self.noteButton.setText('Notes')
-        self.noteButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self.noteButton.setAutoRaise(True)
-        self.noteButton.clicked.connect(self.ShowNoteTooltip)
-
         self.relatedObjFilesButton = QtWidgets.QToolButton()
         self.relatedObjFilesButton.setIcon(GetIcon('data'))
         self.relatedObjFilesButton.setText('Object Files')
         self.relatedObjFilesButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.relatedObjFilesButton.setAutoRaise(True)
         self.relatedObjFilesButton.clicked.connect(self.ShowRelatedObjFilesTooltip)
+
+        self.noteButton = QtWidgets.QToolButton()
+        self.noteButton.setIcon(GetIcon('note'))
+        self.noteButton.setText('Notes')
+        self.noteButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.noteButton.setAutoRaise(True)
+        self.noteButton.clicked.connect(self.ShowNoteTooltip)
+        self.noteButton.setVisible(False)
 
         toplayout = QtWidgets.QHBoxLayout()
         toplayout.addWidget(self.spriteLabel)
@@ -1821,9 +1823,20 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         mainLayout.addLayout(toplayout)
         mainLayout.addLayout(subLayout)
 
+        self.noteBox = QtWidgets.QGroupBox()
+        self.notesDisplay = QtWidgets.QTextEdit()
+        self.notesDisplay.setReadOnly(True)
+        self.notesDisplay.setMaximumHeight(100)
+        L = QtWidgets.QVBoxLayout()
+        L.setContentsMargins(4, 4, 4, 4)
+        L.addWidget(self.notesDisplay)
+        self.noteBox.setLayout(L)
+        self.noteBox.setVisible(False)
+
         layout = QtWidgets.QGridLayout()
         self.editorlayout = layout
         subLayout.addLayout(layout)
+        subLayout.addWidget(self.noteBox)
         subLayout.addLayout(editboxlayout)
 
         self.setLayout(mainLayout)
@@ -1849,12 +1862,26 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         self.notes = None
         self.relatedObjFiles = None
         self._tabWidget = None
+        self._behaviorGrid = None
+        self._layerWidgets = []
+        self._initialStateWidget = None
 
         # Multi-select state
         self._multiMode = False       # True when >1 actor is selected
         self._mixedTypeMode = False   # True when selected actors have different types
         self._multiItems = []         # list of SpriteItem references
         self._multiBaseline = ''      # 24-char hex string displayed when multi-mode was set up
+
+    def sizeHint(self):
+        if self._tabWidget is not None and globals.CategorizedSpriteData:
+            tab_py = self._tabWidget.sizeHint()
+            tab_cpp = QtWidgets.QTabWidget.sizeHint(self._tabWidget)
+            hint = self.layout().sizeHint()
+            return QtCore.QSize(
+                hint.width(),
+                hint.height() - tab_cpp.height() + tab_py.height()
+            )
+        return super().sizeHint()
 
     class PropertyDecoder(QtCore.QObject):
         """
@@ -1868,6 +1895,30 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             module-level extract_field_value() so the logic is not duplicated.
             """
             return extract_field_value(data, self.bit)
+
+        def checkReq(self, data):
+            """
+            Checks whether this field's requirement (requirednybble/requiredval)
+            is met by the current data. Hides the field row if not.
+            """
+            required = getattr(self, 'required', None)
+            if required is None:
+                return
+
+            show = True
+            for bit_range, val_range in required:
+                value = extract_field_value(data, bit_range)
+                show = show and val_range[0] <= value < val_range[1]
+
+            layout = getattr(self, 'layout', None)
+            row = getattr(self, 'row', None)
+            if layout is None or row is None:
+                return
+
+            for i in range(layout.columnCount()):
+                w = layout.itemAtPosition(row, i)
+                if w is not None:
+                    w.widget().setVisible(show)
 
         def insertvalue(self, data, value):
             """
@@ -1957,6 +2008,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             """
             Updates the value shown by the widget
             """
+            self.checkReq(data)
             self.widget.setTristate(False)
             value = ((self.retrieve(data) & self.mask) == self.mask)
             self.widget.setChecked(value)
@@ -2018,6 +2070,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             """
             Updates the value shown by the widget
             """
+            self.checkReq(data)
             value = self.retrieve(data)
             if not self.model.existingLookup[value]:
                 self.widget.setCurrentIndex(-1)
@@ -2080,6 +2133,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             """
             Updates the value shown by the widget
             """
+            self.checkReq(data)
             self.widget.setMinimum(0)
             self.widget.setSpecialValueText('')
             value = self.retrieve(data)
@@ -2157,6 +2211,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             """
             Updates the value shown by the widget
             """
+            self.checkReq(data)
             for bitIdx in range(self.bitnum):
                 checkbox = self.widgets[bitIdx]
                 checkbox.setTristate(False)
@@ -2290,29 +2345,378 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                             used.add(val)
             return used
 
+    class StrybblePropertyDecoder(PropertyDecoder):
+        def __init__(self, title, bit, comment, layout, row, editor=None):
+            super().__init__()
+            self._base_comment = comment
+            self.bit = bit
+            num_bits = bit[1] - bit[0]
+            self.num_chars = num_bits // 6
+
+            self.label = QtWidgets.QLabel(title + ':')
+            self.widget = QtWidgets.QLineEdit()
+            self.widget.setFocusPolicy(Qt.ClickFocus)
+
+            if self.num_chars < 1:
+                self.widget.setEnabled(False)
+                self.widget.setPlaceholderText('field too small')
+                self.label.setEnabled(False)
+            else:
+                self._placeholder = 'Write up to {} character{}'.format(
+                    self.num_chars, '' if self.num_chars == 1 else 's')
+                self.widget.setMaxLength(self.num_chars)
+                self.widget.setPlaceholderText(self._placeholder)
+
+            if comment is not None:
+                self.label.setToolTip(comment)
+                self.widget.setToolTip(comment)
+
+            self.widget.textChanged.connect(self.HandleTextChanged)
+
+            layout.addWidget(self.label, row, 0, Qt.AlignRight)
+            layout.addWidget(self.widget, row, 1)
+
+        def _show_error(self, message):
+            self.widget.setStyleSheet(
+                'QLineEdit { border: 2px solid red; }')
+            self.widget.setToolTip(message)
+            if self._base_comment is not None:
+                self.label.setToolTip(
+                    '<b>[name]</b>: [note]'.replace('[name]', self.label.text()[:-1]).replace('[note]', message))
+
+        def _clear_error(self):
+            self.widget.setStyleSheet('')
+            if self._base_comment is not None:
+                self.widget.setToolTip(self._base_comment)
+                self.label.setToolTip(self._base_comment)
+            else:
+                self.widget.setToolTip('')
+                self.label.setToolTip('')
+
+        def _validate_text(self, text):
+            if self.num_chars < 1:
+                return False
+            if not text:
+                self._clear_error()
+                return True
+            try:
+                strybble_encode(text, self.num_chars)
+            except StrybbleEncodeError as e:
+                self._show_error(str(e))
+                return False
+            self._clear_error()
+            return True
+
+        def update(self, data):
+            self.checkReq(data)
+            if self.num_chars < 1:
+                return
+            value = self.retrieve(data)
+            hex_len = self.num_chars * 6 // 4
+            hex_str = format(value, '0{}x'.format(hex_len))
+            try:
+                text = strybble_decode(hex_str, self.num_chars)
+            except Exception:
+                text = ''
+            self.widget.blockSignals(True)
+            self.widget.setText(text)
+            self.widget.blockSignals(False)
+
+        def setMixed(self, mixed):
+            if self.num_chars < 1:
+                return
+            self.widget.blockSignals(True)
+            if mixed:
+                self.widget.setPlaceholderText('—')
+                self.widget.clear()
+            else:
+                self.widget.setPlaceholderText(self._placeholder)
+                self._clear_error()
+            self.widget.blockSignals(False)
+
+        def assign(self, data):
+            if self.num_chars < 1:
+                return data
+            text = self.widget.text()
+            if not text and self.widget.placeholderText():
+                return data
+            if not self._validate_text(text):
+                return data
+            hex_str = strybble_encode(text, self.num_chars)
+            value = int(hex_str, 16)
+            return self.insertvalue(data, value)
+
+        def HandleTextChanged(self, text):
+            if self.num_chars < 1:
+                return
+            if self._validate_text(text):
+                self.updateData.emit(self)
+
+    class DualboxPropertyDecoder(PropertyDecoder):
+        """
+        Class that decodes/encodes sprite data to/from a dualbox (two radio buttons)
+        """
+
+        def __init__(self, title1, title2, bit, comment, layout, row, editor=None):
+            """
+            Creates the widget
+            """
+            super().__init__()
+
+            self.bit = bit
+            self.layout = layout
+            self.row = row
+
+            self.buttons = [QtWidgets.QRadioButton(), QtWidgets.QRadioButton()]
+
+            for button in self.buttons:
+                button.clicked.connect(self.HandleClick)
+
+            label1 = QtWidgets.QLabel(title1)
+            label2 = QtWidgets.QLabel(title2)
+
+            L = QtWidgets.QHBoxLayout()
+            L.addStretch(1)
+            L.addWidget(label1)
+            L.addWidget(self.buttons[0])
+            L.addWidget(QtWidgets.QLabel("|"))
+            L.addWidget(self.buttons[1])
+            L.addWidget(label2)
+            L.addStretch(1)
+            L.setContentsMargins(0, 0, 0, 0)
+
+            widget = QtWidgets.QWidget()
+            widget.setLayout(L)
+
+            layout.addWidget(widget, row, 0, 1, 3)
+
+        def update(self, data):
+            """
+            Updates the value shown by the widget
+            """
+            self.checkReq(data)
+            value = self.retrieve(data) & 1
+
+            self.buttons[value].setChecked(True)
+            self.buttons[not value].setChecked(False)
+
+        def assign(self, data):
+            """
+            Assigns the selected value to the data
+            """
+            value = self.buttons[1].isChecked()
+            return self.insertvalue(data, value)
+
+        def HandleClick(self, clicked=False):
+            """
+            Handles clicks on the radio buttons
+            """
+            self.updateData.emit(self)
+
+    class MultiDualboxPropertyDecoder(PropertyDecoder):
+        """
+        Class that decodes/encodes sprite data to/from a row of dualboxes
+        """
+
+        def __init__(self, title1, title2, bit, comment, layout, row, editor=None):
+            """
+            Creates the widget
+            """
+            super().__init__()
+
+            self.bit = bit
+            self.layout = layout
+            self.row = row
+            self.startbit = bit[0] if isinstance(bit, tuple) else bit
+            self.bitnum = bit[1] - bit[0] if isinstance(bit, tuple) else 1
+
+            self.widgets = []
+            DualboxLayout = QtWidgets.QGridLayout()
+            DualboxLayout.setContentsMargins(0, 0, 0, 0)
+
+            for i in range(self.bitnum):
+                buttons = [QtWidgets.QRadioButton(), QtWidgets.QRadioButton()]
+                buttons[0].clicked.connect(self.HandleClicked)
+                buttons[0].setAutoExclusive(False)
+                buttons[1].clicked.connect(self.HandleClicked)
+                buttons[1].setAutoExclusive(False)
+
+                buttons[0].setChecked(True)
+
+                button_group = QtWidgets.QButtonGroup()
+                button_group.addButton(buttons[0], 1)
+                button_group.addButton(buttons[1], 2)
+
+                self.widgets.append(button_group)
+
+                DualboxLayout.addWidget(buttons[0], 0, i)
+                DualboxLayout.addWidget(buttons[1], 1, i)
+
+            label1 = QtWidgets.QLabel(title1)
+            label2 = QtWidgets.QLabel(title2)
+
+            labels = QtWidgets.QGridLayout()
+            labels.addWidget(label1, 0, 0, Qt.AlignRight)
+            labels.addWidget(label2, 1, 0, Qt.AlignRight)
+
+            labels_widget = QtWidgets.QWidget()
+            labels_widget.setLayout(labels)
+
+            dualbox_widget = QtWidgets.QWidget()
+            dualbox_widget.setLayout(DualboxLayout)
+
+            layout.addWidget(labels_widget, row, 0, Qt.AlignRight)
+            layout.addWidget(dualbox_widget, row, 1, 1, 2)
+
+        def HandleClicked(self, _):
+            """
+            Handles clicks on the radiobutton
+            """
+            self.updateData.emit(self)
+
+        def update(self, data):
+            """
+            Updates the value shown by the widget
+            """
+            self.checkReq(data)
+            value = self.retrieve(data)
+
+            for i in range(self.bitnum - 1, -1, -1):
+                self.widgets[i].button(2).setChecked(value & 1)
+                value >>= 1
+
+        def assign(self, data):
+            """
+            Assigns the checkbox states to the data
+            """
+            value = 0
+
+            for i in range(self.bitnum):
+                value = (value << 1) | (self.widgets[i].checkedId() - 1)
+
+            return self.insertvalue(data, value)
+
     def _make_field_decoder(self, f, layout, row):
         """
         Instantiate the appropriate PropertyDecoder subclass for field tuple f,
         adding its widget(s) to layout at the given row. Returns the decoder, or
         None if the field type is unrecognised.
         """
+        required = f[7] if len(f) > 7 else None
         if f[0] == 0:
-            return SpriteEditorWidget.CheckboxPropertyDecoder(
+            nf = SpriteEditorWidget.CheckboxPropertyDecoder(
                 f[1], f[2], f[3], f[4], layout, row, editor=self)
         elif f[0] == 1:
-            return SpriteEditorWidget.ListPropertyDecoder(
+            nf = SpriteEditorWidget.ListPropertyDecoder(
                 f[1], f[2], f[3], f[4], layout, row, editor=self)
         elif f[0] == 2:
             id_type = f[5] if len(f) > 5 else None
             if id_type is not None:
-                return SpriteEditorWidget.IDValuePropertyDecoder(
+                nf = SpriteEditorWidget.IDValuePropertyDecoder(
                     f[1], f[2], f[3], f[4], id_type, layout, row, editor=self)
-            return SpriteEditorWidget.ValuePropertyDecoder(
-                f[1], f[2], f[3], f[4], layout, row, editor=self)
+            else:
+                nf = SpriteEditorWidget.ValuePropertyDecoder(
+                    f[1], f[2], f[3], f[4], layout, row, editor=self)
         elif f[0] == 3:
-            return SpriteEditorWidget.BitfieldPropertyDecoder(
+            nf = SpriteEditorWidget.BitfieldPropertyDecoder(
                 f[1], f[2], f[3], f[4], layout, row, editor=self)
-        return None
+        elif f[0] == 4:
+            nf = SpriteEditorWidget.StrybblePropertyDecoder(
+                f[1], f[2], f[3], layout, row, editor=self)
+        elif f[0] == 5:
+            nf = SpriteEditorWidget.DualboxPropertyDecoder(
+                f[1], f[2], f[3], f[4], layout, row, editor=self)
+        elif f[0] == 7:
+            nf = SpriteEditorWidget.MultiDualboxPropertyDecoder(
+                f[1], f[2], f[3], f[4], layout, row, editor=self)
+        else:
+            return None
+        nf.required = required
+        nf.layout = layout
+        nf.row = row
+
+        # Install highlight event filter on all interactive widgets in this row
+        for c in range(layout.columnCount()):
+            item = layout.itemAtPosition(row, c)
+            if item is None:
+                continue
+            w = item.widget()
+            if w is None:
+                continue
+            w.installEventFilter(self)
+            w._decoder_ref = nf
+            for child in w.findChildren(QtWidgets.QWidget):
+                child.installEventFilter(self)
+                child._decoder_ref = nf
+
+        # Place a native OS info icon next to the label for fields with
+        # comments, and ensure the label itself also shows the tooltip
+        comment = f[3] if f[0] == 4 else (f[4] if len(f) > 4 else None)
+        if comment is not None and f[0] not in (5, 7) and setting('ShowInfoIcons', True):
+            item = layout.itemAtPosition(row, 0)
+            if item is not None:
+                label = item.widget()
+                if isinstance(label, QtWidgets.QLabel):
+                    label.setToolTip(comment)
+                    layout.removeWidget(label)
+                    container = QtWidgets.QWidget()
+                    hbox = QtWidgets.QHBoxLayout(container)
+                    hbox.setContentsMargins(0, 0, 0, 0)
+                    hbox.setSpacing(3)
+                    hbox.addStretch()
+                    hbox.addWidget(label)
+                    icon = QtWidgets.QLabel()
+                    screen = QtWidgets.QApplication.primaryScreen()
+                    dpr = screen.devicePixelRatio() if screen else 1
+                    sz = max(1, int(14 * dpr))
+                    pixmap = QtWidgets.QApplication.style().standardIcon(
+                        QtWidgets.QStyle.SP_MessageBoxInformation).pixmap(sz, sz)
+                    pixmap.setDevicePixelRatio(dpr)
+                    icon.setPixmap(pixmap)
+                    icon.setFixedSize(14, 14)
+                    icon.setToolTip(comment)
+                    hbox.addWidget(icon)
+                    layout.addWidget(container, row, 0, Qt.AlignRight)
+        return nf
+
+    def _decoder_bit_to_hex_positions(self, decoder):
+        """Map a decoder's bit spec to 0-based formatted-hex character indices."""
+        if isinstance(decoder, SpriteEditorWidget.BitfieldPropertyDecoder):
+            start = decoder.startbit  # 0-indexed
+            end = decoder.startbit + decoder.bitnum
+            start += 1  # convert to 1-indexed
+        elif hasattr(decoder, 'bit'):
+            bit = decoder.bit
+            if isinstance(bit, tuple):
+                start, end = bit
+            else:
+                start = bit
+                end = bit + 1
+        else:
+            return set()
+
+        start_nybble = (start - 1) // 4
+        end_nybble = (end - 2) // 4 + 1
+
+        positions = set()
+        for nybble in range(start_nybble, end_nybble):
+            byte_idx = nybble // 2
+            high_or_low = nybble % 2
+            pos = byte_idx * 2 + byte_idx // 2 + high_or_low
+            positions.add(pos)
+        return positions
+
+    def eventFilter(self, obj, event):
+        if event.type() in (QtCore.QEvent.Enter, QtCore.QEvent.FocusIn):
+            decoder = getattr(obj, '_decoder_ref', None)
+            if decoder is not None:
+                positions = self._decoder_bit_to_hex_positions(decoder)
+                if isinstance(self.raweditor, HexHighlightEdit):
+                    self.raweditor.setHighlight(positions)
+        elif event.type() in (QtCore.QEvent.Leave, QtCore.QEvent.FocusOut):
+            if isinstance(self.raweditor, HexHighlightEdit):
+                self.raweditor.clearHighlight()
+        return super().eventFilter(obj, event)
 
     # ------------------------------------------------------------------
     # Multi-select helpers
@@ -2391,21 +2795,10 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         self._applyMixedStates(diff)
 
         layers = set(it.layer for it in items)
-        self.activeLayer.blockSignals(True)
-        self.activeLayer.setCurrentIndex(next(iter(layers)) if len(layers) == 1 else -1)
-        self.activeLayer.blockSignals(False)
+        self._set_layer_value_multi(layers)
 
         states = set(it.initialState for it in items)
-        self.initialState.blockSignals(True)
-        if len(states) == 1:
-            self.initialState.setMinimum(0)
-            self.initialState.setSpecialValueText('')
-            self.initialState.setValue(next(iter(states)))
-        else:
-            self.initialState.setMinimum(-1)
-            self.initialState.setSpecialValueText('—')
-            self.initialState.setValue(-1)
-        self.initialState.blockSignals(False)
+        self._set_initialstate_value_multi(states)
 
     def setMixedActors(self, items):
         """Set up the editor for multiple actors of DIFFERENT types (raw only)."""
@@ -2417,6 +2810,10 @@ class SpriteEditorWidget(QtWidgets.QWidget):
 
         layout = self.editorlayout
         if self._tabWidget is not None:
+            for w in (self.initialState, self.activeLayer):
+                w.setParent(self)
+                w.setVisible(False)
+            
             layout.removeWidget(self._tabWidget)
             self._tabWidget.hide()
             self._tabWidget.deleteLater()
@@ -2430,7 +2827,8 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                     w.setParent(None)
         self.fields = []
 
-        self.spriteLabel.setText('<b>Editing multiple actors</b>')
+        self.spriteLabel.setText(f'<b>Editing {len(items)} actors</b>')
+        self.noteBox.setVisible(False)
         self.noteButton.setVisible(False)
         self.relatedObjFilesButton.setVisible(False)
 
@@ -2463,11 +2861,16 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             sprite = None
 
         layout = self.editorlayout
+        self._behaviorGrid = None
 
         # Explicitly clean up any categorized tab widget from a previous call
         # before the general cleanup loop, to prevent it from briefly appearing
         # as a floating top-level window.
         if self._tabWidget is not None:
+            # Reparent shared widgets out of the tab so they survive deletion
+            for w in (self.initialState, self.activeLayer):
+                w.setParent(self)
+                w.setVisible(False)
             layout.removeWidget(self._tabWidget)
             self._tabWidget.hide()
             self._tabWidget.deleteLater()
@@ -2484,6 +2887,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
 
         if sprite is None:
             self.spriteLabel.setText('<b>Unidentified/Unknown Actor ([id])</b>'.replace('[id]', str(type)))
+            self.noteBox.setVisible(False)
             self.noteButton.setVisible(False)
 
             self.raweditor.setVisible(True)
@@ -2499,8 +2903,19 @@ class SpriteEditorWidget(QtWidgets.QWidget):
 
             self.spriteLabel.setText('<b>Actor [id]:<br>[name]</b>'.replace('[id]', str(display_id)).replace('[name]', str(sprite.name)))
 
-            self.noteButton.setVisible(sprite.notes is not None)
             self.notes = sprite.notes
+
+            if sprite.notes is not None:
+                if setting('ShowActorNotes', True):
+                    self.notesDisplay.setHtml(sprite.notes)
+                    self.noteBox.setVisible(True)
+                    self.noteButton.setVisible(False)
+                else:
+                    self.noteButton.setVisible(True)
+                    self.noteBox.setVisible(False)
+            else:
+                self.noteBox.setVisible(False)
+                self.noteButton.setVisible(False)
 
             self.relatedObjFilesButton.setVisible(sprite.relatedObjFiles is not None)
             self.relatedObjFiles = sprite.relatedObjFiles
@@ -2512,12 +2927,25 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                 # Group fields by their XML-defined category (f[6]).  Builtin categories
                 # appear first in a fixed order; any custom mod categories follow
                 # alphabetically; uncategorized fields (no category attribute) come last.
+
+                # Collect categories needed by layer/initialstate overrides
+                override_cats = set()
+                if sprite.layer_defs:
+                    for ld in sprite.layer_defs:
+                        cat = ld.get('category')
+                        override_cats.add(cat if cat else 'uncategorized')
+                if sprite.initialstate_def:
+                    cat = sprite.initialstate_def.get('category')
+                    override_cats.add(cat if cat else 'uncategorized')
+
                 _BUILTIN = [('behavior', 'Behavior'), ('movement', 'Movement'), ('events', 'Events')]
                 _BUILTIN_KEYS = {k for k, _ in _BUILTIN}
 
                 seen: dict = {}
                 for f in sprite.fields:
                     cat = f[6] if len(f) > 6 and f[6] else 'uncategorized'
+                    seen.setdefault(cat, None)
+                for cat in override_cats:
                     seen.setdefault(cat, None)
 
                 CATEGORY_ORDER = []
@@ -2535,16 +2963,33 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                     cat = f[6] if len(f) > 6 and f[6] else 'uncategorized'
                     grouped[cat].append(f)
 
-                tabWidget = QtWidgets.QTabWidget()
+                class _CurrentTabSizedTabWidget(QtWidgets.QTabWidget):
+                    def sizeHint(self):
+                        w = self.currentWidget()
+                        if w is None:
+                            return super().sizeHint()
+                        page = w.sizeHint()
+                        bar = self.tabBar().sizeHint()
+                        return QtCore.QSize(
+                            max(page.width(), bar.width()),
+                            page.height() + bar.height()
+                        )
+
+                tabWidget = _CurrentTabSizedTabWidget()
+                tabWidget.setTabBarAutoHide(True)
                 self._tabWidget = tabWidget
+                self._categoryGrids = {}
 
                 for cat_key, cat_label in CATEGORY_ORDER:
                     cat_fields = grouped[cat_key]
-                    if not cat_fields:
+                    if not cat_fields and cat_key not in override_cats:
                         continue
                     tab = QtWidgets.QWidget()
                     grid = QtWidgets.QGridLayout(tab)
                     grid.setContentsMargins(4, 4, 4, 4)
+                    if cat_key == 'behavior':
+                        self._behaviorGrid = grid
+                    self._categoryGrids[cat_key] = grid
                     tab_row = 0
                     for f in cat_fields:
                         nf = self._make_field_decoder(f, grid, tab_row)
@@ -2554,6 +2999,34 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                         fields.append(nf)
                         tab_row += 1
                     tabWidget.addTab(tab, cat_label)
+
+                # Normalize column widths across all categorized tabs so labels
+                # and input widgets don't jump horizontally when switching tabs.
+                _tab_grids = [
+                    tabWidget.widget(i).layout()
+                    for i in range(tabWidget.count())
+                    if isinstance(tabWidget.widget(i).layout(), QtWidgets.QGridLayout)
+                ]
+                _max_c0 = 0
+                _max_c1 = 0
+                for g in _tab_grids:
+                    for r in range(g.rowCount()):
+                        i0 = g.itemAtPosition(r, 0)
+                        i1 = g.itemAtPosition(r, 1)
+                        if i0 is not None and i0 is i1:
+                            continue
+                        if i0 is not None and i0.widget() is not None:
+                            _max_c0 = max(_max_c0, i0.widget().sizeHint().width())
+                        if i1 is not None and i1.widget() is not None:
+                            _max_c1 = max(_max_c1, i1.widget().sizeHint().width())
+                for g in _tab_grids:
+                    g.setColumnMinimumWidth(0, _max_c0)
+                    g.setColumnMinimumWidth(1, _max_c1)
+                    g.setColumnStretch(1, 1)
+
+                def _on_tab_changed():
+                    QtCore.QTimer.singleShot(0, globals.mainWindow._lockFloatingHeight)
+                tabWidget.currentChanged.connect(_on_tab_changed)
 
                 self.fields = fields
                 layout.addWidget(tabWidget, 2, 0, 1, 2)
@@ -2571,13 +3044,297 @@ class SpriteEditorWidget(QtWidgets.QWidget):
                     row += 1
                 self.fields = fields
 
-            layout.addWidget(createHorzLine(), row, 0, 1, 2); row += 1
+            # Determine which grid each override section belongs in.
+            # In categorized mode the override's category attribute selects
+            # the tab; otherwise everything goes to the default grid.
+            def _grid_for_override(defn):
+                if defn is not None and globals.CategorizedSpriteData and hasattr(self, '_categoryGrids'):
+                    cat = defn.get('category')
+                    key = cat if cat else 'uncategorized'
+                    if key in self._categoryGrids:
+                        return self._categoryGrids[key]
+                return self._behaviorGrid if self._behaviorGrid is not None else layout
 
+            layer_defn = sprite.layer_defs[0] if sprite.layer_defs else None
+            is_defn = sprite.initialstate_def
+
+            layer_is_custom = bool(sprite.layer_defs)
+            initialstate_is_custom = sprite.initialstate_def is not None
+
+            # Customised sections go in their category-specific grid
+            if layer_is_custom:
+                target = _grid_for_override(layer_defn)
+                trow = target.rowCount()
+                self._make_layer_section(target, trow, sprite)
+
+            if initialstate_is_custom:
+                target = _grid_for_override(is_defn)
+                trow = target.rowCount()
+                self._make_initialstate_section(target, trow, sprite)
+
+            # Default sections always go to the behaviour/default grid
+            default_grid = self._behaviorGrid if self._behaviorGrid is not None else layout
+            trow = default_grid.rowCount()
+
+            if not (layer_is_custom and initialstate_is_custom):
+                default_grid.addWidget(createHorzLine(), trow, 0, 1, 2); trow += 1
+
+            if not layer_is_custom:
+                trow = self._make_layer_section(default_grid, trow, sprite)
+            if not initialstate_is_custom:
+                self._make_initialstate_section(default_grid, trow, sprite)
+
+    # ------------------------------------------------------------------
+    # Layer / Initial State override helpers
+    # ------------------------------------------------------------------
+
+    def _build_override_widget(self, defn, layout, row, default_label, default_range):
+        comment = defn.get('comment')
+        widget_type = defn.get('type', 'value')
+
+        if widget_type == 'dualbox':
+            title1 = defn.get('title1', '')
+            title2 = defn.get('title2', '')
+
+            label1 = QtWidgets.QLabel(title1 + ':')
+            label2 = QtWidgets.QLabel(title2 + ':')
+
+            buttons = [QtWidgets.QRadioButton(), QtWidgets.QRadioButton()]
+            buttons[0].setChecked(True)
+
+            L = QtWidgets.QHBoxLayout()
+            L.setContentsMargins(0, 0, 0, 0)
+            L.addWidget(label1)
+            L.addWidget(buttons[0])
+            L.addWidget(QtWidgets.QLabel("|"))
+            L.addWidget(buttons[1])
+            L.addWidget(label2)
+            L.addStretch(1)
+
+            widget = QtWidgets.QWidget()
+            widget.setLayout(L)
+            widget._buttons = buttons
+
+            if comment:
+                widget.setToolTip(comment)
+
+            layout.addWidget(widget, row, 0, 1, 2)
+            return widget
+
+        title = (defn.get('title') or default_label).rstrip(':')
+        label = QtWidgets.QLabel(title + ':')
+        if comment:
+            label.setToolTip(comment)
+
+        if widget_type == 'list':
+            widget = QtWidgets.QComboBox()
+            widget.setFocusPolicy(Qt.ClickFocus)
+            for val, text in (defn.get('entries') or []):
+                widget.addItem(text, val)
+            if comment:
+                widget.setToolTip(comment)
+        elif widget_type == 'checkbox':
+            widget = QtWidgets.QCheckBox()
+            widget.setFocusPolicy(Qt.ClickFocus)
+            if comment:
+                widget.setToolTip(comment)
+        else:
+            widget = QtWidgets.QSpinBox()
+            widget.setFocusPolicy(Qt.ClickFocus)
+            widget.setRange(*default_range)
+            if comment:
+                widget.setToolTip(comment)
+
+        layout.addWidget(label, row, 0, Qt.AlignRight)
+        layout.addWidget(widget, row, 1)
+        return widget
+
+    def _override_set_value(self, widget, value):
+        if hasattr(widget, '_buttons'):
+            widget._buttons[bool(value) & 1].setChecked(True)
+        elif isinstance(widget, QtWidgets.QComboBox):
+            idx = widget.findData(value)
+            if idx >= 0:
+                widget.setCurrentIndex(idx)
+            else:
+                # Value doesn't match any entry; default to first entry
+                widget.setCurrentIndex(0)
+        elif isinstance(widget, QtWidgets.QCheckBox):
+            widget.setChecked(bool(value))
+        elif isinstance(widget, QtWidgets.QSpinBox):
+            widget.setValue(value)
+
+    def _override_get_value(self, widget):
+        if hasattr(widget, '_buttons'):
+            return 1 if widget._buttons[1].isChecked() else 0
+        elif isinstance(widget, QtWidgets.QComboBox):
+            val = widget.currentData()
+            return val if val is not None else 0
+        elif isinstance(widget, QtWidgets.QCheckBox):
+            return 1 if widget.isChecked() else 0
+        elif isinstance(widget, QtWidgets.QSpinBox):
+            return widget.value()
+        return 0
+
+    def _make_layer_section(self, layout, row, sprite):
+        layer_defs = sprite.layer_defs if sprite else []
+        if layer_defs:
+            self._layerWidgets = []
+            for defn in layer_defs:
+                # Each layer definition may target a different category tab
+                target = layout
+                if globals.CategorizedSpriteData and hasattr(self, '_categoryGrids'):
+                    cat = defn.get('category')
+                    key = cat if cat else 'uncategorized'
+                    if key in self._categoryGrids:
+                        target = self._categoryGrids[key]
+                trow = target.rowCount()
+                mask = defn.get('mask')
+                if mask is not None:
+                    max_val = mask_max_value(mask)
+                    default_range = (0, max_val)
+                else:
+                    default_range = (0, 255)
+                widget = self._build_override_widget(defn, target, trow, 'Layer', default_range)
+                self._layerWidgets.append((widget, mask))
+                if hasattr(widget, '_buttons'):
+                    for b in widget._buttons:
+                        b.clicked.connect(self._on_layer_changed)
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    widget.activated.connect(self._on_layer_changed)
+                elif isinstance(widget, QtWidgets.QCheckBox):
+                    widget.toggled.connect(self._on_layer_changed)
+                elif isinstance(widget, QtWidgets.QSpinBox):
+                    widget.valueChanged.connect(self._on_layer_changed)
+        else:
+            self._layerWidgets = []
             layout.addWidget(QtWidgets.QLabel('Layer:'), row, 0, Qt.AlignRight)
-            layout.addWidget(self.activeLayer, row, 1); row += 1
+            layout.addWidget(self.activeLayer, row, 1)
+            self.activeLayer.setVisible(True)
+            row += 1
+        return row
 
+    def _make_initialstate_section(self, layout, row, sprite):
+        defn = sprite.initialstate_def if sprite else None
+        if defn is not None:
+            self._initialStateWidget = self._build_override_widget(defn, layout, row, 'Initial State', (0, 255))
+            if hasattr(self._initialStateWidget, '_buttons'):
+                for b in self._initialStateWidget._buttons:
+                    b.clicked.connect(lambda: self._on_initialstate_changed(self._override_get_value(self._initialStateWidget)))
+            elif isinstance(self._initialStateWidget, QtWidgets.QComboBox):
+                self._initialStateWidget.activated.connect(
+                    lambda idx: self._on_initialstate_changed(self._initialStateWidget.itemData(idx)))
+            elif isinstance(self._initialStateWidget, QtWidgets.QCheckBox):
+                self._initialStateWidget.toggled.connect(
+                    lambda chk: self._on_initialstate_changed(1 if chk else 0))
+            elif isinstance(self._initialStateWidget, QtWidgets.QSpinBox):
+                self._initialStateWidget.valueChanged.connect(self._on_initialstate_changed)
+        else:
+            self._initialStateWidget = None
             layout.addWidget(QtWidgets.QLabel('Initial State:'), row, 0, Qt.AlignRight)
             layout.addWidget(self.initialState, row, 1)
+            self.initialState.setVisible(True)
+
+    def setLayerOverrideValue(self, layer_byte):
+        if self._layerWidgets:
+            for widget, mask in self._layerWidgets:
+                widget.blockSignals(True)
+                if mask is not None:
+                    val = extract_mask_value(layer_byte, mask)
+                else:
+                    val = layer_byte
+                self._override_set_value(widget, val)
+                widget.blockSignals(False)
+        else:
+            self.activeLayer.blockSignals(True)
+            self.activeLayer.setCurrentIndex(layer_byte if 0 <= layer_byte <= 2 else -1)
+            self.activeLayer.blockSignals(False)
+
+    def setInitialStateOverrideValue(self, value):
+        if self._initialStateWidget is not None:
+            self._override_set_value(self._initialStateWidget, value)
+        else:
+            self.initialState.blockSignals(True)
+            self.initialState.setValue(value)
+            self.initialState.blockSignals(False)
+
+    def _on_layer_changed(self, *_args):
+        layer_byte = self._get_layer_byte_from_widgets()
+        if layer_byte < 0:
+            return
+        if hasattr(globals, 'mainWindow') and globals.mainWindow:
+            globals.mainWindow.SpriteLayerUpdated(layer_byte)
+
+    def _get_layer_byte_from_widgets(self):
+        if not self._layerWidgets:
+            return -1
+        layer_byte = 0
+        for widget, mask in self._layerWidgets:
+            val = self._override_get_value(widget)
+            if mask is not None:
+                layer_byte = insert_mask_value(layer_byte, mask, val)
+            else:
+                layer_byte = val
+        return layer_byte
+
+    def _on_initialstate_changed(self, value):
+        if value < 0:
+            return
+        if hasattr(globals, 'mainWindow') and globals.mainWindow:
+            globals.mainWindow.SpriteInitialStateUpdated(value)
+
+    def _set_layer_value_multi(self, values):
+        if self._layerWidgets:
+            for widget, mask in self._layerWidgets:
+                widget.blockSignals(True)
+                if mask is not None:
+                    sub_vals = {extract_mask_value(v, mask) for v in values}
+                else:
+                    sub_vals = values
+                is_mixed = len(sub_vals) != 1
+                if is_mixed:
+                    if isinstance(widget, QtWidgets.QComboBox):
+                        widget.setCurrentIndex(-1)
+                    elif isinstance(widget, QtWidgets.QCheckBox):
+                        widget.setTristate(True)
+                        widget.setCheckState(Qt.PartiallyChecked)
+                else:
+                    if isinstance(widget, QtWidgets.QCheckBox):
+                        widget.setTristate(False)
+                    self._override_set_value(widget, next(iter(sub_vals)))
+                widget.blockSignals(False)
+        else:
+            self.activeLayer.blockSignals(True)
+            self.activeLayer.setCurrentIndex(next(iter(values)) if len(values) == 1 else -1)
+            self.activeLayer.blockSignals(False)
+
+    def _set_initialstate_value_multi(self, values):
+        if self._initialStateWidget is not None:
+            is_mixed = len(values) != 1
+            widget = self._initialStateWidget
+            widget.blockSignals(True)
+            if is_mixed:
+                if isinstance(widget, QtWidgets.QComboBox):
+                    widget.setCurrentIndex(-1)
+                elif isinstance(widget, QtWidgets.QCheckBox):
+                    widget.setTristate(True)
+                    widget.setCheckState(Qt.PartiallyChecked)
+            else:
+                if isinstance(widget, QtWidgets.QCheckBox):
+                    widget.setTristate(False)
+                self._override_set_value(widget, next(iter(values)))
+            widget.blockSignals(False)
+        else:
+            self.initialState.blockSignals(True)
+            if len(values) == 1:
+                self.initialState.setMinimum(0)
+                self.initialState.setSpecialValueText('')
+                self.initialState.setValue(next(iter(values)))
+            else:
+                self.initialState.setMinimum(-1)
+                self.initialState.setSpecialValueText('—')
+                self.initialState.setValue(-1)
+            self.initialState.blockSignals(False)
 
     def update(self):
         """
@@ -2715,6 +3472,62 @@ class SpriteEditorWidget(QtWidgets.QWidget):
             f.update(data)
         self.UpdateFlag = False
         self.DataUpdate.emit(data)
+
+class HexHighlightEdit(QtWidgets.QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._highlight_positions = set()
+
+    def setHighlight(self, positions):
+        self._highlight_positions = set(positions)
+        self.update()
+
+    def clearHighlight(self):
+        self._highlight_positions.clear()
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        opt = QtWidgets.QStyleOptionFrame()
+        self.initStyleOption(opt)
+
+        # Background + frame (Qt's standard line edit look)
+        self.style().drawPrimitive(
+            QtWidgets.QStyle.PE_PanelLineEdit, opt, painter, self)
+
+        text = self.text()
+        if not text:
+            return
+
+        text_rect = self.style().subElementRect(
+            QtWidgets.QStyle.SE_LineEditContents, opt, self)
+
+        # Highlight rects behind specific characters
+        if self._highlight_positions:
+            fm = self.fontMetrics()
+            for pos in sorted(self._highlight_positions):
+                if pos >= len(text):
+                    continue
+                offset = fm.horizontalAdvance(text[:pos])
+                char_width = max(fm.horizontalAdvance(text[pos]), 1)
+                ch = text_rect.left() + offset
+                color = self.palette().highlight().color()
+                color.setAlpha(120)
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QtGui.QBrush(color))
+                painter.drawRoundedRect(
+                    QtCore.QRectF(ch, text_rect.top() + 1,
+                                  char_width, text_rect.height() - 2),
+                    2, 2)
+
+        # Text via Qt's own method for pixel-perfect alignment
+        self.style().drawItemText(painter, text_rect,
+                                  Qt.AlignLeft | Qt.AlignVCenter,
+                                  opt.palette, self.isEnabled(),
+                                  text, QtGui.QPalette.Text)
+
 
 class EntranceEditorWidget(QtWidgets.QWidget):
     """
@@ -3644,7 +4457,7 @@ class LocationEditorWidget(QtWidgets.QWidget):
         self.UpdateFlag = False
 
     def FixTitle(self):
-        self.editingLabel.setText('<b>Location [id]:</b>'.replace('[id]', str(self.loc.id)))
+        self.editingLabel.setText('<b>Location [id]</b>'.replace('[id]', str(self.loc.id)))
 
     def _locTargets(self):
         return self._multiItems if self._multiMode else ([self.loc] if self.loc else [])
@@ -3959,7 +4772,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
         if eventButton == Qt.MidButton:
             self.__prevMousePos = event.pos()
-            QtWidgets.QGraphicsView.mousePressEvent(self, event)
+            event.accept()
 
         elif eventButton == Qt.RightButton:
             if globals.CurrentPaintType in (0, 1, 2, 3) and globals.CurrentObject != -1:
@@ -5274,12 +6087,17 @@ class GameAndModsMenu(QtWidgets.QMenu):
         mods = _gd.getAvailableMods()
         self._hasMods = bool(mods)
         for def_, folder in mods:
+            is_broken = bool(getattr(def_, 'error', None))
             act = QtWidgets.QAction(def_.name, self)
-            act.setToolTip(def_.description)
-            act.setCheckable(True)
-            act.setChecked(folder in current_mods)
             act.setData(('mod', folder))
-            act.toggled.connect(self._onModToggled)
+            if is_broken:
+                act.setEnabled(False)
+                act.setToolTip(f'⚠ {def_.error}')
+            else:
+                act.setToolTip(def_.description)
+                act.setCheckable(True)
+                act.setChecked(folder in current_mods)
+                act.toggled.connect(self._onModToggled)
             self.addAction(act)
 
         if mods:

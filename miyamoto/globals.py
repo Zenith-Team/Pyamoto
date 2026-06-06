@@ -105,6 +105,7 @@ SPRITE_PREVIEW_SMALL = 24
 SPRITE_PREVIEW_MEDIUM = 40
 SPRITE_PREVIEW_LARGE = 56
 SpriteListPreviewSize = SPRITE_PREVIEW_DISABLED
+SpriteListPreviewHighDetail = False
 PaintingEntrance = None
 PaintingEntranceListIndex = None
 NumberFont = None
@@ -121,6 +122,8 @@ UseRGBA8 = False
 NumSprites = 0
 TilesetEdited = False
 IsNSMBUDX = False
+UseOuterSarcFormat = False
+ModifyInnerName = False
 
 # user_data_path must be resolved before miyamoto_path so it can be included
 # in the miyamotodata search candidates (downloaded data lives here).

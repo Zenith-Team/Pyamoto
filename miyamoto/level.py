@@ -179,6 +179,14 @@ class Level_NSMBU(AbstractLevel):
                     print(f"migrating sprite id {spriteidold} aka {spritename} to {spriteidnew} aka {self.id_manager.get_string_for_id(spriteidnew)}")
                     sprite.type = spriteidnew # TODO: This doesn't update the number shown in the UI until a reload
             print("finished spriteid migration")
+
+            # Re-init sprites whose type was updated by migration so they
+            # pick up the correct image class (InitializeSprite ran during
+            # SpriteItem.__init__ before string_to_int was populated).
+            for area in self.areas:
+                for sp in area.sprites:
+                    sp.InitializeSprite()
+
             # TODO: Show a popup, but only if the migration changed anything
 
         except Exception as e:
@@ -186,7 +194,7 @@ class Level_NSMBU(AbstractLevel):
 
         return True
 
-    def save(self):
+    def save(self, innerfilename=None):
         """
         Save the level back to a file
         """
@@ -228,7 +236,101 @@ class Level_NSMBU(AbstractLevel):
             if L2 is not None:
                 courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
 
-        # Add all the other stuff, too
+        # Save the sprite map (always goes in the inner SARC)
+        spritemap_data = self.id_manager.get_save_data_binary()
+        if spritemap_data:
+            newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
+
+        # Outer SARC format (Miyamoto-style wrapping)
+        if globals.UseOuterSarcFormat and innerfilename:
+            innersarc = newArchive.save()[0]
+            globals.szsData[innerfilename] = innersarc
+
+            outerArchive = SarcLib.SARC_Archive()
+            outerArchive.addFile(SarcLib.File(innerfilename, innersarc))
+            outerArchive.addFile(SarcLib.File('levelname', innerfilename.encode('utf-8')))
+            globals.szsData['levelname'] = innerfilename.encode('utf-8')
+
+            self._add_files_to_archive(outerArchive, (innerfilename, 'levelname'))
+
+            return outerArchive.save()[0]
+
+        # Default flat format: add sprites/tilesets to the same archive
+        self._add_files_to_archive(newArchive)
+
+        return newArchive.save()[0]
+
+    def saveNewArea(self, course_new, L0_new, L1_new, L2_new, innerfilename=None):
+        """
+        Save the level back to a file (when adding a new or deleting an existing Area)
+        """
+
+        # Make a new archive (inner SARC)
+        newArchive = SarcLib.SARC_Archive()
+
+        # Create a folder within the archive
+        courseFolder = SarcLib.Folder('course')
+        newArchive.addFolder(courseFolder)
+
+        # Go through the areas, save them and add them back to the archive
+        for areanum, area in enumerate(self.areas):
+            course, L0, L1, L2 = area.save(True)
+
+            if course is not None:
+                courseFolder.addFile(SarcLib.File('course%d.bin' % (areanum + 1), course))
+            if L0 is not None:
+                courseFolder.addFile(SarcLib.File('course%d_bgdatL0.bin' % (areanum + 1), L0))
+            if L1 is not None:
+                courseFolder.addFile(SarcLib.File('course%d_bgdatL1.bin' % (areanum + 1), L1))
+            if L2 is not None:
+                courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
+
+        if course_new is not None:
+            courseFolder.addFile(SarcLib.File('course%d.bin' % (len(self.areas) + 1), course_new))
+        if L0_new is not None:
+            courseFolder.addFile(SarcLib.File('course%d_bgdatL0.bin' % (len(self.areas) + 1), L0_new))
+        if L1_new is not None:
+            courseFolder.addFile(SarcLib.File('course%d_bgdatL1.bin' % (len(self.areas) + 1), L1_new))
+        if L2_new is not None:
+            courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (len(self.areas) + 1), L2_new))
+
+        # Save the sprite map
+        spritemap_data = self.id_manager.get_save_data_binary()
+        if spritemap_data:
+            newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
+
+        # Outer SARC format (Miyamoto-style wrapping)
+        if globals.UseOuterSarcFormat and innerfilename:
+            innersarc = newArchive.save()[0]
+            globals.szsData[innerfilename] = innersarc
+
+            outerArchive = SarcLib.SARC_Archive()
+            outerArchive.addFile(SarcLib.File(innerfilename, innersarc))
+            outerArchive.addFile(SarcLib.File('levelname', innerfilename.encode('utf-8')))
+            globals.szsData['levelname'] = innerfilename.encode('utf-8')
+
+            for szsThingName in globals.szsData:
+                if szsThingName in (innerfilename, 'levelname'):
+                    continue
+                outerArchive.addFile(SarcLib.File(szsThingName, globals.szsData[szsThingName]))
+
+            return outerArchive.save()[0]
+
+        # Default flat format
+        for szsThingName in globals.szsData:
+            newArchive.addFile(SarcLib.File(szsThingName, globals.szsData[szsThingName]))
+
+        return newArchive.save()[0]
+
+    def _add_files_to_archive(self, archive, skip=None):
+        """Resolve sprite and tileset files and add them to *archive*.
+
+        When *skip* is given, any key in that iterable is omitted from the
+        fallback copy (used for the outer-SARC format where the inner SARC
+        and levelname live directly in *archive* already).
+        """
+        skip = skip or ()
+
         if os.path.isdir(globals.actor_data_path):
             szsNewData = {}
 
@@ -281,19 +383,33 @@ class Level_NSMBU(AbstractLevel):
 
             sprites_names = list(set(sprites_names))
 
+            # Resolve patch data folders for sprite resource lookup
+            data_folders = globals.gamedef.recursiveFiles('data', False, True) if globals.gamedef else []
+
             # Look up each needed file and add it to our archive
             for sprite_name in sprites_names:
                 # Get it from inside the original archive
                 if not globals.OverwriteSprite and sprite_name in globals.szsData:
-                    newArchive.addFile(SarcLib.File(sprite_name, globals.szsData[sprite_name]))
+                    archive.addFile(SarcLib.File(sprite_name, globals.szsData[sprite_name]))
                     szsNewData[sprite_name] = globals.szsData[sprite_name]
+
+                # Get it from patch data folders (most specific first)
+                elif any(os.path.isfile(os.path.join(f, sprite_name)) for f in reversed(data_folders)):
+                    for folder in reversed(data_folders):
+                        fpath = os.path.join(folder, sprite_name)
+                        if os.path.isfile(fpath):
+                            with open(fpath, 'rb') as f:
+                                f1 = f.read()
+                            archive.addFile(SarcLib.File(sprite_name, f1))
+                            szsNewData[sprite_name] = f1
+                            break
 
                 # Get it from the "custom" data folder
                 elif os.path.isfile(os.path.join(globals.actor_data_path, 'custom', sprite_name)):
                     with open(os.path.join(globals.actor_data_path, 'custom', sprite_name), 'rb') as f:
                         f1 = f.read()
 
-                    newArchive.addFile(SarcLib.File(sprite_name, f1))
+                    archive.addFile(SarcLib.File(sprite_name, f1))
                     szsNewData[sprite_name] = f1
 
                 # Get it from the data folder
@@ -301,7 +417,7 @@ class Level_NSMBU(AbstractLevel):
                     with open(os.path.join(globals.actor_data_path, sprite_name), 'rb') as f:
                         f1 = f.read()
 
-                    newArchive.addFile(SarcLib.File(sprite_name, f1))
+                    archive.addFile(SarcLib.File(sprite_name, f1))
                     szsNewData[sprite_name] = f1
 
                 # Throw a warning because the file was not found...
@@ -312,7 +428,7 @@ class Level_NSMBU(AbstractLevel):
             # Add each tileset to our archive
             for tileset_name in tilesets_names:
                 if tileset_name in globals.szsData:
-                    newArchive.addFile(SarcLib.File(tileset_name, globals.szsData[tileset_name]))
+                    archive.addFile(SarcLib.File(tileset_name, globals.szsData[tileset_name]))
                     szsNewData[tileset_name] = globals.szsData[tileset_name]
 
             # Add the other default Pa0 tilesets to our new dict
@@ -323,60 +439,7 @@ class Level_NSMBU(AbstractLevel):
             globals.szsData = szsNewData
 
         else:
-            # data folder not found, copy the files
             for szsThingName in globals.szsData:
-                newArchive.addFile(SarcLib.File(szsThingName, globals.szsData[szsThingName]))
-
-        # Save the sprite map
-        spritemap_data = self.id_manager.get_save_data_binary()
-        if spritemap_data:
-            newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
-
-        # Save the archive and return it
-        return newArchive.save()[0]
-
-    def saveNewArea(self, course_new, L0_new, L1_new, L2_new):
-        """
-        Save the level back to a file (when adding a new or deleting an existing Area)
-        """
-
-        # Make a new archive
-        newArchive = SarcLib.SARC_Archive()
-
-        # Create a folder within the archive
-        courseFolder = SarcLib.Folder('course')
-        newArchive.addFolder(courseFolder)
-
-        # Go through the areas, save them and add them back to the archive
-        for areanum, area in enumerate(self.areas):
-            course, L0, L1, L2 = area.save(True)
-
-            if course is not None:
-                courseFolder.addFile(SarcLib.File('course%d.bin' % (areanum + 1), course))
-            if L0 is not None:
-                courseFolder.addFile(SarcLib.File('course%d_bgdatL0.bin' % (areanum + 1), L0))
-            if L1 is not None:
-                courseFolder.addFile(SarcLib.File('course%d_bgdatL1.bin' % (areanum + 1), L1))
-            if L2 is not None:
-                courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
-
-        if course_new is not None:
-            courseFolder.addFile(SarcLib.File('course%d.bin' % (len(self.areas) + 1), course_new))
-        if L0_new is not None:
-            courseFolder.addFile(SarcLib.File('course%d_bgdatL0.bin' % (len(self.areas) + 1), L0_new))
-        if L1_new is not None:
-            courseFolder.addFile(SarcLib.File('course%d_bgdatL1.bin' % (len(self.areas) + 1), L1_new))
-        if L2_new is not None:
-            courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (len(self.areas) + 1), L2_new))
-
-        # Add all the other stuff, too
-        for szsThingName in globals.szsData:
-            newArchive.addFile(SarcLib.File(szsThingName, globals.szsData[szsThingName]))
-
-        # Save the sprite map
-        spritemap_data = self.id_manager.get_save_data_binary()
-        if spritemap_data:
-            newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
-
-        # Save the archive and return it
-        return newArchive.save()[0]
+                if szsThingName in skip:
+                    continue
+                archive.addFile(SarcLib.File(szsThingName, globals.szsData[szsThingName]))

@@ -13,7 +13,7 @@
 
 ############ Imports ############
 
-import importlib
+import types
 import os
 from PyQt5 import QtWidgets
 import sys
@@ -52,8 +52,23 @@ class MiyamotoGameDefinition:
             return
         try:
             self.InitFromName(name, source, base_instance)
-        except Exception:
+            # Validate referenced files exist
+            missing = []
+            for f in self.files.values():
+                if f.path is not None and not os.path.isfile(f.path):
+                    missing.append(f.path)
+            for f in self.folders.values():
+                if f.path is not None and not os.path.isdir(f.path):
+                    missing.append(f.path)
+            if missing:
+                self.error = 'Referenced files missing:\n  ' + '\n  '.join(missing)
+        except Exception as e:
             self.InitAsEmpty()
+            self.custom = True
+            self.gamepath = name
+            self.name = str(name) if name else 'Unknown'
+            self.base = base_instance
+            self.error = str(e)
 
     def InitAsEmpty(self):
         gdf = self.GameDefinitionFile
@@ -64,6 +79,7 @@ class MiyamotoGameDefinition:
         self.name = 'New Super Mario Bros. U'
         self.description = 'A new adventure, and in HD!<br>Published by Nintendo in August 2012.'
         self.version = '1.0'
+        self.error = None
 
         from . import sprites as _sprites_mod
         self.sprites = _sprites_mod
@@ -85,6 +101,7 @@ class MiyamotoGameDefinition:
         self.folders = {
             'bg': gdf(None, False),
             'sprites': gdf(None, False),
+            'data': gdf(None, False),
         }
 
     def InitFromName(self, name, source='mod', base_instance=None):
@@ -146,7 +163,7 @@ class MiyamotoGameDefinition:
         if 'sprites' in self.files and self.files['sprites'].path is not None:
             with open(self.files['sprites'].path, 'r') as f:
                 filedata = f.read()
-            new_module = importlib.types.ModuleType(self.name + '->sprites')
+            new_module = types.ModuleType(self.name + '->sprites')
             exec(filedata, new_module.__dict__)
             sys.modules[new_module.__name__] = new_module
             self.sprites = new_module
@@ -310,7 +327,8 @@ class MiyamotoGameDefinition:
 
     def getImageClasses(self):
         """
-        Gets all image classes
+        Gets all image classes, bridging string_id entries to their
+        allocated integer IDs so level sprites find the right class.
         """
         if not self.custom:
             return self.sprites.ImageClasses
@@ -322,6 +340,16 @@ class MiyamotoGameDefinition:
 
         if hasattr(self.sprites, 'ImageClasses'):
             images.update(self.sprites.ImageClasses)
+
+        # Map string_id entries to their allocated integer IDs so level
+        # sprites (which store the integer type) can find their image class.
+        has_level = hasattr(globals, 'Level') and globals.Level is not None
+        id_mgr = getattr(globals.Level, 'id_manager', None) if has_level else None
+        if id_mgr is not None:
+            for str_id in list(images.keys()):
+                if isinstance(str_id, str) and str_id in id_mgr.string_to_int:
+                    images[id_mgr.string_to_int[str_id]] = images[str_id]
+
         return images
 
 
@@ -384,7 +412,7 @@ def getMusic():
             if not found:
                 songs.append([songid, name])
 
-    return sorted(songs, key=lambda song: int(song[0]))
+    return songs
 
 
 def FindGameDef(name, skip=None):
@@ -395,10 +423,17 @@ def FindGameDef(name, skip=None):
         for folder in os.listdir(_games):
             if folder == skip:
                 continue
-            if not os.path.isfile(os.path.join(_games, folder, 'main.xml')):
-                continue
+            folder_path = os.path.join(_games, folder)
+            main_xml = os.path.join(folder_path, 'main.xml')
+            if not os.path.isfile(main_xml):
+                if os.path.islink(folder_path) and os.path.exists(os.path.realpath(folder_path)):
+                    main_xml = os.path.join(os.path.realpath(folder_path), 'main.xml')
+                    if not os.path.isfile(main_xml):
+                        continue
+                else:
+                    continue
             def_ = MiyamotoGameDefinition(folder, source='game')
-            if def_.custom and def_.name == name:
+            if def_.custom and def_.error is None and def_.name == name:
                 return def_
 
     # Search bundled mods
@@ -407,10 +442,17 @@ def FindGameDef(name, skip=None):
         for folder in os.listdir(_patches):
             if folder == skip:
                 continue
-            if not os.path.isfile(os.path.join(_patches, folder, 'main.xml')):
-                continue
+            folder_path = os.path.join(_patches, folder)
+            main_xml = os.path.join(folder_path, 'main.xml')
+            if not os.path.isfile(main_xml):
+                if os.path.islink(folder_path) and os.path.exists(os.path.realpath(folder_path)):
+                    main_xml = os.path.join(os.path.realpath(folder_path), 'main.xml')
+                    if not os.path.isfile(main_xml):
+                        continue
+                else:
+                    continue
             def_ = MiyamotoGameDefinition(folder, source='mod')
-            if def_.custom and def_.name == name:
+            if def_.custom and def_.error is None and def_.name == name:
                 return def_
 
     # Search user mods
@@ -419,10 +461,17 @@ def FindGameDef(name, skip=None):
         for folder in os.listdir(_user):
             if folder == skip:
                 continue
-            if not os.path.isfile(os.path.join(_user, folder, 'main.xml')):
-                continue
+            folder_path = os.path.join(_user, folder)
+            main_xml = os.path.join(folder_path, 'main.xml')
+            if not os.path.isfile(main_xml):
+                if os.path.islink(folder_path) and os.path.exists(os.path.realpath(folder_path)):
+                    main_xml = os.path.join(os.path.realpath(folder_path), 'main.xml')
+                    if not os.path.isfile(main_xml):
+                        continue
+                else:
+                    continue
             def_ = MiyamotoGameDefinition(folder, source='mod')
-            if def_.custom and def_.name == name:
+            if def_.custom and def_.error is None and def_.name == name:
                 return def_
 
     return None
@@ -447,8 +496,53 @@ def getAvailableBaseGames():
     return sorted(games, key=lambda x: (x[1] != 'NSMBU', x[0].name))
 
 
+def _load_mod_entry(folder, patches_root, source, base_game_names):
+    """Try to load a mod; return (def_, folder) on success or (broken_def, folder) with def_.error set."""
+    if folder in base_game_names:
+        return None
+
+    mod_dir = os.path.join(patches_root, folder)
+    main_xml = os.path.join(mod_dir, 'main.xml')
+    is_link = os.path.islink(mod_dir)
+
+    # Resolve symlinks explicitly
+    if is_link:
+        real = os.path.realpath(mod_dir)
+        if not os.path.exists(real):
+            def_ = MiyamotoGameDefinition()
+            def_.custom = True
+            def_.name = folder
+            def_.gamepath = folder
+            def_.error = f'Broken symlink: → {os.readlink(mod_dir)} (target does not exist)'
+            return (def_, folder)
+        if not os.path.isdir(real):
+            def_ = MiyamotoGameDefinition()
+            def_.custom = True
+            def_.name = folder
+            def_.gamepath = folder
+            def_.error = f'Symlink target is not a directory: → {os.readlink(mod_dir)}'
+            return (def_, folder)
+    elif not os.path.isdir(mod_dir):
+        return None  # skip regular files
+
+    if not os.path.isfile(main_xml):
+        def_ = MiyamotoGameDefinition()
+        def_.custom = True
+        def_.name = folder
+        def_.gamepath = folder
+        if is_link:
+            def_.error = f'Missing main.xml (resolved: {os.path.realpath(mod_dir)})'
+        else:
+            def_.error = 'Missing main.xml'
+        return (def_, folder)
+
+    def_ = MiyamotoGameDefinition(folder, source=source)
+    return (def_, folder)
+
+
 def getAvailableMods():
-    """Return list of (MiyamotoGameDefinition, folder_name) for all mods (user overrides bundled)."""
+    """Return list of (MiyamotoGameDefinition, folder_name) for all mods (user overrides bundled).
+    Broken entries (symlink errors, missing main.xml, load failures) are included with def_.error set."""
     mods = {}  # folder_name -> (def_, folder)
 
     # Collect base game folder names so we can skip them in the mods list
@@ -462,27 +556,17 @@ def getAvailableMods():
     _patches = os.path.join(globals.miyamoto_path, 'miyamotodata', 'patches')
     if os.path.isdir(_patches):
         for folder in os.listdir(_patches):
-            if folder in _base_game_names:
-                continue
-            if not os.path.isdir(os.path.join(_patches, folder)):
-                continue
-            if not os.path.isfile(os.path.join(_patches, folder, 'main.xml')):
-                continue
-            def_ = MiyamotoGameDefinition(folder, source='mod')
-            if def_.custom:
-                mods[folder] = (def_, folder)
+            result = _load_mod_entry(folder, _patches, 'mod', _base_game_names)
+            if result is not None:
+                mods[folder] = result
 
     # User mods override bundled with same folder name
     _user = os.path.join(globals.user_data_path, 'patches')
     if os.path.isdir(_user):
         for folder in os.listdir(_user):
-            if not os.path.isdir(os.path.join(_user, folder)):
-                continue
-            if not os.path.isfile(os.path.join(_user, folder, 'main.xml')):
-                continue
-            def_ = MiyamotoGameDefinition(folder, source='mod')
-            if def_.custom:
-                mods[folder] = (def_, folder)
+            result = _load_mod_entry(folder, _user, 'mod', _base_game_names)
+            if result is not None:
+                mods[folder] = result
 
     return sorted(mods.values(), key=lambda x: x[0].name)
 

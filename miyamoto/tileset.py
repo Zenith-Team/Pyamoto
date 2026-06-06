@@ -1178,6 +1178,23 @@ def DeleteObject(idx, objNum, soft=False):
 
         stamp.MiyamotoClip = globals.mainWindow.encodeObjects(objects, sprites)
 
+    for clip in globals.mainWindow.clipChooser._clips:
+        try:
+            layers, sprites = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
+        except Exception:
+            continue
+        objects = []
+
+        for layer in layers:
+            for obj in layer:
+                if obj.tileset == idx:
+                    if obj.type > objNum:
+                        obj.SetType(obj.tileset, obj.type - 1)
+
+                objects.append(obj)
+
+        clip.miyamoto_clip = globals.mainWindow.encodeObjects(objects, sprites)
+
     if globals.mainWindow.clipboard is not None:
         if globals.mainWindow.clipboard.startswith('MiyamotoClip|') and globals.mainWindow.clipboard.endswith('|%'):
             layers, sprites = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
@@ -1245,6 +1262,7 @@ def _compressBC3_libtxc_dxtn(tex, tile_path):
         dataList.append(
             bc3.compress(mipData, max(1, 2048 >> i), max(1, 512 >> i)))
 
+    os.makedirs(tile_path, exist_ok=True)
     with open(tile_path + '/tmp.dds', 'wb+') as out:
         out.write(dds.generateHeader(2048, 512, 0x33, 12))
         for data in dataList:
@@ -1281,6 +1299,7 @@ def writeGTX(tex, idx, nml=False):
         data.setsize(tex.byteCount())
         data = data.asstring()
 
+        os.makedirs(tile_path, exist_ok=True)
         with open(tile_path + '/tmp.dds', 'wb+') as out:
             hdr = dds.generateHeader(2048, 512, 0x1a)
             out.write(hdr)

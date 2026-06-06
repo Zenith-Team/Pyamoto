@@ -26,6 +26,7 @@ from collections import Counter
 import json
 import os
 import platform
+import signal
 import struct
 import subprocess
 import time
@@ -114,6 +115,9 @@ def _excepthook(*exc_info):
     """
     if globals.app is None:
         return _excepthook_original(*exc_info)
+
+    if exc_info[0] is KeyboardInterrupt:
+        sys.exit(1)
 
     separator = '-' * 80
     logFile = "log.txt"
@@ -1174,6 +1178,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         editTilesetsBtn.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
         editTilesetsBtn.clicked.connect(self.actions['edittilesets'].trigger)
 
+        setLayerBtn = QtWidgets.QPushButton('Set to Layer')
+        setLayerBtn.setToolTip('Move all selected objects to the current paint layer.')
+        setLayerBtn.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
+        setLayerBtn.clicked.connect(lambda: self.MoveSelectedToLayer(globals.CurrentLayer))
+
         topRow = QtWidgets.QHBoxLayout()
         topRow.setContentsMargins(6, 4, 6, 4)
         topRow.addWidget(QtWidgets.QLabel('Paint on Layer:'))
@@ -1181,6 +1190,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         topRow.addWidget(self.objUseLayer1)
         topRow.addWidget(self.objUseLayer2)
         topRow.addStretch(1)
+        topRow.addWidget(setLayerBtn)
         topRow.addWidget(editTilesetsBtn)
         tilesLayout.addLayout(topRow)
         tilesLayout.addWidget(self.objAllTab)
@@ -1676,11 +1686,64 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
     def SelectAll(self):
         """
-        Select all objects in the current area
+        Select all objects in the current area, filtered by the current selection type.
+        If tiles are selected, selects all tiles. If sprites are selected, selects all sprites, etc.
+        If nothing is selected, selects everything.
         """
-        paintRect = QtGui.QPainterPath()
-        paintRect.addRect(float(0), float(0), float(1024 * globals.TileWidth), float(512 * globals.TileWidth))
-        self.scene.setSelectionArea(paintRect)
+        selitems = self.scene.selectedItems()
+
+        if not selitems:
+            paintRect = QtGui.QPainterPath()
+            paintRect.addRect(float(0), float(0), float(1024 * globals.TileWidth), float(512 * globals.TileWidth))
+            self.scene.setSelectionArea(paintRect)
+            return
+
+        has_objects = any(isinstance(item, ObjectItem) for item in selitems)
+        has_sprites = any(isinstance(item, SpriteItem) for item in selitems)
+        has_entrances = any(isinstance(item, EntranceItem) for item in selitems)
+        has_locations = any(isinstance(item, LocationItem) for item in selitems)
+        has_paths = any(isinstance(item, PathItem) for item in selitems)
+        has_nabbit_paths = any(isinstance(item, NabbitPathItem) for item in selitems)
+        has_comments = any(isinstance(item, CommentItem) for item in selitems)
+
+        layer_shown = (globals.Layer0Shown, globals.Layer1Shown, globals.Layer2Shown)
+
+        self.SelectionUpdateFlag = True
+        self.scene.clearSelection()
+
+        if has_objects:
+            for layer_idx, layer in enumerate(globals.Area.layers):
+                if layer_shown[layer_idx]:
+                    for obj in layer:
+                        obj.setSelected(True)
+
+        if has_sprites:
+            for sprite in globals.Area.sprites:
+                if layer_shown[sprite.layer]:
+                    sprite.setSelected(True)
+
+        if has_entrances:
+            for ent in globals.Area.entrances:
+                ent.setSelected(True)
+
+        if has_locations:
+            for loc in globals.Area.locations:
+                loc.setSelected(True)
+
+        if has_paths:
+            for path in globals.Area.paths:
+                path.setSelected(True)
+
+        if has_nabbit_paths:
+            for npath in globals.Area.nPaths:
+                npath.setSelected(True)
+
+        if has_comments:
+            for comment in globals.Area.comments:
+                comment.setSelected(True)
+
+        self.SelectionUpdateFlag = False
+        self.ChangeSelectionHandler()
 
     def HandleUndo(self):
         """
@@ -2506,15 +2569,21 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         # no error checking. if it saved last time, it will probably work now
 
+        name = None
+        if globals.UseOuterSarcFormat:
+            name = self.getInnerSarcName()
+            if name == '':
+                return
+
         if self.fileSavePath.endswith('.szs'):
             yaz0.compressFASTYZ(
-                globals.Level.saveNewArea(None, None, None, None),
+                globals.Level.saveNewArea(None, None, None, None, name),
                 self.fileSavePath,
             )
 
         else:
             with open(self.fileSavePath, 'wb+') as f:
-                f.write(globals.Level.saveNewArea(None, None, None, None))
+                f.write(globals.Level.saveNewArea(None, None, None, None, name))
 
         if globals.CurrentArea in globals.ObjectAddedtoEmbedded:  # Should always be true
             del globals.ObjectAddedtoEmbedded[globals.CurrentArea]
@@ -2563,6 +2632,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         if SLib.RotationTimer.isActive():
             SLib.RotationTimer.setInterval(round(1000 / SLib.RotationFPS))
 
+        # Determine if the inner sarc name should be modifiable
+        globals.UseOuterSarcFormat = dlg.generalTab.useOuterSarcFormat.isChecked()
+        setSetting('UseOuterSarcFormat', globals.UseOuterSarcFormat)
+
+        if not globals.IsNSMBUDX:
+            globals.ModifyInnerName = dlg.generalTab.modifyInnerName.isChecked()
+            setSetting('ModifyInnerName', globals.ModifyInnerName)
+
         # Get the File Opening Behavior setting
         setSetting('OpenMethodMode', dlg.generalTab.openMethod.currentIndex())
 
@@ -2573,6 +2650,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         setSetting('CheckForUpdates', dlg.generalTab.checkForUpdates.isChecked())
 
         # Get the Editor preferences
+        setSetting('ShowActorNotes', dlg.editorTab.showActorNotes.isChecked())
+        setSetting('ShowInfoIcons', dlg.editorTab.showInfoIcons.isChecked())
+
         globals.CategorizedSpriteData = dlg.editorTab.categorizedSpriteData.isChecked()
         setSetting('CategorizedSpriteData', globals.CategorizedSpriteData)
 
@@ -2584,6 +2664,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         globals.SpriteListPreviewSize = dlg.editorTab.spriteListPreview.currentData()
         setSetting('SpriteListPreviewSize', globals.SpriteListPreviewSize)
+
+        globals.SpriteListPreviewHighDetail = dlg.editorTab.spriteListPreviewHighDetail.isChecked()
+        setSetting('SpriteListPreviewHighDetail', globals.SpriteListPreviewHighDetail)
         self.spriteList.scheduleDelayedItemsLayout()
         self.spriteList.viewport().update()
         self.sprPicker.scheduleDelayedItemsLayout()
@@ -2602,6 +2685,15 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         # Get the theme settings
         setSetting('Theme', dlg.themesTab.themeBox.currentText())
         setSetting('uiStyle', dlg.themesTab.NonWinStyle.currentText())
+
+        # Save install paths from the Resources tab
+        new_data_path = dlg.resourcesTab.dataPathEdit.text().strip()
+        if new_data_path:
+            setSetting('DataPath', new_data_path)
+            globals.actor_data_path = new_data_path.replace("\\", "/")
+        new_obj_path = dlg.resourcesTab.objPathEdit.text().strip()
+        if new_obj_path:
+            setSetting('ObjPath', new_obj_path)
 
         # Save game paths from the Game Setup tab
         for folder, path_edit in dlg.gameSetupTab._path_edits.items():
@@ -2780,8 +2872,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         if not self.fileSavePath:
             return self.HandleSaveAs()
 
+        name = None
+        if globals.UseOuterSarcFormat:
+            name = self.getInnerSarcName()
+            if name == '':
+                return False
+
         try:
-            data = globals.Level.save()
+            data = globals.Level.save(name)
         except ValueError as e:
             QtWidgets.QMessageBox.warning(None, 'Save Error', str(e))
             return False
@@ -2819,8 +2917,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         if not self.fileSavePath:
             return self.HandleSaveAs()
 
+        name = None
+        if globals.UseOuterSarcFormat:
+            name = self.getInnerSarcName()
+            if name == '':
+                return False
+
         try:
-            data = globals.Level.saveNewArea(course, L0, L1, L2)
+            data = globals.Level.saveNewArea(course, L0, L1, L2, name)
         except ValueError as e:
             QtWidgets.QMessageBox.warning(None, 'Save Error', str(e))
             return False
@@ -2870,8 +2974,18 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.fileSavePath = fn
         self.fileTitle = os.path.basename(fn)
 
+        name = None
+        if globals.UseOuterSarcFormat:
+            name = self.getInnerSarcName()
+            if name == '':
+                return False
+            if "-" not in name:
+                warningBox = QtWidgets.QMessageBox(QtWidgets.QMessageBox.NoIcon, 'Name warning',
+                                                   'The input name does not include a -, which is what retail levels use. \nThis may crash, because it does not fit the proper format.')
+                warningBox.exec_()
+
         try:
-            data = globals.Level.save()
+            data = globals.Level.save(name)
         except ValueError as e:
             QtWidgets.QMessageBox.warning(None, 'Save Error', str(e))
             return False
@@ -2907,6 +3021,22 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         Exit the editor. Why would you want to do this anyway?
         """
         self.close()
+
+    def getInnerSarcName(self):
+        name = os.path.splitext(self.fileTitle)[0]
+        if not name or "/" in name or "\\" in name or globals.ModifyInnerName:
+            name = QtWidgets.QInputDialog.getText(self, "Choose Internal Name",
+                                                  "Choose an internal filename for this level (do not add a .sarc/.szs extension) (example: 1-1):"
+                                                  "\n(To make Miyamoto automatically set the internal filename to the filename of the level file,"
+                                                  "\nGo to Preferences and uncheck \"Modify Internal Name\".)",
+                                                  QtWidgets.QLineEdit.Normal)[0]
+
+            if "/" in name or "\\" in name:
+                warningBox = QtWidgets.QMessageBox(QtWidgets.QMessageBox.NoIcon, 'Name warning', r'The input name included "/" or "\", aborting...')
+                warningBox.exec_()
+                return ''
+
+        return name
 
     def HandleSwitchArea(self, idx):
         """
@@ -4126,19 +4256,19 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         n = len(self.selObjs) if self.selObjs else 0
         if showSpritePanel:
-            title = 'Selected Actor Properties' if n <= 1 else 'Editing %d Actors' % n
+            title = 'Selected Actor Properties'
             self._switchPropEditor(self.spriteDataEditor, title)
         elif showEntrancePanel:
-            title = 'Selected Entrance Properties' if n <= 1 else 'Editing %d Entrances' % n
+            title = 'Selected Entrance Properties'
             self._switchPropEditor(self.entranceEditor, title)
         elif showLocationPanel:
-            title = 'Selected Location Properties' if n <= 1 else 'Editing %d Locations' % n
+            title = 'Selected Location Properties'
             self._switchPropEditor(self.locationEditor, title)
         elif showPathPanel:
-            title = 'Selected Path Node Properties' if n <= 1 else 'Editing %d Path Nodes' % n
+            title = 'Selected Path Node Properties'
             self._switchPropEditor(self.pathEditor, title)
         elif showNabbitPathPanel:
-            title = 'Selected Nabbit Path Node Properties' if n <= 1 else 'Editing %d Nabbit Path Nodes' % n
+            title = 'Selected Nabbit Path Node Properties'
             self._switchPropEditor(self.nabbitPathEditor, title)
         else:
             self.propEditorDock.setVisible(False)
@@ -4231,49 +4361,55 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         # should we replace?
         if QtWidgets.QApplication.keyboardModifiers() == Qt.AltModifier:
-            items = self.scene.selectedItems()
-            type_obj = ObjectItem
-            area = globals.Area
-            change = []
+            self.MoveSelectedToLayer(nl)
+
+    def MoveSelectedToLayer(self, nl):
+        """
+        Moves all selected ObjectItems to the specified layer.
+        """
+        items = self.scene.selectedItems()
+        type_obj = ObjectItem
+        area = globals.Area
+        change = []
+
+        if nl == 0:
+            newLayer = area.layers[0]
+        elif nl == 1:
+            newLayer = area.layers[1]
+        else:
+            newLayer = area.layers[2]
+
+        for x in items:
+            if isinstance(x, type_obj) and x.layer != nl:
+                change.append(x)
+
+        if len(change) > 0:
+            change.sort(key=lambda x: x.zValue())
+
+            if len(newLayer) == 0:
+                z = (2 - nl) * 8192
+            else:
+                z = newLayer[-1].zValue() + 1
 
             if nl == 0:
-                newLayer = area.layers[0]
+                newVisibility = globals.Layer0Shown
             elif nl == 1:
-                newLayer = area.layers[1]
+                newVisibility = globals.Layer1Shown
             else:
-                newLayer = area.layers[2]
+                newVisibility = globals.Layer2Shown
 
-            for x in items:
-                if isinstance(x, type_obj) and x.layer != nl:
-                    change.append(x)
+            for item in change:
+                area.RemoveFromLayer(item)
+                item.layer = nl
+                newLayer.append(item)
+                item.setZValue(z)
+                item.setVisible(newVisibility)
+                item.update()
+                item.UpdateTooltip()
+                z += 1
 
-            if len(change) > 0:
-                change.sort(key=lambda x: x.zValue())
-
-                if len(newLayer) == 0:
-                    z = (2 - nl) * 8192
-                else:
-                    z = newLayer[-1].zValue() + 1
-
-                if nl == 0:
-                    newVisibility = globals.Layer0Shown
-                elif nl == 1:
-                    newVisibility = globals.Layer1Shown
-                else:
-                    newVisibility = globals.Layer2Shown
-
-                for item in change:
-                    area.RemoveFromLayer(item)
-                    item.layer = nl
-                    newLayer.append(item)
-                    item.setZValue(z)
-                    item.setVisible(newVisibility)
-                    item.update()
-                    item.UpdateTooltip()
-                    z += 1
-
-            self.scene.update()
-            SetDirty()
+        self.scene.update()
+        SetDirty()
 
     def ImportObjFromFile(self):
         """
@@ -4919,52 +5055,63 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
     def _lockFloatingHeight(self):
         """
-        Lock the floating dock's height to its content, capped to the screen.
+        Lock the dock's height to its content, capped to the screen.
+
+        Works for both floating and docked modes.
 
         Must be called *after* the editor's content has been fully populated
         (i.e. after UpdateModeInfo / setSprite / setEntrance etc.) so that
         the layout's sizeHint is accurate.
         """
         dock = self.propEditorDock
-        if not dock.isFloating() or not dock.isVisible():
+        if not dock.isVisible():
             return
 
         current = self.propEditorStack.currentWidget()
         if current is None:
             return
 
+        TITLEBAR = 28
+
         target_h = current.sizeHint().height()
         if target_h <= 0:
             return
 
         # Cap to the usable screen area so the dock never overflows off-screen.
-        # _propEditorPos is the content-area top-left, updated live by eventFilter.
         ref_pos = self._propEditorPos if self._propEditorPos is not None else dock.pos()
         screen = QtWidgets.QApplication.screenAt(ref_pos)
         if screen is None:
             screen = QtWidgets.QApplication.primaryScreen()
         avail = screen.availableGeometry()
 
-        # Allow room for the macOS title bar above the content area.
-        TITLEBAR = 28
         max_h = avail.height() - TITLEBAR - 16
         target_h = max(80, min(target_h, max_h))
-
-        # Clamp the saved position so the dock stays fully on-screen after resize.
-        if self._propEditorPos is not None:
-            px = max(avail.left(), min(self._propEditorPos.x(),
-                                       avail.right() - self._propEditorWidth))
-            py = max(avail.top(), min(self._propEditorPos.y(),
-                                      avail.bottom() - target_h - TITLEBAR))
-            dock.move(px, py)
 
         # Release the old lock first so the resize below isn't clamped to the
         # previous content's height, then immediately re-lock to the new height.
         dock.setMinimumHeight(0)
         dock.setMaximumHeight(16777215)
-        dock.setMinimumHeight(target_h)
-        dock.setMaximumHeight(target_h)
-        dock.resize(self._propEditorWidth, target_h)
+
+        if dock.isFloating():
+            # Floating: account for the OS window title bar so the content
+            # area matches sizeHint rather than the window frame.
+            total_h = target_h + TITLEBAR
+
+            # Clamp the saved position so the dock stays fully on-screen after resize.
+            if self._propEditorPos is not None:
+                px = max(avail.left(), min(self._propEditorPos.x(),
+                                           avail.right() - self._propEditorWidth))
+                py = max(avail.top(), min(self._propEditorPos.y(),
+                                           avail.bottom() - total_h))
+                dock.move(px, py)
+
+            dock.setMinimumHeight(total_h)
+            dock.setMaximumHeight(total_h)
+            dock.resize(self._propEditorWidth, total_h)
+        else:
+            # Docked: constrain height to content (+ title bar within the main window).
+            dock.setMinimumHeight(target_h + TITLEBAR)
+            dock.setMaximumHeight(target_h + TITLEBAR)
 
     def _onPropEditorTopLevelChanged(self, floating):
         """Adjust height constraints when the dock is docked/undocked."""
@@ -4973,10 +5120,8 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             # pass before computing the content height.
             QtCore.QTimer.singleShot(0, self._lockFloatingHeight)
         else:
-            # Docked: release the lock so Qt's splitter can manage height freely.
-            dock = self.propEditorDock
-            dock.setMinimumHeight(0)
-            dock.setMaximumHeight(16777215)
+            # Docked: delay one pass so the layout settles before locking height.
+            QtCore.QTimer.singleShot(0, self._lockFloatingHeight)
 
     def UpdateModeInfo(self):
         """
@@ -4996,8 +5141,8 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             else:
                 obj = self.selObj
                 self.spriteDataEditor.setSprite(obj.type)
-                self.spriteDataEditor.activeLayer.setCurrentIndex(obj.layer)
-                self.spriteDataEditor.initialState.setValue(obj.initialState)
+                self.spriteDataEditor.setLayerOverrideValue(obj.layer)
+                self.spriteDataEditor.setInitialStateOverrideValue(obj.initialState)
                 self.spriteDataEditor.data = obj.spritedata
                 self.spriteDataEditor.update()
         elif current is self.entranceEditor and self.propEditorDock.isVisible():
@@ -5565,6 +5710,9 @@ def main():
     # Create an application
     globals.app = QtWidgets.QApplication(sys.argv)
 
+    # Restore default SIGINT handling so Ctrl+C instantly kills the process
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     # Go to the script path
     path = globals.miyamoto_path
     if path is not None:
@@ -5577,6 +5725,11 @@ def main():
     _settings_existed = os.path.exists(settings_path)  # check BEFORE migration may create the file
     _migrate_old_settings(settings_path)
     globals.settings = JsonSettings(settings_path)
+
+    # If user relocated the data folder via Preferences > Resources, honor that path.
+    _saved_data_path = globals.settings.value('DataPath', '')
+    if _saved_data_path and os.path.isdir(_saved_data_path):
+        globals.actor_data_path = str(_saved_data_path).replace("\\", "/")
 
     # Apply project default preferences on first launch (no existing settings.json)
     if not _settings_existed:
@@ -5684,6 +5837,7 @@ def main():
     globals.PlaceObjectFullSize = setting('PlaceObjectFullSize', False)
     globals.CategorizedSpriteData = setting('CategorizedSpriteData', False)
     globals.SpriteListPreviewSize = setting('SpriteListPreviewSize', globals.SPRITE_PREVIEW_DISABLED)
+    globals.SpriteListPreviewHighDetail = setting('SpriteListPreviewHighDetail', False)
     globals.UseRGBA8 = setting('UseRGBA8', False)
     globals.RealViewEnabled = setting('RealViewEnabled', True)
     globals.SpritesShown = setting('ShowSprites', True)
@@ -5694,6 +5848,8 @@ def main():
     globals.RotationShown = setting('RotationShown', False)
     globals.RotationNoticeShown = setting('RotationNoticeShown', True)
     SLib.RotationFPS = setting('RotationFPS', 30)
+    globals.UseOuterSarcFormat = setting('UseOuterSarcFormat', False)
+    globals.ModifyInnerName = setting('ModifyInnerName', False)
 
     SLib.RealViewEnabled = globals.RealViewEnabled
 

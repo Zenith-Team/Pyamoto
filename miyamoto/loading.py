@@ -673,7 +673,10 @@ def LoadGameDef(base_game=None, mods=None, dlg=None):
         for mod_name in mods:
             if mod_name in (None, 'None', ''):
                 continue
-            current_def = MiyamotoGameDefinition(mod_name, source='mod', base_instance=current_def)
+            new_def = MiyamotoGameDefinition(mod_name, source='mod', base_instance=current_def)
+            if getattr(new_def, 'error', None):
+                continue
+            current_def = new_def
 
         globals.gamedef = current_def
 

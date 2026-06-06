@@ -516,6 +516,7 @@ class ObjectItem(LevelEditorItem):
             x = int(newpos.x() / globals.TileWidth)
             y = int(newpos.y() / globals.TileWidth)
             if x != self.objx or y != self.objy:
+                scene.update(self.sceneBoundingRect())
                 self.LevelRect.moveTo(x, y)
 
                 oldx = self.objx
@@ -1766,10 +1767,14 @@ class SpriteItem(LevelEditorItem):
         """
         type = self.type
 
+        # Resolve name from Sprites[] (int) or CustomSpriteDefinitions (str)
         try:
             self.name = globals.Sprites[type].name
-        except:
-            self.name = 'UNKNOWN'
+        except (TypeError, IndexError):
+            try:
+                self.name = globals.CustomSpriteDefinitions[type].name
+            except (KeyError, TypeError):
+                self.name = 'UNKNOWN'
 
         self.setToolTip('<b>Actor [type]:</b><br>[name]'.replace('[type]', str(type)).replace('[name]', str(self.name)))
         self.UpdateListItem()
@@ -1789,8 +1794,9 @@ class SpriteItem(LevelEditorItem):
         self.setZValue(26000)
         self.resetTransform()
 
-        if (self.type in globals.gamedef.getImageClasses()) and (self.type not in SLib.SpriteImagesLoaded):
-            globals.gamedef.getImageClasses()[self.type].loadImages()
+        imgs = globals.gamedef.getImageClasses()
+        if (self.type in imgs) and (self.type not in SLib.SpriteImagesLoaded):
+            imgs[self.type].loadImages()
             SLib.SpriteImagesLoaded.add(self.type)
 
         self.ImageObj = obj(self) if obj else SLib.SpriteImage(self)
@@ -1926,15 +1932,6 @@ class SpriteItem(LevelEditorItem):
                     globals.TileWidth // 2)) + xOffsetAdjusted)
                     newpos.setY(int(int((newpos.y() + (globals.TileWidth / 4) - yOffsetAdjusted) / (globals.TileWidth // 2)) * (
                     globals.TileWidth // 2)) + yOffsetAdjusted)
-
-            x = newpos.x()
-            y = newpos.y()
-
-            # don't let it get out of the boundaries
-            if x < 0: newpos.setX(0)
-            if x > 1023 * globals.TileWidth: newpos.setX(1023 * globals.TileWidth)
-            if y < 0: newpos.setY(0)
-            if y > 511 * globals.TileWidth: newpos.setY(511 * globals.TileWidth)
 
             # update the data
             x = int(newpos.x() / tileWidthMult - xOffset)
@@ -2220,7 +2217,7 @@ class EntranceItem(LevelEditorItem):
         if EntranceItem.EntranceImages is None:
             ei = []
             src = QtGui.QPixmap(os.path.join(globals.miyamoto_path, 'miyamotodata', 'entrances.png'))
-            for i in range(18):
+            for i in range(17):
                 ei.append(src.copy(i * globals.TileWidth, 0, globals.TileWidth, globals.TileWidth))
             EntranceItem.EntranceImages = ei
 
@@ -2340,22 +2337,21 @@ class EntranceItem(LevelEditorItem):
         enttype = self.enttype
         if enttype == 0 or enttype == 1: icontype = 1  # normal
         if enttype == 2: icontype = 2  # door exit
-        if enttype == 3: icontype = 4  # pipe up
-        if enttype == 4: icontype = 5  # pipe down
-        if enttype == 5: icontype = 6  # pipe left
-        if enttype == 6: icontype = 7  # pipe right
-        if enttype == 8: icontype = 12  # ground pound
-        if enttype == 9: icontype = 13  # sliding
+        if enttype == 3: icontype = 3  # pipe up
+        if enttype == 4: icontype = 4  # pipe down
+        if enttype == 5: icontype = 5  # pipe left
+        if enttype == 6: icontype = 6  # pipe right
+        if enttype == 8: icontype = 11  # ground pound
+        if enttype == 9: icontype = 12  # sliding
         # 0F/15 is unknown?
-        if enttype == 16: icontype = 8  # mini pipe up
-        if enttype == 17: icontype = 9  # mini pipe down
-        if enttype == 18: icontype = 10  # mini pipe left
-        if enttype == 19: icontype = 11  # mini pipe right
-        if enttype == 20: icontype = 15  # jump out facing right
-        if enttype == 21: icontype = 17  # vine entrance
-        if enttype == 23: icontype = 14  # boss battle entrance
-        if enttype == 24: icontype = 16  # jump out facing left
-        if enttype == 27: icontype = 3  # door entrance
+        if enttype == 16: icontype = 7  # mini pipe up
+        if enttype == 17: icontype = 8  # mini pipe down
+        if enttype == 18: icontype = 9  # mini pipe left
+        if enttype == 19: icontype = 10  # mini pipe right
+        if enttype == 20: icontype = 14  # jump out facing right
+        if enttype == 21: icontype = 16  # vine entrance
+        if enttype == 23: icontype = 13  # boss battle entrance
+        if enttype == 24: icontype = 15  # jump out facing left
 
         painter.drawPixmap(0, 0, EntranceItem.EntranceImages[icontype])
 
