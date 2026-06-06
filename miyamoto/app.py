@@ -2774,7 +2774,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(
                 self, 'Pyamoto',
                 f'Could not find "{level_name}" in:\n{game_path}\n\n'
-                'Check the game path for this game in Preferences → Games.',
+                'Check the game path for this game in Preferences → Game Setup.',
                 QtWidgets.QMessageBox.Ok)
         else:
             # No game path set — use default behaviour (globals.gamedef.GetGamePath())
