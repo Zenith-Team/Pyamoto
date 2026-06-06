@@ -4814,6 +4814,10 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 self.currentobj = obj
                 self.dragstartx = clickedx
                 self.dragstarty = clickedy
+
+                self.scene().clearSelection()
+                obj.setSelected(True)
+                
                 SetDirty()
 
             elif globals.CurrentPaintType == 10 and globals.CurrentObject != -1:
@@ -4872,6 +4876,10 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 self.currentobj = obj
                 self.dragstartx = clickedx
                 self.dragstarty = clickedy
+
+                self.scene().clearSelection()
+                obj.setSelected(True)
+
                 SetDirty()
 
                 globals.CurrentPaintType = 10
@@ -4959,6 +4967,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     spr.UpdateDynamicSizing()
                     spr.UpdateListItem()
 
+                    self.scene().clearSelection()
+                    spr.setSelected(True)
+
                 SetDirty()
 
             elif globals.CurrentPaintType == 5:
@@ -4990,6 +5001,10 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                 globals.UndoManager.push(undomanager.AddEntranceCommand(ent))
                 ent.UpdateListItem()
+
+                self.scene().clearSelection()
+                ent.setSelected(True)
+
             elif globals.CurrentPaintType == 6:
                 # paint a path node
                 clicked = self.mapToScene(event.x(), event.y())
@@ -5037,7 +5052,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     self.dragstarty = clickedy
 
                     newnode.UpdateListItem()
-                    newnode.listitem.setSelected(True)
+
+                    self.scene().clearSelection()
+                    newnode.setSelected(True)
                 else:
                     pathd = None
                     for pathnode in globals.Area.paths:
@@ -5086,7 +5103,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     self.dragstarty = clickedy
 
                     newnode.UpdateListItem()
-                    newnode.listitem.setSelected(True)
+
+                    self.scene().clearSelection()
+                    newnode.setSelected(True)
 
             elif globals.CurrentPaintType == 7:
                 # paint a location
@@ -5126,6 +5145,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 self.scene().update()
                 loc.UpdateListItem()
 
+                self.scene().clearSelection()
+                loc.setSelected(True)
+
             elif globals.CurrentPaintType == 8:
                 # paint a stamp
                 clicked = self.mapToScene(event.x(), event.y())
@@ -5148,7 +5170,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                             elif oldGrassType in [3, 4]:
                                 oldGrassType = 3
 
-                    objs = globals.mainWindow.placeEncodedObjects(clip.miyamoto_clip, False, clickedx, clickedy)
+                    objs = globals.mainWindow.placeEncodedObjects(clip.miyamoto_clip, True, clickedx, clickedy)
 
                     # Get the current flower/grass type
                     grassType = 5
@@ -5214,6 +5236,10 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                 globals.UndoManager.push(undomanager.AddCommentCommand(com))
                 com.UpdateListItem()
+
+                self.scene().clearSelection()
+                com.setSelected(True)
+
                 SetDirty()
 
 
@@ -5257,7 +5283,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         self.dragstarty = clickedy
 
                         newnode.UpdateListItem()
-                        newnode.listitem.setSelected(True)
+
+                        self.scene().clearSelection()
+                        newnode.setSelected(True)
                     else:
                         pathd = None
                         for pathnode in globals.Area.nPaths:
@@ -5303,7 +5331,9 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         self.dragstarty = clickedy
 
                         newnode.UpdateListItem()
-                        newnode.listitem.setSelected(True)
+
+                        self.scene().clearSelection()
+                        newnode.setSelected(True)
 
                 else:
                     dlg = QtWidgets.QMessageBox()
