@@ -3866,9 +3866,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         if globals.UndoManager:
             globals.UndoManager.clear()
 
-        if new:
-            SetDirty()
-
         if name is not None:
             # Add the path to Recent Files
             self.RecentMenu.AddToList(self.fileSavePath)
