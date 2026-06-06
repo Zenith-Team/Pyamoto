@@ -13,10 +13,12 @@
         <level file="1-5" name="1-5: Rise of the Piranha Plants" />
         <level file="1-23" name="1-Castle: Lemmy's Swingback Castle" />
         <level file="1-13" name="1-Blooper: Blooper's Secret Lair" />
-        <level file="1-32" name="Piranha Plant Ambush" />
-        <level file="1-33" name="Piranha Plant Ambush" />
-        <level file="1-34" name="Piranha Plant Ambush" />
-        <level file="1-55" name="Piranha Plant Ambush?" />
+        <category name="Ambushes">
+            <level file="1-32" name="Piranha Plant Ambush" />
+            <level file="1-33" name="Piranha Plant Ambush" />
+            <level file="1-34" name="Piranha Plant Ambush" />
+            <level file="1-55" name="Piranha Plant Ambush?" />
+        </category>
     </category>
 
     <category name="W2: Layer-Cake Desert">
@@ -29,12 +31,14 @@
         <level file="2-6" name="2-6: Blooming Lakitus" />
         <level file="2-23" name="2-Castle: Morton's Compactor Castle" />
         <level file="2-14" name="2-Ice Block: Piranha Plants on Ice" />
-        <level file="2-32" name="Goomba Ambush" />
-        <level file="2-33" name="Goomba Ambush" />
-        <level file="2-34" name="Goomba + Fire Bro Ambush?" />
-        <level file="2-55" name="Fire Bro Ambush?" />
-        <level file="2-56" name="Fire Bro Ambush?" />
-        <level file="2-57" name="Fire Bro Ambush?" />
+        <category name="Ambushes">
+            <level file="2-32" name="Goomba Ambush" />
+            <level file="2-33" name="Goomba Ambush" />
+            <level file="2-34" name="Goomba + Fire Bro Ambush?" />
+            <level file="2-55" name="Fire Bro Ambush?" />
+            <level file="2-56" name="Fire Bro Ambush?" />
+            <level file="2-57" name="Fire Bro Ambush?" />
+        </category>
     </category>
 
     <category name="W3: Sparkling Waters">
@@ -47,10 +51,12 @@
         <level file="3-5" name="3-5: Dragoneel's Undersea Grotto" />
         <level file="3-23" name="3-Castle: Larry's Torpedo Castle" />
         <level file="3-15" name="3-Leaf: Skyward Stalk" />
-        <level file="3-32" name="Porcupuffer Ambush" />
-        <level file="3-33" name="Porcupuffer Ambush" />
-        <level file="3-34" name="Porcupuffer Ambush" />
-        <level file="3-55" name="Porcupuffer Ambush?" />
+        <category name="Ambushes">
+            <level file="3-32" name="Porcupuffer Ambush" />
+            <level file="3-33" name="Porcupuffer Ambush" />
+            <level file="3-34" name="Porcupuffer Ambush" />
+            <level file="3-55" name="Porcupuffer Ambush?" />
+        </category>
     </category>
 
     <category name="W4: Frosted Glacier">
@@ -63,12 +69,14 @@
         <level file="4-20" name="4-Ghost House: Swaying Ghost House" />
         <level file="4-23" name="4-Castle: Wendy's Shifting Castle" />
         <level file="4-16" name="4-Fliprus: Fliprus Lake" />
-        <level file="4-32" name="Cooligan Ambush" />
-        <level file="4-33" name="Cooligan Ambush" />
-        <level file="4-34" name="Cooligan Ambush" />
-        <level file="4-55" name="Cooligan Ambush?" />
-        <level file="4-56" name="Cooligan Ambush?" />
-        <level file="4-57" name="Cooligan Ambush?" />
+        <category name="Ambushes">
+            <level file="4-32" name="Cooligan Ambush" />
+            <level file="4-33" name="Cooligan Ambush" />
+            <level file="4-34" name="Cooligan Ambush" />
+            <level file="4-55" name="Cooligan Ambush?" />
+            <level file="4-56" name="Cooligan Ambush?" />
+            <level file="4-57" name="Cooligan Ambush?" />
+        </category>
     </category>
 
     <category name="W5: Soda Jungle">
@@ -84,11 +92,13 @@
         <level file="5-7" name="5-7: Wiggler Stampede" />
         <level file="5-23" name="5-Castle: Iggy's Volcanic Castle" />
         <level file="5-17" name="5-Para-Beetles: Flight of the Para-Beetles" />
-        <level file="5-32" name="Boo Ambush" />
-        <level file="5-33" name="Boo Ambush" />
-        <level file="5-34" name="Boo Ambush" />
-        <level file="5-55" name="Boo Ambush?" />
-        <level file="5-56" name="Boo Ambush?" />
+        <category name="Ambushes">
+            <level file="5-32" name="Boo Ambush" />
+            <level file="5-33" name="Boo Ambush" />
+            <level file="5-34" name="Boo Ambush" />
+            <level file="5-55" name="Boo Ambush?" />
+            <level file="5-56" name="Boo Ambush?" />
+        </category>
     </category>
 
     <category name="W6: Rock-Candy Mines">
@@ -114,11 +124,13 @@
         <level file="7-5" name="7-5: A Quick Dip in the Sky" />
         <level file="7-6" name="7-6: Snaking above Mist Valley" />
         <level file="7-23" name="7-Castle: Ludwig's Clockwork Castle" />
-        <level file="7-37" name="7-Ship: Boarding the Airship" />
-        <level file="7-32" name="Fuzzy Ambush" />
-        <level file="7-33" name="Fuzzy Ambush" />
-        <level file="7-34" name="Fuzzy Ambush" />
-        <level file="7-55" name="Fuzzy Ambush?" />
+        <level file="7-37" name="7-Airship: Boarding the Airship" />
+        <category name="Ambushes">
+            <level file="7-32" name="Fuzzy Ambush" />
+            <level file="7-33" name="Fuzzy Ambush" />
+            <level file="7-34" name="Fuzzy Ambush" />
+            <level file="7-55" name="Fuzzy Ambush?" />
+        </category>
     </category>
 
     <category name="W8: Peach's Castle">
@@ -143,7 +155,7 @@
     </category>
 
     <category name="Secret Island">
-        <level file="1-58" name="Record Toad House" />
+        <level file="1-58" name="Records House" />
     </category>
 
     <category name="Toad Houses">
@@ -161,7 +173,7 @@
         <level file="2-26" name="Baby Yoshi Toad House" />
         <level file="2-27" name="Baby Yoshi Toad House" />
         <level file="2-28" name="Baby Yoshi Toad House" />
-        <level file="3-25" name="1-Up Toad House" />
+        <level file="3-25" name="1-Up Blast Toad House" />
     </category>
 
     <category name="Coin Battle">
