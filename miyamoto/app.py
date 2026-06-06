@@ -319,7 +319,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     sys.exit(0)
                 elif dlg.action == WelcomeDialog.ACTION_OPEN_FILE:
                     filetypes = ''
-                    filetypes += 'Level Archives' + ' (*.sarc *.szs);;'
+                    filetypes += 'Level Archives' + ' (*.szs *.sarc);;'
                     filetypes += 'Compressed Level Archives' + ' (*.szs);;'
                     filetypes += 'Uncompressed Level Archives' + ' (*.sarc);;'
                     filetypes += 'All Files' + ' (*)'
@@ -2395,7 +2395,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 return
 
         filetypes = ''
-        filetypes += 'Level Archives' + ' (*.sarc *.szs);;'
+        filetypes += 'Level Archives' + ' (*.szs *.sarc);;'
         filetypes += 'Compressed Level Archives' + ' (*.szs);;'
         filetypes += 'Uncompressed Level Archives' + ' (*.sarc);;'
         filetypes += 'All Files' + ' (*)'
@@ -2788,7 +2788,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         if self.CheckDirty(): return
 
         filetypes = ''
-        filetypes += 'Level Archives' + ' (*.sarc *.szs);;'
+        filetypes += 'Level Archives' + ' (*.szs *.sarc);;'
         filetypes += 'Compressed Level Archives' + ' (*.szs);;'
         filetypes += 'Uncompressed Level Archives' + ' (*.sarc);;'
         filetypes += 'All Files' + ' (*)'
@@ -2960,10 +2960,8 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         Save a level back to the archive, with a new filename
         """
         filetypes = ''
-        filetypes += 'Level Archives' + ' (*.sarc *.szs);;'
         filetypes += 'Compressed Level Archives' + ' (*.szs);;'
-        filetypes += 'Uncompressed Level Archives' + ' (*.sarc);;'
-        filetypes += 'All Files' + ' (*)'
+        filetypes += 'Uncompressed Level Archives' + ' (*.sarc)'
         
         last_dir = str(setting('LastFilePath')) if globals.settings.contains('LastFilePath') else ''
         fn = QtWidgets.QFileDialog.getSaveFileName(self, 'Choose a level archive', last_dir, filetypes)[0]
