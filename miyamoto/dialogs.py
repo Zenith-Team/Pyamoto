@@ -3097,7 +3097,6 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         self._rename_btn.setEnabled(False)
         self._rename_btn.setVisible(False)
         self._rename_btn.clicked.connect(self._doEditLevelInfo)
-        self.buttonBox.addButton(self._rename_btn, QtWidgets.QDialogButtonBox.ActionRole)
 
         # "Edit Worlds" icon button — visible for user-patch mod sources, always enabled
         self._worlds_btn = QtWidgets.QPushButton(GetIcon('layer'), '')
@@ -3107,7 +3106,6 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         self._worlds_btn.setEnabled(False)
         self._worlds_btn.setVisible(False)
         self._worlds_btn.clicked.connect(self._doEditWorlds)
-        self.buttonBox.addButton(self._worlds_btn, QtWidgets.QDialogButtonBox.ActionRole)
 
         # "Copy Level to Mod" icon button — visible only for game sources
         self._copy_btn = QtWidgets.QPushButton(GetIcon('copy'), '')
@@ -3117,14 +3115,20 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         self._copy_btn.setEnabled(False)
         self._copy_btn.setVisible(False)
         self._copy_btn.clicked.connect(self._doCopyToMod)
-        self.buttonBox.addButton(self._copy_btn, QtWidgets.QDialogButtonBox.ActionRole)
 
         self._source_combo.currentIndexChanged.connect(self._onSourceChanged)
+
+        buttonRow = QtWidgets.QHBoxLayout()
+        buttonRow.addWidget(self._rename_btn)
+        buttonRow.addWidget(self._worlds_btn)
+        buttonRow.addWidget(self._copy_btn)
+        buttonRow.addStretch()
+        buttonRow.addWidget(self.buttonBox)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self._source_combo)
         layout.addWidget(self._stack)
-        layout.addWidget(self.buttonBox)
+        layout.addLayout(buttonRow)
         self.setLayout(layout)
         self.setMinimumWidth(360)
         self.setMinimumHeight(420)
