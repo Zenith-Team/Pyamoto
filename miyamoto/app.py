@@ -497,7 +497,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             'deselect', self.Deselect, GetIcon('deselect'),
             'Deselect',
             'Deselect all currently selected items',
-            QtGui.QKeySequence('Ctrl+D'),
+            QtGui.QKeySequence('Esc'),
         )
 
         self.CreateAction(
