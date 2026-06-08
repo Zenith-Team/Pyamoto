@@ -176,6 +176,12 @@
         <level file="3-25" name="1-Up Blast Toad House" />
     </category>
 
+    <category name="Other">
+        <level file="1-39" name="Title Screen" />
+        <level file="1-41" name="Credits" />
+        <level file="1-46" name="Boost Rush Results" />
+    </category>
+
     <category name="Coin Battle">
         <level file="11-1" name="Coin Courses-1" />
         <level file="11-2" name="Coin Courses-2" />
@@ -185,12 +191,6 @@
         <level file="11-6" name="Coin Courses-6" />
         <level file="11-7" name="Coin Courses-7" />
         <level file="11-8" name="Coin Courses-8" />
-    </category>
-
-    <category name="Other">
-        <level file="1-39" name="Title Screen" />
-        <level file="1-41" name="Credits" />
-        <level file="1-46" name="Boost Rush Results" />
     </category>
 
     <category name="Challenge Mode">
