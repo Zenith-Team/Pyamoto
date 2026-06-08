@@ -4689,6 +4689,7 @@ class TilesetsTab(QtWidgets.QWidget):
             del dialogs
 
             dbox.setWindowTitle('Enter a Filename')
+            dbox.setWindowFlags(dbox.windowFlags() & ~Qt.WindowContextHelpButtonHint)
             dbox.label.setText('Enter the name of a custom tileset file to use. It must already be inside the level archive in order for Pyamoto to recognize it.')
             dbox.textbox.setMaxLength(31)
             dbox.textbox.setText(fname)

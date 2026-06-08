@@ -191,6 +191,7 @@ class ObjectShiftDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Shift Items')
         self.setWindowIcon(GetIcon('move'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.XOffset = QtWidgets.QSpinBox()
         self.XOffset.setRange(-16384, 16383)
@@ -230,6 +231,7 @@ class ObjectTilesetSwapDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Swap Objects\' Tilesets')
         self.setWindowIcon(GetIcon('swap'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         # Create widgets
         self.FromTS = QtWidgets.QSpinBox()
@@ -271,6 +273,7 @@ class ObjectTypeSwapDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Swap Objects\' Types')
         self.setWindowIcon(GetIcon('swap'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         # Create widgets
         self.FromType = QtWidgets.QSpinBox()
@@ -327,6 +330,7 @@ class MetaInfoDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Level Information')
         self.setWindowIcon(GetIcon('info'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         title = globals.Area.Metadata.strData('Title')
         author = globals.Area.Metadata.strData('Author')
@@ -453,6 +457,7 @@ class MetaInfoDialog(QtWidgets.QDialog):
                 super().__init__()
                 self.setWindowTitle('Change Password')
                 self.setWindowIcon(GetIcon('info'))
+                self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
                 self.New = QtWidgets.QLineEdit()
                 self.New.setMaxLength(64)
@@ -523,6 +528,7 @@ class AreaOptionsDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Area Options')
         self.setWindowIcon(GetIcon('area'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.tabWidget = QtWidgets.QTabWidget()
         self.LoadingTab = LoadingTab()
@@ -550,6 +556,7 @@ class ZonesDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Edit Zones')
         self.setWindowIcon(GetIcon('zones'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self._dirtyTabs = set()  # set of ZoneTab objects with unsaved changes
         self._newButtons = []    # one per zone tab, for _updateButtonStates
         self._cloneButtons = []  # one per zone tab, for _updateButtonStates
@@ -1448,6 +1455,7 @@ class ScreenCapChoiceDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Choose a Screenshot source')
         self.setWindowIcon(GetIcon('screenshot'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.zoneCombo = QtWidgets.QComboBox()
         self.zoneCombo.addItem('Current Screen')
@@ -1503,6 +1511,7 @@ class AutoSavedInfoDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Auto-saved backup found')
         self.setWindowIcon(GetIcon('save'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         mainlayout = QtWidgets.QVBoxLayout(self)
 
@@ -1536,6 +1545,7 @@ class AreaChoiceDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Choose an Area')
         self.setWindowIcon(GetIcon('areas'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.areaCombo = QtWidgets.QComboBox()
         for i in range(areacount):
@@ -1564,6 +1574,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Pyamoto Preferences')
         self.setWindowIcon(GetIcon('settings'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         # Create the tab widget
         self.tabWidget = QtWidgets.QTabWidget()
@@ -3061,6 +3072,7 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         super().__init__()
         self.setWindowTitle('Choose Level')
         self.setWindowIcon(GetIcon('open'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.currentlevel = None
         self.current_game_path = None
@@ -3805,6 +3817,7 @@ class SpritemapDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.setWindowTitle('Sprite Map Viewer')
         self.setWindowIcon(GetIcon('folderpath'))
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setMinimumSize(480, 360)
         self.resize(560, 480)
 

@@ -5134,6 +5134,7 @@ class ImportObjectsDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.editors = editors  # list of TilesetEditor, one per slot (index == slot)
         self.setWindowTitle("Add downloaded objects")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setMinimumWidth(520)
         self.setMinimumHeight(600)
         self._objectData = []  # parallel list of (jsonData, dirPath) for each model row
