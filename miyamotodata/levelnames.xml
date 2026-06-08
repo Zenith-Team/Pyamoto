@@ -292,14 +292,14 @@
 
     </category>
 
-    <category name="Unused Levels">
-        <level file="4-25" name="Toad House Type 4" />
-        <level file="13-2" name="A W1 climbing level with corrupted tilesets" />
-        <level file="13-4" name="An underground forest level with a long coin-filled path for a shell" />
-        <level file="13-7" name="A level with colored blocks, paragoombas and line-following platforms" />
-        <level file="16-1" name="A nearly-empty level with nothing but four bricks, a Koopa, and some other sprites" />
-        <level file="16-2" name="Beta &quot;Fuzzy Cliff Climb&quot;" />
-        <level file="18-1" name="Beta Desert Challenge Mode Stage" />
+    <category name="Unused">
+        <level file="4-25" name="Credits Toad House" />
+        <level file="13-2" name="Early '200 Clifftop Coins'?" />
+        <level file="13-4" name="Early 'Follow That Shell!'?" />
+        <level file="13-7" name="Don't Touch the Ground Challenge Level" />
+        <level file="16-1" name="Sky Level with Moving Castle Platforms and a Lakitu" />
+        <level file="16-2" name="Early 'Fuzzy Cliff Climb'" />
+        <level file="18-1" name="Desert Level with an Enemy Spawner" />
     </category>
 
 </levels>

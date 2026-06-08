@@ -182,4 +182,11 @@
         <level file="1-46" name="Boost Rush Results" />
     </category>
 
+    <category name="Unused">
+        <level file="2-13" name="Early 'Slippery Rope Ladders'" />
+        <level file="3-13" name="Early 'Beanstalk Jungle'" />
+        <level file="4-13" name="Flat Level with 3 Star Coins and a Goal Pole " />
+        <level file="5-13" name="Early 'Para-Beetle Parade'" />
+    </category>
+
 </levels>
