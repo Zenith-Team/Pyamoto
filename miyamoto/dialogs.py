@@ -1597,10 +1597,10 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.modsTab = self.gameSetupTab
 
         self.tabWidget.addTab(self.generalTab, 'General')
-        self.tabWidget.addTab(self.resourcesTab, 'Resources')
         self.tabWidget.addTab(self.toolbarTab, 'Toolbar')
         self.tabWidget.addTab(self.themesTab, 'Themes')
         self.tabWidget.addTab(self.gameSetupTab, 'Game Setup')
+        self.tabWidget.addTab(self.resourcesTab, 'Resources')
 
         # Create the buttonbox
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
@@ -1651,11 +1651,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             def __init__(self):
                 super().__init__()
 
-                scroll = QtWidgets.QScrollArea()
-                scroll.setWidgetResizable(True)
-                scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-                container = QtWidgets.QWidget()
-                vbox = QtWidgets.QVBoxLayout(container)
+                vbox = QtWidgets.QVBoxLayout()
                 vbox.setSpacing(16)
                 vbox.setContentsMargins(4, 4, 4, 4)
 
@@ -1800,10 +1796,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 vbox.addWidget(tileset_group)
 
                 vbox.addStretch(1)
-                scroll.setWidget(container)
-                outer = QtWidgets.QVBoxLayout(self)
-                outer.setContentsMargins(0, 0, 0, 0)
-                outer.addWidget(scroll)
+                self.setLayout(vbox)
 
         return GeneralTab()
 
@@ -1889,11 +1882,6 @@ class PreferencesDialog(QtWidgets.QDialog):
                         box.InternalName = I  # to save settings later
                     group.setLayout(layout)
 
-                # Create the always-enabled Current Area checkbox
-                CurrentArea = QtWidgets.QCheckBox('Current Area')
-                CurrentArea.setChecked(True)
-                CurrentArea.setEnabled(False)
-
                 # Create the Reset button
                 reset = QtWidgets.QPushButton('Reset')
                 reset.clicked.connect(self.reset)
@@ -1907,7 +1895,6 @@ class PreferencesDialog(QtWidgets.QDialog):
                 L.addWidget(SB, 1, 3, 1, 1)
                 L.addWidget(SDB, 2, 3, 1, 1)
                 L.addWidget(HB, 3, 3, 1, 1)
-                L.addWidget(CurrentArea, 4, 3, 1, 1)
                 self.setLayout(L)
 
             def reset(self):
@@ -2768,11 +2755,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 )
                 from .verifications import isValidObjectsPath
 
-                scroll = QtWidgets.QScrollArea()
-                scroll.setWidgetResizable(True)
-                scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-                container = QtWidgets.QWidget()
-                cvbox = QtWidgets.QVBoxLayout(container)
+                cvbox = QtWidgets.QVBoxLayout()
                 cvbox.setSpacing(14)
                 cvbox.setContentsMargins(4, 4, 4, 4)
 
@@ -2896,10 +2879,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                 self_inner.objRow._onFinishedExtra = _on_obj_downloaded
 
                 cvbox.addStretch(1)
-                scroll.setWidget(container)
-                outer = QtWidgets.QVBoxLayout(self_inner)
-                outer.setContentsMargins(0, 0, 0, 0)
-                outer.addWidget(scroll)
+                self_inner.setLayout(cvbox)
 
                 if _data_present():
                     self_inner.dataRow.setAlreadyPresent()
