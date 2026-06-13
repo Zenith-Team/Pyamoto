@@ -1165,7 +1165,7 @@ def DeleteObject(idx, objNum, soft=False):
                     obj.SetType(obj.tileset, obj.type - 1)
 
     for stamp in globals.mainWindow.stampChooser.model.items:
-        layers, sprites = globals.mainWindow.getEncodedObjects(stamp.MiyamotoClip, False)
+        layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(stamp.MiyamotoClip, False)
         objects = []
 
         for layer in layers:
@@ -1176,11 +1176,11 @@ def DeleteObject(idx, objNum, soft=False):
 
                 objects.append(obj)
 
-        stamp.MiyamotoClip = globals.mainWindow.encodeObjects(objects, sprites)
+        stamp.MiyamotoClip = globals.mainWindow.encodeObjects(objects, sprites, entrances, locations, paths, nabbitPaths, comments)
 
     for clip in globals.mainWindow.clipChooser._clips:
         try:
-            layers, sprites = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
+            layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
         except Exception:
             continue
         objects = []
@@ -1193,11 +1193,11 @@ def DeleteObject(idx, objNum, soft=False):
 
                 objects.append(obj)
 
-        clip.miyamoto_clip = globals.mainWindow.encodeObjects(objects, sprites)
+        clip.miyamoto_clip = globals.mainWindow.encodeObjects(objects, sprites, entrances, locations, paths, nabbitPaths, comments)
 
     if globals.mainWindow.clipboard is not None:
         if globals.mainWindow.clipboard.startswith('MiyamotoClip|') and globals.mainWindow.clipboard.endswith('|%'):
-            layers, sprites = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
+            layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
             objects = []
 
             for layer in layers:
@@ -1208,7 +1208,7 @@ def DeleteObject(idx, objNum, soft=False):
 
                     objects.append(obj)
 
-            globals.mainWindow.clipboard = globals.mainWindow.encodeObjects(objects, sprites)
+            globals.mainWindow.clipboard = globals.mainWindow.encodeObjects(objects, sprites, entrances, locations, paths, nabbitPaths, comments)
 
 
 def _compressBC3_nvcompress(tex, tile_path, nml):

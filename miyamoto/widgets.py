@@ -429,7 +429,7 @@ class ObjectPickerWidget(QtWidgets.QListView):
         inClipboard = False
         if globals.mainWindow.clipboard is not None:
             if globals.mainWindow.clipboard.startswith('MiyamotoClip|') and globals.mainWindow.clipboard.endswith('|%'):
-                layers, _ = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
+                layers, sprites , entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
                 for layer in layers:
                     for obj in layer:
                         if obj.tileset == idx and obj.type == objNum:
@@ -1067,12 +1067,17 @@ class ClipChooserWidget(QtWidgets.QWidget):
     def _on_new(self):
         mw = globals.mainWindow
         selitems = mw.scene.selectedItems()
-        from .items import ObjectItem, SpriteItem
+        from .items import ObjectItem, SpriteItem, EntranceItem, LocationItem, PathItem, NabbitPathItem, CommentItem
         objs = [o for o in selitems if isinstance(o, ObjectItem)]
         sprs = [o for o in selitems if isinstance(o, SpriteItem)]
-        if not objs and not sprs:
+        ents = [o for o in selitems if isinstance(o, EntranceItem)]
+        locs = [o for o in selitems if isinstance(o, LocationItem)]
+        paths = [o for o in selitems if isinstance(o, PathItem)]
+        nPaths = [o for o in selitems if isinstance(o, NabbitPathItem)]
+        coms = [o for o in selitems if isinstance(o, CommentItem)]
+        if not objs and not sprs and not ents and not locs and not paths and not nPaths and not coms:
             return
-        clip_str = mw.encodeObjects(objs, sprs)
+        clip_str = mw.encodeObjects(objs, sprs, ents, locs, paths, nPaths, coms)
         if not clip_str:
             return
         name = self._prompt_name('New Clip')
@@ -5038,7 +5043,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     newpathdata = {'id': newpathid,
                                    'unk1': 0,
                                    'nodes': [
-                                       {'x': clickedx, 'y': clickedy, 'speed': 1, 'accel': 1.0, 'delay': 0}],
+                                       {'x': clickedx, 'y': clickedy, 'speed': 1.0, 'accel': 1.0, 'delay': 0}],
                                    'loops': False
                                    }
                     newnode = PathItem(clickedx, clickedy, newpathdata, newpathdata['nodes'][0], 0, 0, 0, 0)
@@ -5066,7 +5071,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                     # Insert after selected node and copy its properties
                     insert_idx = -1
-                    copy_data = {'speed': 1, 'accel': 1.0, 'delay': 0}
+                    copy_data = {'speed': 1.0, 'accel': 1.0, 'delay': 0}
                     if selectedpn:
                         for idx, n in enumerate(pathd['nodes']):
                             if n['graphicsitem'].listitem == selectedpn:
@@ -5084,10 +5089,6 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                     newnodedata = {'x': clickedx, 'y': clickedy}
                     newnodedata.update(copy_data)
-                    
-                    # Default speed of 1 for newly placed nodes
-                    if newnodedata['speed'] == 0:
-                        newnodedata['speed'] = 1
 
                     pathd['nodes'].insert(insert_idx, newnodedata)
 
@@ -5150,7 +5151,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 loc.setSelected(True)
 
             elif globals.CurrentPaintType == 8:
-                # paint a stamp
+                # paint a clip
                 clicked = self.mapToScene(event.x(), event.y())
                 if clicked.x() < 0: clicked.setX(0)
                 if clicked.y() < 0: clicked.setY(0)
@@ -5208,8 +5209,6 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     self.dragstartx = clickedx
                     self.dragstarty = clickedy
                     self.currentobj = objs
-
-                    SetDirty()
 
             elif globals.CurrentPaintType == 9:
                 # paint a comment

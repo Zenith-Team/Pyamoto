@@ -1785,7 +1785,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
     def Cut(self):
         """
-        Cuts the selected items
+        Cut the selected items
         """
         self.SelectionUpdateFlag = True
         selitems = self.scene.selectedItems()
@@ -1804,9 +1804,28 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
             clipboard_o = []
             clipboard_s = []
+            clipboard_e = []
+            clipboard_l = []
+            clipboard_p = []
+            clipboard_n = []
+            clipboard_c = []
             
             objs_to_delete = []
             sprs_to_delete = []
+            ents_to_delete = []
+            locs_to_delete = []
+            paths_to_delete = []
+            nPaths_to_delete = []
+            coms_to_delete = []
+
+            # Count selected nodes per path to correctly handle path removal
+            nodes_to_delete_per_path = {}
+            for item in selitems:
+                if isinstance(item, (PathItem, NabbitPathItem)):
+                    p_id = id(item.pathinfo)
+                    nodes_to_delete_per_path[p_id] = nodes_to_delete_per_path.get(p_id, 0) + 1
+            
+            handled_path_removals = set()
             
             for obj in selitems:
                 if isinstance(obj, ObjectItem):
@@ -1822,18 +1841,66 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     if obj in globals.Area.sprites:
                         sprs_to_delete.append((obj, globals.Area.sprites.index(obj)))
                         clipboard_s.append(obj)
+                elif isinstance(obj, EntranceItem):
+                    if obj in globals.Area.entrances:
+                        ents_to_delete.append((obj, globals.Area.entrances.index(obj)))
+                        clipboard_e.append(obj)
+                elif isinstance(obj, LocationItem):
+                    if obj in globals.Area.locations:
+                        locs_to_delete.append((obj, globals.Area.locations.index(obj)))
+                        clipboard_l.append(obj)
+                elif isinstance(obj, PathItem):
+                    try:
+                        idx = obj.pathinfo['nodes'].index(obj.nodeinfo)
+                        p_id = id(obj.pathinfo)
+                        path_was_removed = False
+                        if len(obj.pathinfo['nodes']) == nodes_to_delete_per_path[p_id]:
+                            if p_id not in handled_path_removals:
+                                path_was_removed = True
+                                handled_path_removals.add(p_id)
+                        paths_to_delete.append((obj, obj.pathinfo, obj.nodeinfo, idx, path_was_removed, False))
+                        clipboard_p.append(obj)
+                    except ValueError:
+                        continue
+                elif isinstance(obj, NabbitPathItem):
+                    try:
+                        idx = obj.pathinfo['nodes'].index(obj.nodeinfo)
+                        p_id = id(obj.pathinfo)
+                        path_was_removed = False
+                        if len(obj.pathinfo['nodes']) == nodes_to_delete_per_path[p_id]:
+                            if p_id not in handled_path_removals:
+                                path_was_removed = True
+                                handled_path_removals.add(p_id)
+                        nPaths_to_delete.append((obj, obj.pathinfo, obj.nodeinfo, idx, path_was_removed, True))
+                        clipboard_n.append(obj)
+                    except ValueError:
+                        continue
+                elif isinstance(obj, CommentItem):
+                    if obj in globals.Area.comments:
+                        coms_to_delete.append((obj, globals.Area.comments.index(obj)))
+                        clipboard_c.append(obj)
 
-            if objs_to_delete or sprs_to_delete:
+            if objs_to_delete or sprs_to_delete or ents_to_delete or locs_to_delete or paths_to_delete or nPaths_to_delete or coms_to_delete:
                 globals.UndoManager.begin_compound("Cut Selection")
                 if objs_to_delete:
                     globals.UndoManager.push(undomanager.DeleteObjectsCommand(objs_to_delete))
                 if sprs_to_delete:
                     globals.UndoManager.push(undomanager.DeleteSpritesCommand(sprs_to_delete))
+                if ents_to_delete:
+                    globals.UndoManager.push(undomanager.DeleteEntrancesCommand(ents_to_delete))
+                if locs_to_delete:
+                    globals.UndoManager.push(undomanager.DeleteLocationsCommand(locs_to_delete))
+                if paths_to_delete:
+                    globals.UndoManager.push(undomanager.DeletePathNodeCommand(paths_to_delete, False))
+                if nPaths_to_delete:
+                    globals.UndoManager.push(undomanager.DeletePathNodeCommand(nPaths_to_delete, True))
+                if coms_to_delete:
+                    globals.UndoManager.push(undomanager.DeleteCommentsCommand(coms_to_delete))
                 globals.UndoManager.end_compound()
 
                 self.actions['cut'].setEnabled(False)
                 self.actions['paste'].setEnabled(True)
-                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s)
+                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s, clipboard_e, clipboard_l, clipboard_p, clipboard_n, clipboard_c)
                 self.systemClipboard.setText(self.clipboard)
 
                 # Get the current flower/grass type
@@ -1868,25 +1935,45 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
     def Copy(self):
         """
-        Copies the selected items
+        Copy the selected items
         """
         selitems = self.scene.selectedItems()
         if len(selitems) > 0:
             clipboard_o = []
             clipboard_s = []
+            clipboard_e = []
+            clipboard_l = []
+            clipboard_p = []
+            clipboard_n = []
+            clipboard_c = []
             ii = isinstance
             type_obj = ObjectItem
             type_spr = SpriteItem
+            type_ent = EntranceItem
+            type_loc = LocationItem
+            type_path = PathItem
+            type_nPath = NabbitPathItem
+            type_com = CommentItem
 
             for obj in selitems:
                 if ii(obj, type_obj):
                     clipboard_o.append(obj)
                 elif ii(obj, type_spr):
                     clipboard_s.append(obj)
+                elif ii(obj, type_ent):
+                    clipboard_e.append(obj)
+                elif ii(obj, type_loc):
+                    clipboard_l.append(obj)
+                elif ii(obj, type_path):
+                    clipboard_p.append(obj)
+                elif ii(obj, type_nPath):
+                    clipboard_n.append(obj)
+                elif ii(obj, type_com):
+                    clipboard_c.append(obj)
 
-            if len(clipboard_o) > 0 or len(clipboard_s) > 0:
+            if len(clipboard_o) > 0 or len(clipboard_s) > 0 or len(clipboard_e) > 0 or len(clipboard_l) > 0 or len(clipboard_p) > 0 or len(clipboard_n) > 0 or len(clipboard_c) > 0:
                 self.actions['paste'].setEnabled(True)
-                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s)
+                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s, clipboard_e, clipboard_l, clipboard_p, clipboard_n, clipboard_c)
                 self.systemClipboard.setText(self.clipboard)
 
     def Paste(self):
@@ -1933,9 +2020,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
                 self.scene.update()
 
-    def encodeObjects(self, clipboard_o, clipboard_s):
+    def encodeObjects(self, clipboard_o, clipboard_s, clipboard_e, clipboard_l, clipboard_p, clipboard_n, clipboard_c):
         """
-        Encode a set of objects and sprites into a string
+        Encode a set of objects into a string
         """
         convclip = ['MiyamotoClip']
 
@@ -1952,6 +2039,51 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             convclip.append('1:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d' % (
             item.type, item.objx, item.objy, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
             data[8], data[9], data[10], data[11], item.layer, item.initialState))
+
+        # get entrances
+        clipboard_e.sort(key=lambda x: x.entid)
+
+        for item in clipboard_e:
+            convclip.append('2:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d' % (
+            item.objx, item.objy, item.camerax, item.cameray, item.entid, item.destarea, item.destentrance, item.enttype, item.players,
+            item.entzone, item.playerDistance, item.entsettings, item.otherID, item.coinOrder, item.pathID, item.pathnodeindex, item.transition))
+
+        # get locations
+        clipboard_l.sort(key=lambda x: x.id)
+
+        for item in clipboard_l:
+            convclip.append('3:%d:%d:%d:%d:%d' % (
+            item.objx, item.objy, item.width, item.height, item.id))
+
+        # get path nodes
+        clipboard_p.sort(key=lambda x: (x.pathid, x.nodeid))
+
+        pathID = -1
+        for item in clipboard_p:
+            if item.pathid != pathID:
+                pathID = item.pathid
+
+                convclip.append('4:%d:%d:%d' % (
+                item.pathid, item.pathinfo['unk1'], item.pathinfo['loops']))
+
+            convclip[-1] += (':%d:%d:%g:%g:%d' % (
+            item.objx, item.objy, item.nodeinfo['speed'], item.nodeinfo['accel'], item.nodeinfo['delay']))
+
+        # get nabbit path nodes
+        clipboard_n.sort(key=lambda x: x.nodeid)
+
+        for item in clipboard_n:
+            convclip.append('5:%d:%d:%d:%d:%d:%d:%d' % (
+            item.objx, item.objy, item.nodeinfo['action'], item.nodeinfo['unk1'], item.nodeinfo['unk2'], item.nodeinfo['unk3'], item.nodeinfo['unk4']))
+
+        # get comments
+        for item in clipboard_c:
+            from base64 import b64encode
+            text = item.text.encode("ascii")
+            b64text = b64encode(text)
+
+            convclip.append('8:%d:%d:%s' % (
+            item.objx, item.objy, b64text.decode("ascii")))
 
         convclip.append('%')
         return '|'.join(convclip)
@@ -1980,21 +2112,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if result != QtWidgets.QMessageBox.Yes: return
 
-        layers, sprites = self.getEncodedObjects(encoded)
+        layers, sprites, entrances, locations, paths, nabbitPaths, comments = self.getEncodedObjects(encoded)
 
         globals.UndoManager.begin_compound("Paste")
-
-        # Go through the sprites
-        for spr in sprites:
-            x = spr.objx / 16
-            y = spr.objy / 16
-            if x < x1: x1 = x
-            if x > x2: x2 = x
-            if y < y1: y1 = y
-            if y > y2: y2 = y
-
-            globals.UndoManager.push(undomanager.AddSpriteCommand(spr))
-            added.append(spr)
 
         # Go through the objects
         for layer_idx, layer in enumerate(layers):
@@ -2020,7 +2140,83 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     added.append(obj)
                     z += 1
 
+        # Go through the sprites
+        for spr in sprites:
+            x = spr.objx / 16
+            y = spr.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddSpriteCommand(spr))
+            added.append(spr)
+
+        # Go through the entrances
+        for ent in entrances:
+            x = ent.objx / 16
+            y = ent.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddEntranceCommand(ent))
+            added.append(ent)
+
+        # Go through the locations
+        for loc in locations:
+            x = loc.objx / 16
+            y = loc.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddLocationCommand(loc))
+            added.append(loc)
+
+        # Go through the path nodes
+        for node in paths:
+            x = node.objx / 16
+            y = node.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddPathNodeCommand(node.pathinfo, node.nodeinfo, node, False))
+            added.append(node)
+
+        # Go through the nabbit path nodes
+        for node in nabbitPaths:
+            x = node.objx / 16
+            y = node.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddPathNodeCommand(node.pathinfo, node.nodeinfo, node, True))
+            added.append(node)
+
+        # Go through the comments
+        for com in comments:
+            x = com.objx / 16
+            y = com.objy / 16
+            if x < x1: x1 = x
+            if x > x2: x2 = x
+            if y < y1: y1 = y
+            if y > y2: y2 = y
+
+            globals.UndoManager.push(undomanager.AddCommentCommand(com))
+            added.append(com)
+
         globals.UndoManager.end_compound()
+
+        if len(added) == 0:
+            globals.OverrideSnapping = False
+            return added
 
         # now center everything
         zoomscaler = ((self.ZoomLevel / globals.TileWidth * 24) / 100.0)
@@ -2046,13 +2242,18 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             ypixeloffset = yoffset * 16
 
         for item in added:
-            if isinstance(item, SpriteItem):
+            if isinstance(item, ObjectItem):
+                item.setPos((item.objx + xoffset) * globals.TileWidth, (item.objy + yoffset) * globals.TileWidth)
+            elif isinstance(item, SpriteItem):
                 item.setPos(
                     (item.objx + xpixeloffset + item.ImageObj.xOffset) * globals.TileWidth / 16,
                     (item.objy + ypixeloffset + item.ImageObj.yOffset) * globals.TileWidth / 16,
                 )
-            elif isinstance(item, ObjectItem):
-                item.setPos((item.objx + xoffset) * globals.TileWidth, (item.objy + yoffset) * globals.TileWidth)
+            elif isinstance(item, (EntranceItem, LocationItem, PathItem, NabbitPathItem, CommentItem)):
+                item.setPos(
+                    (item.objx + xpixeloffset) * globals.TileWidth / 16,
+                    (item.objy + ypixeloffset) * globals.TileWidth / 16,
+                )
             if select: item.setSelected(True)
 
         globals.OverrideSnapping = False
@@ -2064,32 +2265,38 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         return added
 
-    def getEncodedObjects(self, encoded, countCheck = True):
+    def getEncodedObjects(self, encoded, placeObjects = True):
         """
         Create the objects from a MiyamotoClip
         """
 
         layers = ([], [], [])
         sprites = []
+        entrances = []
+        locations = []
+        paths = []
+        nabbitPaths = []
+        comments = []
 
         try:
             if not (encoded.startswith('MiyamotoClip|') and encoded.endswith('|%')):
-                return layers, sprites
+                return layers, sprites, entrances, locations, paths, nabbitPaths, comments
 
             clip = encoded[13:-2].split('|')
 
-            if countCheck and len(clip) > 300:
+            if placeObjects and len(clip) > 300:
                 result = QtWidgets.QMessageBox.warning(self, 'Pyamoto', "You're trying to paste over 300 items at once.<br>This may take a while (depending on your computer speed), are you sure you want to continue?",
                                                        QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
                 if result == QtWidgets.QMessageBox.No:
-                    return layers, sprites
+                    return layers, sprites, entrances, locations, paths, nabbitPaths, comments
 
             for item in clip:
-                # Check to see whether it's an object or sprite
+                # Check to see what type of item it is
                 # and add it to the correct stack
                 split = item.split(':')
+
+                # get object
                 if split[0] == '0':
-                    # object
                     if len(split) != 9: continue
 
                     tileset = int(split[1])
@@ -2111,14 +2318,19 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     if height < 1 or height > 511: continue
                     if data < 0 or data > 24: continue
 
-                    newitem = ObjectItem(tileset, type, layer, objx, objy, width, height, 1, data)
 
-                    layers[layer].append(newitem)
+                    mw = globals.mainWindow
+                    obj.positionChanged = mw.HandleObjPosChange
 
+                    obj = ObjectItem(tileset, type, layer, objx, objy, width, height, 1, data)
+
+                    layers[layer].append(obj)
+
+                # get sprite
                 elif split[0] == '1':
-                    # sprite
                     if len(split) != 18: continue
 
+                    type = int(split[1])
                     objx = int(split[2])
                     objy = int(split[3])
                     data = bytes(map(int,
@@ -2127,14 +2339,185 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     layer = int(split[16])
                     initialState = int(split[17])
 
-                    newitem = SpriteItem(int(split[1]), objx, objy, data, layer, initialState)
-                    sprites.append(newitem)
+                    spr = SpriteItem(type, objx, objy, data, layer, initialState)
+
+                    mw = globals.mainWindow
+                    spr.positionChanged = mw.HandleSprPosChange
+                    spr.listitem = ListWidgetItem_SortsByOther(spr)
+
+                    spr.UpdateListItem()
+                    sprites.append(spr)
+
+                # get entrance
+                elif split[0] == '2':
+                    if len(split) != 18: continue
+
+                    objx = int(split[1])
+                    objy = int(split[2])
+                    camerax = int(split[3])
+                    cameray = int(split[4])
+                    destarea = int(split[6])
+                    destentrance = int(split[7])
+                    enttype = int(split[8])
+                    players = int(split[9])
+                    entzone = int(split[10])
+                    playerDistance = int(split[11])
+                    entsettings = int(split[12])
+                    otherID = int(split[13])
+                    coinOrder = int(split[14])
+                    pathID = int(split[15])
+                    pathnodeindex = int(split[16])
+                    transition = int(split[17])
+                    
+                    allID = set()  # faster 'x in y' lookups for sets
+                    newID = int(split[5])
+                    for i in globals.Area.entrances:
+                        allID.add(i.entid)
+                    for i in entrances:
+                        allID.add(i.entid)
+
+                    while newID <= 255:
+                        if newID not in allID:
+                            break
+                        newID += 1
+
+                    ent = EntranceItem(objx, objy, camerax, cameray, newID, destarea, destentrance, enttype, players,
+                    entzone, playerDistance, entsettings, otherID, coinOrder, pathID, pathnodeindex, transition)
+
+                    mw = globals.mainWindow
+                    ent.positionChanged = mw.HandleEntPosChange
+                    ent.listitem = ListWidgetItem_SortsByOther(ent)
+
+                    ent.UpdateListItem()
+                    entrances.append(ent)
+
+                # get location
+                elif split[0] == '3':
+                    if len(split) != 6: continue
+
+                    objx = int(split[1])
+                    objy = int(split[2])
+                    width = int(split[3])
+                    height = int(split[4])
+                    
+                    allID = set()  # faster 'x in y' lookups for sets
+                    newID = int(split[5])
+                    for i in globals.Area.locations:
+                        allID.add(i.id)
+                    for i in locations:
+                        allID.add(i.id)
+
+                    while newID <= 255:
+                        if newID not in allID:
+                            break
+                        newID += 1
+
+                    loc = LocationItem(objx, objy, width, height, newID)
+
+                    mw = globals.mainWindow
+                    loc.positionChanged = mw.HandleLocPosChange
+                    loc.sizeChanged = mw.HandleLocSizeChange
+                    loc.listitem = ListWidgetItem_SortsByOther(loc)
+
+                    loc.UpdateListItem()
+                    locations.append(loc)
+
+                # get path
+                elif split[0] == '4':
+                    if len(split) % 5 != 4 or len(split) < 9: continue
+
+                    unk1 = int(split[2])
+                    loops = int(split[3])
+
+                    getids = [False for x in range(256)]
+                    getids[90] = True  # Skip Nabbit path
+                    for pathdatax in globals.Area.pathdata:
+                        getids[int(pathdatax['id'])] = True
+                    for i in paths:
+                        getids[int(i.pathid)] = True
+
+                    newpathid = getids.index(False, int(split[1]))
+                    pathinfo = {'id': newpathid,
+                                   'unk1': unk1,
+                                   'nodes': [],
+                                   'loops': loops
+                                   }
+
+                    for x in range(4, len(split), 5):
+                        objx = int(split[x])
+                        objy = int(split[x + 1])
+                        speed = float(split[x + 2])
+                        accel = float(split[x + 3])
+                        delay = int(split[x + 4])
+
+                        nodeinfo = {'x': objx, 'y': objy, 'speed': speed, 'accel': accel, 'delay': delay}
+                        pathinfo['nodes'].append(nodeinfo)
+
+                        node = PathItem(objx, objy, pathinfo, nodeinfo, 0, 0, 0, 0)
+
+                        mw = globals.mainWindow
+                        node.positionChanged = mw.HandlePathPosChange
+                        node.listitem = ListWidgetItem_SortsByOther(node)
+
+                        node.UpdateListItem()
+                        paths.append(node)
+
+                # get nabbit path node
+                elif split[0] == '5':
+                    if len(split) != 8 or globals.Area.areanum != 1: continue
+
+                    objx = int(split[1])
+                    objy = int(split[2])
+                    action = int(split[3])
+                    unk1 = int(split[4])
+                    unk2 = int(split[5])
+                    unk3 = int(split[6])
+                    unk4 = int(split[7])
+
+                    if globals.Area.nPathdata and placeObjects:
+                        pathinfo = globals.Area.nPaths[-1].pathinfo
+                    elif nabbitPaths:
+                        pathinfo = nabbitPaths[-1].pathinfo
+                    else:
+                        pathinfo = {'nodes': []}
+
+                    nodeinfo = {'x': objx, 'y': objy, 'action': action, 'unk1': unk1, 'unk2': unk2, 'unk3': unk3, 'unk4': unk4}
+                    pathinfo['nodes'].append(nodeinfo)
+                    
+                    node = NabbitPathItem(objx, objy, pathinfo, nodeinfo, 0, 0, 0, 0)
+
+                    mw = globals.mainWindow
+                    node.positionChanged = mw.HandlePathPosChange
+                    node.listitem = ListWidgetItem_SortsByOther(node)
+                    
+                    node.UpdateListItem()
+                    nabbitPaths.append(node)
+
+                # get comment
+                elif split[0] == '8':
+                    if len(split) != 4: continue
+                    from base64 import b64decode
+
+                    objx = int(split[1])
+                    objy = int(split[2])
+                    b64text = str(split[3]).encode("ascii")
+                    text = b64decode(b64text)
+
+                    com = CommentItem(objx, objy, text.decode("ascii"))
+
+                    mw = globals.mainWindow
+                    com.positionChanged = mw.HandleComPosChange
+                    com.textChanged = mw.HandleComTxtChange
+                    com.listitem = QtWidgets.QListWidgetItem()
+
+                    com.UpdateListItem()
+                    comments.append(com)
 
         except ValueError:
             # an int() probably failed somewhere
             pass
 
-        return layers, sprites
+        return layers, sprites, entrances, locations, paths, nabbitPaths, comments
 
     def HandleRaiseObjects(self):
         objlist = [obj for obj in self.scene.selectedItems() if isinstance(obj, ObjectItem)]
@@ -4521,7 +4904,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     ## Check if the object is referenced by a saved clip
                     for clip in self.clipChooser._clips:
                         try:
-                            layers, _ = self.getEncodedObjects(clip.miyamoto_clip, False)
+                            layers, sprites , entrances, locations, paths, nabbitPaths, comments = self.getEncodedObjects(clip.miyamoto_clip, False)
                         except Exception:
                             continue
                         for layer in layers:
@@ -4536,7 +4919,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     ## Check if the object is in the clipboard
                     if self.clipboard is not None:
                         if self.clipboard.startswith('MiyamotoClip|') and self.clipboard.endswith('|%'):
-                            layers, _ = self.getEncodedObjects(self.clipboard, False)
+                            layers, sprites , entrances, locations, paths, nabbitPaths, comments = self.getEncodedObjects(self.clipboard, False)
                             for layer in layers:
                                 for obj in layer:
                                     if obj.tileset == idx and obj.type == objNum:
