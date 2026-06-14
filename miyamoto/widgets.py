@@ -429,7 +429,7 @@ class ObjectPickerWidget(QtWidgets.QListView):
         inClipboard = False
         if globals.mainWindow.clipboard is not None:
             if globals.mainWindow.clipboard.startswith('MiyamotoClip|') and globals.mainWindow.clipboard.endswith('|%'):
-                layers, _ = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
+                layers, sprites , entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
                 for layer in layers:
                     for obj in layer:
                         if obj.tileset == idx and obj.type == objNum:
@@ -1067,12 +1067,17 @@ class ClipChooserWidget(QtWidgets.QWidget):
     def _on_new(self):
         mw = globals.mainWindow
         selitems = mw.scene.selectedItems()
-        from .items import ObjectItem, SpriteItem
+        from .items import ObjectItem, SpriteItem, EntranceItem, LocationItem, PathItem, NabbitPathItem, CommentItem
         objs = [o for o in selitems if isinstance(o, ObjectItem)]
         sprs = [o for o in selitems if isinstance(o, SpriteItem)]
-        if not objs and not sprs:
+        ents = [o for o in selitems if isinstance(o, EntranceItem)]
+        locs = [o for o in selitems if isinstance(o, LocationItem)]
+        paths = [o for o in selitems if isinstance(o, PathItem)]
+        nPaths = [o for o in selitems if isinstance(o, NabbitPathItem)]
+        coms = [o for o in selitems if isinstance(o, CommentItem)]
+        if not objs and not sprs and not ents and not locs and not paths and not nPaths and not coms:
             return
-        clip_str = mw.encodeObjects(objs, sprs)
+        clip_str = mw.encodeObjects(objs, sprs, ents, locs, paths, nPaths, coms)
         if not clip_str:
             return
         name = self._prompt_name('New Clip')
@@ -3472,7 +3477,21 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         for f in self.fields:
             f.update(data)
         self.UpdateFlag = False
+
+        # Emit DataUpdate so SpriteDataUpdated can handle special cases (e.g. sprite 564).
         self.DataUpdate.emit(data)
+
+        # Direct fallback: if the DataUpdate path did not save (dock hidden,
+        # selObj was None, etc.), write the change through the undo manager now.
+        # SpriteDataChangedCommand.redo() is idempotent with respect to old_data —
+        # if SpriteDataUpdated already ran we'll see obj.spritedata == data and skip.
+        if not self.DefaultMode and globals.UndoManager is not None:
+            mw = globals.mainWindow
+            if mw is not None:
+                obj = getattr(mw, 'selObj', None)
+                if obj is not None and hasattr(obj, 'spritedata') and obj.spritedata != data:
+                    globals.UndoManager.push(
+                        undomanager.SpriteDataChangedCommand(obj, obj.spritedata, data))
 
 class HexHighlightEdit(QtWidgets.QLineEdit):
     def __init__(self, parent=None):
@@ -3488,46 +3507,47 @@ class HexHighlightEdit(QtWidgets.QLineEdit):
         self.update()
 
     def paintEvent(self, event):
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        # Let Qt draw the full line edit (background, scrolled text, cursor, selection).
+        super().paintEvent(event)
 
-        opt = QtWidgets.QStyleOptionFrame()
-        self.initStyleOption(opt)
-
-        # Background + frame (Qt's standard line edit look)
-        self.style().drawPrimitive(
-            QtWidgets.QStyle.PE_PanelLineEdit, opt, painter, self)
+        if not self._highlight_positions:
+            return
 
         text = self.text()
         if not text:
             return
 
+        opt = QtWidgets.QStyleOptionFrame()
+        self.initStyleOption(opt)
         text_rect = self.style().subElementRect(
             QtWidgets.QStyle.SE_LineEditContents, opt, self)
 
-        # Highlight rects behind specific characters
-        if self._highlight_positions:
-            fm = self.fontMetrics()
-            for pos in sorted(self._highlight_positions):
-                if pos >= len(text):
-                    continue
-                offset = fm.horizontalAdvance(text[:pos])
-                char_width = max(fm.horizontalAdvance(text[pos]), 1)
-                ch = text_rect.left() + offset
-                color = self.palette().highlight().color()
-                color.setAlpha(120)
-                painter.setPen(Qt.NoPen)
-                painter.setBrush(QtGui.QBrush(color))
-                painter.drawRoundedRect(
-                    QtCore.QRectF(ch, text_rect.top() + 1,
-                                  char_width, text_rect.height() - 2),
-                    2, 2)
+        fm = self.fontMetrics()
+        cursor_pos = self.cursorPosition()
+        expected_cursor_x = text_rect.left() + fm.horizontalAdvance(text[:cursor_pos])
+        scroll_offset = expected_cursor_x - self.cursorRect().left()
 
-        # Text via Qt's own method for pixel-perfect alignment
-        self.style().drawItemText(painter, text_rect,
-                                  Qt.AlignLeft | Qt.AlignVCenter,
-                                  opt.palette, self.isEnabled(),
-                                  text, QtGui.QPalette.Text)
+        painter = QtGui.QPainter(self)
+        painter.setClipRect(text_rect)
+
+        # Draw highlight rects on top of the Qt-rendered background
+        for pos in sorted(self._highlight_positions):
+            if pos >= len(text):
+                continue
+            x = text_rect.left() + fm.horizontalAdvance(text[:pos]) - scroll_offset
+            w = max(fm.horizontalAdvance(text[pos]), 1)
+            color = self.palette().highlight().color()
+            color.setAlpha(120)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QtGui.QBrush(color))
+            painter.drawRoundedRect(
+                QtCore.QRectF(x, text_rect.top() + 1, w, text_rect.height() - 2), 2, 2)
+
+        # Redraw text on top of the highlights so it stays crisp
+        baseline_y = text_rect.top() + (text_rect.height() - fm.height()) // 2 + fm.ascent()
+        painter.setPen(opt.palette.color(
+            QtGui.QPalette.Text if self.isEnabled() else QtGui.QPalette.PlaceholderText))
+        painter.drawText(text_rect.left() - scroll_offset, baseline_y, text)
 
 
 class EntranceEditorWidget(QtWidgets.QWidget):
@@ -4689,6 +4709,7 @@ class TilesetsTab(QtWidgets.QWidget):
             del dialogs
 
             dbox.setWindowTitle('Enter a Filename')
+            dbox.setWindowFlags(dbox.windowFlags() & ~Qt.WindowContextHelpButtonHint)
             dbox.label.setText('Enter the name of a custom tileset file to use. It must already be inside the level archive in order for Pyamoto to recognize it.')
             dbox.textbox.setMaxLength(31)
             dbox.textbox.setText(fname)
@@ -5038,7 +5059,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     newpathdata = {'id': newpathid,
                                    'unk1': 0,
                                    'nodes': [
-                                       {'x': clickedx, 'y': clickedy, 'speed': 1, 'accel': 1.0, 'delay': 0}],
+                                       {'x': clickedx, 'y': clickedy, 'speed': 1.0, 'accel': 1.0, 'delay': 0}],
                                    'loops': False
                                    }
                     newnode = PathItem(clickedx, clickedy, newpathdata, newpathdata['nodes'][0], 0, 0, 0, 0)
@@ -5066,7 +5087,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                     # Insert after selected node and copy its properties
                     insert_idx = -1
-                    copy_data = {'speed': 1, 'accel': 1.0, 'delay': 0}
+                    copy_data = {'speed': 1.0, 'accel': 1.0, 'delay': 0}
                     if selectedpn:
                         for idx, n in enumerate(pathd['nodes']):
                             if n['graphicsitem'].listitem == selectedpn:
@@ -5084,10 +5105,6 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
 
                     newnodedata = {'x': clickedx, 'y': clickedy}
                     newnodedata.update(copy_data)
-                    
-                    # Default speed of 1 for newly placed nodes
-                    if newnodedata['speed'] == 0:
-                        newnodedata['speed'] = 1
 
                     pathd['nodes'].insert(insert_idx, newnodedata)
 
@@ -5150,7 +5167,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 loc.setSelected(True)
 
             elif globals.CurrentPaintType == 8:
-                # paint a stamp
+                # paint a clip
                 clicked = self.mapToScene(event.x(), event.y())
                 if clicked.x() < 0: clicked.setX(0)
                 if clicked.y() < 0: clicked.setY(0)
@@ -5208,8 +5225,6 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     self.dragstartx = clickedx
                     self.dragstarty = clickedy
                     self.currentobj = objs
-
-                    SetDirty()
 
             elif globals.CurrentPaintType == 9:
                 # paint a comment
@@ -6442,6 +6457,33 @@ class EmbeddedTab(QtWidgets.QTabWidget):
         self.m1.LoadFromTileset(1)
         self.m2.LoadFromTileset(2)
         self.m3.LoadFromTileset(3)
+        self._updateTabStates()
+
+    def _updateTabStates(self):
+        e1 = self.m1.rowCount() > 0
+        e2 = self.m2.rowCount() > 0
+        e3 = self.m3.rowCount() > 0
+        any_embedded = e1 or e2 or e3
+
+        self.setTabEnabled(0, any_embedded)
+        self.setTabEnabled(1, e1)
+        self.setTabEnabled(2, e2)
+        self.setTabEnabled(3, e3)
+
+        if not self.isTabEnabled(self.currentIndex()):
+            for i in range(self.count()):
+                if self.isTabEnabled(i):
+                    self.setCurrentIndex(i)
+                    break
+
+        mw = globals.mainWindow
+        if mw is not None and hasattr(mw, 'objAllTab'):
+            mw.objAllTab.setTabEnabled(1, any_embedded)
+            if not mw.objAllTab.isTabEnabled(mw.objAllTab.currentIndex()):
+                for i in range(mw.objAllTab.count()):
+                    if mw.objAllTab.isTabEnabled(i):
+                        mw.objAllTab.setCurrentIndex(i)
+                        break
 
 
 class ListWidgetWithToolTipSignal(QtWidgets.QListWidget):

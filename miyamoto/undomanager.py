@@ -726,7 +726,7 @@ class AddPathNodeCommand(Command):
         self.nodeinfo = nodeinfo
         self.node = node
         self.is_nabbit = is_nabbit
-        self.is_new_path = (len(pathinfo['nodes']) == 1) if index == -1 else False
+        self.is_new_path = index == -1
         self.index = index
 
     def undo(self):
@@ -772,7 +772,8 @@ class AddPathNodeCommand(Command):
             
             if self.is_new_path:
                 if self.is_nabbit:
-                    globals.Area.nPathdata = self.pathinfo
+                    if not globals.Area.nPathdata:
+                        globals.Area.nPathdata = self.pathinfo
                 else:
                     if self.pathinfo not in globals.Area.pathdata:
                         globals.Area.pathdata.append(self.pathinfo)

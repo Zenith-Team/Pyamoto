@@ -53,7 +53,8 @@ class Clip:
         self.preview = None
 
     def _render_preview(self, mw):
-        layers, sprites = mw.getEncodedObjects(self.miyamoto_clip, False)
+        layers, sprites, entrances, locations, paths, nabbitPaths, comments = mw.getEncodedObjects(self.miyamoto_clip, False)
+        # TODO: Render entrances, locations, paths, nabbit paths, and comments
 
         minX = minY = float('inf')
         maxX = maxY = float('-inf')

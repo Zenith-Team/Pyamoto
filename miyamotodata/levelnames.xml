@@ -14,10 +14,10 @@
         <level file="1-23" name="1-Castle: Lemmy's Swingback Castle" />
         <level file="1-13" name="1-Blooper: Blooper's Secret Lair" />
         <category name="Ambushes">
-            <level file="1-32" name="Piranha Plant Ambush" />
-            <level file="1-33" name="Piranha Plant Ambush" />
-            <level file="1-34" name="Piranha Plant Ambush" />
-            <level file="1-55" name="Piranha Plant Ambush?" />
+            <level file="1-32" name="Piranha Plant Ambush 1" />
+            <level file="1-33" name="Piranha Plant Ambush 2" />
+            <level file="1-34" name="Piranha Plant Ambush 3" />
+            <level file="1-55" name="Piranha Plant Ambush 4" />
         </category>
     </category>
 
@@ -32,12 +32,12 @@
         <level file="2-23" name="2-Castle: Morton's Compactor Castle" />
         <level file="2-14" name="2-Ice Block: Piranha Plants on Ice" />
         <category name="Ambushes">
-            <level file="2-32" name="Goomba Ambush" />
-            <level file="2-33" name="Goomba Ambush" />
-            <level file="2-34" name="Goomba + Fire Bro Ambush?" />
-            <level file="2-55" name="Fire Bro Ambush?" />
-            <level file="2-56" name="Fire Bro Ambush?" />
-            <level file="2-57" name="Fire Bro Ambush?" />
+            <level file="2-32" name="Goomba Ambush 1" />
+            <level file="2-33" name="Goomba Ambush 2" />
+            <level file="2-34" name="Goomba Ambush 3" />
+            <level file="2-55" name="Fire Bro Ambush 1" />
+            <level file="2-56" name="Fire Bro Ambush 2" />
+            <level file="2-57" name="Fire Bro Ambush 3" />
         </category>
     </category>
 
@@ -52,10 +52,10 @@
         <level file="3-23" name="3-Castle: Larry's Torpedo Castle" />
         <level file="3-15" name="3-Leaf: Skyward Stalk" />
         <category name="Ambushes">
-            <level file="3-32" name="Porcupuffer Ambush" />
-            <level file="3-33" name="Porcupuffer Ambush" />
-            <level file="3-34" name="Porcupuffer Ambush" />
-            <level file="3-55" name="Porcupuffer Ambush?" />
+            <level file="3-32" name="Cheep Cheep Ambush 1" />
+            <level file="3-33" name="Cheep Cheep Ambush 2" />
+            <level file="3-34" name="Cheep Cheep Ambush 3" />
+            <level file="3-55" name="Cheep Cheep Ambush 4" />
         </category>
     </category>
 
@@ -70,12 +70,12 @@
         <level file="4-23" name="4-Castle: Wendy's Shifting Castle" />
         <level file="4-16" name="4-Fliprus: Fliprus Lake" />
         <category name="Ambushes">
-            <level file="4-32" name="Cooligan Ambush" />
-            <level file="4-33" name="Cooligan Ambush" />
-            <level file="4-34" name="Cooligan Ambush" />
-            <level file="4-55" name="Cooligan Ambush?" />
-            <level file="4-56" name="Cooligan Ambush?" />
-            <level file="4-57" name="Cooligan Ambush?" />
+            <level file="4-32" name="Cooligan Ambush 1" />
+            <level file="4-33" name="Cooligan Ambush 2" />
+            <level file="4-34" name="Cooligan Ambush 3" />
+            <level file="4-55" name="Cooligan Ambush 4" />
+            <level file="4-56" name="Cooligan Ambush 5" />
+            <level file="4-57" name="Cooligan Ambush 6" />
         </category>
     </category>
 
@@ -93,11 +93,11 @@
         <level file="5-23" name="5-Castle: Iggy's Volcanic Castle" />
         <level file="5-17" name="5-Para-Beetles: Flight of the Para-Beetles" />
         <category name="Ambushes">
-            <level file="5-32" name="Boo Ambush" />
-            <level file="5-33" name="Boo Ambush" />
-            <level file="5-34" name="Boo Ambush" />
-            <level file="5-55" name="Boo Ambush?" />
-            <level file="5-56" name="Boo Ambush?" />
+            <level file="5-32" name="Boo Ambush 1" />
+            <level file="5-33" name="Boo Ambush 2" />
+            <level file="5-34" name="Boo Ambush 3" />
+            <level file="5-55" name="Boo Ambush 4" />
+            <level file="5-56" name="Boo Ambush 5" />
         </category>
     </category>
 
@@ -126,10 +126,10 @@
         <level file="7-23" name="7-Castle: Ludwig's Clockwork Castle" />
         <level file="7-37" name="7-Airship: Boarding the Airship" />
         <category name="Ambushes">
-            <level file="7-32" name="Fuzzy Ambush" />
-            <level file="7-33" name="Fuzzy Ambush" />
-            <level file="7-34" name="Fuzzy Ambush" />
-            <level file="7-55" name="Fuzzy Ambush?" />
+            <level file="7-32" name="Fuzzy Ambush 1" />
+            <level file="7-33" name="Fuzzy Ambush 2" />
+            <level file="7-34" name="Fuzzy Ambush 3" />
+            <level file="7-55" name="Fuzzy Ambush 4" />
         </category>
     </category>
 
@@ -159,21 +159,27 @@
     </category>
 
     <category name="Toad Houses">
-        <level file="1-25" name="Block Shuffling Toad House" />
-        <level file="1-26" name="Block Shuffling Toad House" />
-        <level file="1-27" name="Block Shuffling Toad House" />
-        <level file="1-28" name="Block Shuffling Toad House" />
-        <level file="1-29" name="Block Shuffling Toad House" />
-        <level file="1-30" name="Block Shuffling Toad House" />
-        <level file="1-31" name="Block Shuffling Toad House" />
-        <level file="1-47" name="Block Shuffling Toad House" />
-        <level file="1-48" name="Block Shuffling Toad House" />
-        <level file="1-49" name="Block Shuffling Toad House" />
-        <level file="2-25" name="Baby Yoshi Toad House" />
-        <level file="2-26" name="Baby Yoshi Toad House" />
-        <level file="2-27" name="Baby Yoshi Toad House" />
-        <level file="2-28" name="Baby Yoshi Toad House" />
+        <level file="1-25" name="Block Shuffling Toad House 1" />
+        <level file="1-26" name="Block Shuffling Toad House 2" />
+        <level file="1-27" name="Block Shuffling Toad House 3" />
+        <level file="1-28" name="Block Shuffling Toad House 4" />
+        <level file="1-29" name="Block Shuffling Toad House 5" />
+        <level file="1-30" name="Block Shuffling Toad House 6" />
+        <level file="1-31" name="Block Shuffling Toad House 7" />
+        <level file="1-47" name="Block Shuffling Toad House 8" />
+        <level file="1-48" name="Block Shuffling Toad House 9" />
+        <level file="1-49" name="Block Shuffling Toad House 10" />
+        <level file="2-25" name="Baby Yoshi Toad House 1" />
+        <level file="2-26" name="Baby Yoshi Toad House 2" />
+        <level file="2-27" name="Baby Yoshi Toad House 3" />
+        <level file="2-28" name="Baby Yoshi Toad House 4" />
         <level file="3-25" name="1-Up Blast Toad House" />
+    </category>
+
+    <category name="Other">
+        <level file="1-39" name="Title Screen" />
+        <level file="1-41" name="Credits" />
+        <level file="1-46" name="Boost Rush Results" />
     </category>
 
     <category name="Coin Battle">
@@ -185,12 +191,6 @@
         <level file="11-6" name="Coin Courses-6" />
         <level file="11-7" name="Coin Courses-7" />
         <level file="11-8" name="Coin Courses-8" />
-    </category>
-
-    <category name="Other">
-        <level file="1-39" name="Title Screen" />
-        <level file="1-41" name="Credits" />
-        <level file="1-46" name="Boost Rush Results" />
     </category>
 
     <category name="Challenge Mode">
@@ -292,14 +292,14 @@
 
     </category>
 
-    <category name="Unused Levels">
-        <level file="4-25" name="Toad House Type 4" />
-        <level file="13-2" name="A W1 climbing level with corrupted tilesets" />
-        <level file="13-4" name="An underground forest level with a long coin-filled path for a shell" />
-        <level file="13-7" name="A level with colored blocks, paragoombas and line-following platforms" />
-        <level file="16-1" name="A nearly-empty level with nothing but four bricks, a Koopa, and some other sprites" />
-        <level file="16-2" name="Beta &quot;Fuzzy Cliff Climb&quot;" />
-        <level file="18-1" name="Beta Desert Challenge Mode Stage" />
+    <category name="Unused">
+        <level file="4-25" name="Credits Toad House" />
+        <level file="13-2" name="Early '200 Clifftop Coins'?" />
+        <level file="13-4" name="Early 'Follow That Shell!'?" />
+        <level file="13-7" name="Don't Touch the Ground Challenge Level" />
+        <level file="16-1" name="Sky Level with Moving Castle Platforms and a Lakitu" />
+        <level file="16-2" name="Early 'Fuzzy Cliff Climb'" />
+        <level file="18-1" name="Desert Level with an Enemy Spawner" />
     </category>
 
 </levels>

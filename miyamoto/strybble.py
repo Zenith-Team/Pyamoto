@@ -23,7 +23,7 @@ def strybble_encode(text, num_chars=16):
     if re.search(r'[_/.][_/.]', text):
         raise StrybbleEncodeError('Sequential special characters (_, / and .) are not supported.')
 
-    text = text.replace('.', '___').replace('/', '__')
+    text = text.replace(':', '____').replace('.', '___').replace('/', '__')
 
     if len(text) > num_chars:
         raise StrybbleEncodeError(

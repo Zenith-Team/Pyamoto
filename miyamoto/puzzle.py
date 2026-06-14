@@ -25,22 +25,6 @@ import SarcLib
 from .tileset import HandleTilesetEdited, loadGTX, writeGTX
 from .tileset import updateCollisionOverlay
 
-
-########################################################
-# To Do:
-#
-#   - Object Editor
-#       - Moving objects around
-#
-#   - Make UI simpler for Pop
-#   - Animated Tiles
-#   - fix up conflicts with different types of parameters
-#   - C speed saving
-#   - quick settings for applying to mulitple slopes
-#
-########################################################
-
-
 Tileset = None
 window = None
 
@@ -5134,6 +5118,7 @@ class ImportObjectsDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.editors = editors  # list of TilesetEditor, one per slot (index == slot)
         self.setWindowTitle("Add downloaded objects")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setMinimumWidth(520)
         self.setMinimumHeight(600)
         self._objectData = []  # parallel list of (jsonData, dirPath) for each model row
