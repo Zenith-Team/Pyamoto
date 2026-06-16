@@ -3610,12 +3610,12 @@ class EntranceEditorWidget(QtWidgets.QWidget):
         self.allowEntryCheckbox.setToolTip("<b>Enterable:</b><br>If this box is checked on a pipe or door entrance, Mario will be able to enter the pipe/door. If it's not checked, he won't be able to enter it. Behaviour on other types of entrances is unknown/undefined.")
         self.allowEntryCheckbox.clicked.connect(self.HandleAllowEntryClicked)
 
-        self.unkFlagCheckbox = QtWidgets.QCheckBox("Unknown Flag")
+        self.unkFlagCheckbox = QtWidgets.QCheckBox("Connected Pipe")
         self.unkFlagCheckbox.setFocusPolicy(Qt.ClickFocus)
-        self.unkFlagCheckbox.setToolTip("It is unknown what the purpose of this option is.")
+        self.unkFlagCheckbox.setToolTip("Enables pipe entrances to be connected using a path. This setting is broken and causes a softlock in the vanilla game.")
         self.unkFlagCheckbox.clicked.connect(self.HandleUnknownFlagClicked)
 
-        self.faceLeftCheckbox = QtWidgets.QCheckBox("Face left")
+        self.faceLeftCheckbox = QtWidgets.QCheckBox("Face Left")
         self.faceLeftCheckbox.setFocusPolicy(Qt.ClickFocus)
         self.faceLeftCheckbox.setToolTip("Makes the player face left when spawning.")
         self.faceLeftCheckbox.clicked.connect(self.HandleFaceLeftClicked)
