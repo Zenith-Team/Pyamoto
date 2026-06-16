@@ -2319,10 +2319,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     if height < 1 or height > 511: continue
                     if data < 0 or data > 24: continue
 
-
-                    mw = globals.mainWindow
-                    obj.positionChanged = mw.HandleObjPosChange
-
                     obj = ObjectItem(tileset, type, layer, objx, objy, width, height, 1, data)
 
                     layers[layer].append(obj)

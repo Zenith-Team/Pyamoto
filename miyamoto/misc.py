@@ -45,9 +45,110 @@ class LevelScene(QtWidgets.QGraphicsScene):
 
     def drawBackground(self, painter, rect):
         """
-        Draws the background (does nothing since tiles are now rendered by ObjectItems)
+        Draws all visible tiles
         """
         super().drawBackground(painter, rect)
+        if not hasattr(globals.Area, 'layers'):
+            return
+
+        drawrect = QtCore.QRectF(rect.x() / globals.TileWidth, rect.y() / globals.TileWidth, rect.width() / globals.TileWidth + 1,
+                                 rect.height() / globals.TileWidth + 1)
+        isect = drawrect.intersects
+
+        layer0 = []
+        layer1 = []
+        layer2 = []
+
+        x1 = 1024
+        y1 = 512
+        x2 = 0
+        y2 = 0
+
+        # iterate through each object
+        funcs = [layer0.append, layer1.append, layer2.append]
+        show = [globals.Layer0Shown, globals.Layer1Shown, globals.Layer2Shown]
+        for layer, add, process in zip(globals.Area.layers, funcs, show):
+            if not process: continue
+            for item in layer:
+                if not isect(item.LevelRect): continue
+                add(item)
+                xs = item.objx
+                xe = xs + item.width
+                ys = item.objy
+                ye = ys + item.height
+                if xs < x1: x1 = xs
+                if xe > x2: x2 = xe
+                if ys < y1: y1 = ys
+                if ye > y2: y2 = ye
+
+        width = x2 - x1
+        height = y2 - y1
+
+        objectDefinitions = globals.ObjectDefinitions
+        tiles = globals.Tiles
+
+        offset = 0x800
+        items = {1: 26, 2: 27, 3: 16, 4: 17, 5: 18, 6: 19,
+                 7: 20, 8: 21, 9: 22, 10: 25, 11: 23, 12: 24,
+                 14: 32, 15: 33, 16: 34, 17: 35, 18: 42, 19: 36,
+                 20: 37, 21: 38, 22: 41, 23: 39, 24: 40}
+
+        # create and draw the tilemaps
+        for idx, layer in (2, layer2), (1, layer1), (0, layer0):
+            if not layer:
+                continue
+
+            tmap = [[None] * width for _ in range(height)]
+
+            for item in layer:
+                startx = item.objx - x1
+                desty = item.objy - y1
+
+                exists = True
+                try:
+                    if objectDefinitions[item.tileset] is None:
+                        exists = False
+                    elif objectDefinitions[item.tileset][item.type] is None:
+                        exists = False
+                except IndexError:
+                    exists = False
+
+                for row in item.objdata:
+                    destrow = tmap[desty]
+                    destx = startx
+                    for tile in row:
+                        # If this object has data, make sure to override it properly
+                        if tile > 0:
+                            if item.data in items:
+                                destrow[destx] = offset + items[item.data]
+                            else:
+                                destrow[destx] = tile
+                        elif not exists:
+                            destrow[destx] = -1
+                        destx += 1
+                    desty += 1
+
+            painter.save()
+            painter.translate(x1 * globals.TileWidth, y1 * globals.TileWidth)
+            drawPixmap = painter.drawPixmap
+            desty = 0
+            for row in tmap:
+                destx = 0
+                for tile in row:
+                    pix = None
+
+                    if tile == -1:
+                        # Draw unknown tiles
+                        pix = tiles[0x800].getCurrentTile()
+                    elif tile is not None:
+                        pix = tiles[tile].getCurrentTile(idx == 1)
+
+                    if pix is not None:
+                        drawPixmap(destx, desty, pix)
+
+                    destx += globals.TileWidth
+                desty += globals.TileWidth
+            painter.restore()
 
 
 class HexSpinBox(QtWidgets.QSpinBox):

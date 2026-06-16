@@ -539,50 +539,6 @@ class ObjectItem(LevelEditorItem):
         """
         Paints the object
         """
-        # Draw tiles
-        if self.objdata:
-            tiles = globals.Tiles
-            drawPixmap = painter.drawPixmap
-            tw = globals.TileWidth
-            
-            # Tile overrides (e.g. for Question Blocks/Bricks)
-            item_overrides = {1: 26, 2: 27, 3: 16, 4: 17, 5: 18, 6: 19,
-                              7: 20, 8: 21, 9: 22, 10: 25, 11: 23, 12: 24,
-                              14: 32, 15: 33, 16: 34, 17: 35, 18: 42, 19: 36,
-                              20: 37, 21: 38, 22: 41, 23: 39, 24: 40}
-            offset = 0x800
-            
-            # Check if tileset exists
-            exists = True
-            if globals.ObjectDefinitions is None or self.tileset >= len(globals.ObjectDefinitions):
-                exists = False
-            elif globals.ObjectDefinitions[self.tileset] is None or self.type >= len(globals.ObjectDefinitions[self.tileset]):
-                exists = False
-            elif globals.ObjectDefinitions[self.tileset][self.type] is None:
-                exists = False
-
-            is_layer1 = (self.layer == 1)
-            y_pos = 0
-            for row in self.objdata:
-                x_pos = 0
-                for tile in row:
-                    pix = None
-                    if tile > 0:
-                        if self.data in item_overrides:
-                            pix = tiles[offset + item_overrides[self.data]].getCurrentTile(is_layer1)
-                        else:
-                            pix = tiles[tile].getCurrentTile(is_layer1)
-                    elif not exists:
-                        # Draw unknown tile
-                        pix = tiles[offset].getCurrentTile()
-                    
-                    if pix:
-                        drawPixmap(x_pos, y_pos, pix)
-                    
-                    x_pos += tw
-                y_pos += tw
-
-        # Draw selection highlight
         if self.isSelected():
             painter.setPen(QtGui.QPen(globals.theme.color('object_lines_s'), 1, Qt.DotLine))
             painter.drawRect(self.SelectionRect)
