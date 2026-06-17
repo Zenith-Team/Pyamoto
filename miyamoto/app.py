@@ -2319,10 +2319,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     if height < 1 or height > 511: continue
                     if data < 0 or data > 24: continue
 
-
-                    mw = globals.mainWindow
-                    obj.positionChanged = mw.HandleObjPosChange
-
                     obj = ObjectItem(tileset, type, layer, objx, objy, width, height, 1, data)
 
                     layers[layer].append(obj)
@@ -5054,7 +5050,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         import re
 
         def normalize(s):
-            return re.sub(r'[-–—_\s]+', ' ', s).strip().lower()
+            return re.sub(r'[-–—_\s]+', ' ', s).replace("'", '').strip().lower()
 
         terms = [t for t in normalize(text).split() if t]
         for i in range(self.spriteList.count()):

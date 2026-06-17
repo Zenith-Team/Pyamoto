@@ -1727,7 +1727,7 @@ class SpritePickerWidget(QtWidgets.QTreeWidget):
         import re
 
         def normalize(s):
-            return re.sub(r'[-–—_\s]+', ' ', s).strip().lower()
+            return re.sub(r'[-–—_\s]+', ' ', s).replace("'", '').strip().lower()
 
         terms = [t for t in normalize(searchfor).split() if t]
         current_nodes = getattr(self, '_currentViewNodes', [])
