@@ -27,7 +27,7 @@ PackageName = 'miyamoto_v%s' % Version
 # setuptools requires a PEP 440 version string; nightly builds use a commit
 # SHA which isn't valid, so fall back to '0.0' for the setup() call only.
 import re as _re
-_SetupVersion = Version if _re.match(r'^\d+(\.\d+)*$', Version) else '0.0'
+_SetupVersion = Version if _re.match(r'^\d+\.\d+(\.\d+)*$', Version) else '0.0'
 
 
 ################################################################
