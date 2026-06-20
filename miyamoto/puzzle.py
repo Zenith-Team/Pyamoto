@@ -3294,7 +3294,6 @@ class tileOverlord(QtWidgets.QWidget):
         self.randLenLbl = QtWidgets.QLabel('Total Randomizable Tiles:')
         self.randLen = QtWidgets.QSpinBox()
         self.randLen.setRange(1, 15)
-        self.randLen.setEnabled(False)
         self.randLen.setToolTip('<b>Total Randomizable Tiles:</b><br><br>'
             'This specifies the total number of tiles the game may '
             'use for randomized replacements of this tile. This '
@@ -3490,12 +3489,14 @@ class tileOverlord(QtWidgets.QWidget):
             w.blockSignals(True)
 
         oldIdx = object.determineTilingMethod()
-        if oldIdx == 0:
-            mode = 1 if (object.randX or object.randY) else 0
-        elif oldIdx in (1, 2, 3):
-            mode = 2
-        else:
+        if oldIdx > 3:
             mode = 3
+        elif object.randX or object.randY:
+            mode = 1
+        elif oldIdx == 0:
+            mode = 0
+        else:
+            mode = 2
 
         is1x1 = (object.width, object.height) == (1, 1)
         randItem = self.behaviorCombo.model().item(1)
@@ -3513,7 +3514,6 @@ class tileOverlord(QtWidgets.QWidget):
             self.randX.setChecked(object.randX == 1)
             self.randY.setChecked(object.randY == 1)
             self.randLen.setValue(object.randLen)
-            self.randLen.setEnabled(object.randX + object.randY > 0)
         elif mode == 2:
             self.repXCheck.setChecked(bool(object.repeatX))
             self.repYCheck.setChecked(bool(object.repeatY))
@@ -3552,6 +3552,18 @@ class tileOverlord(QtWidgets.QWidget):
         object = self.editor.tileset.objects[idx]
 
         if modeIndex in (0, 1):
+            if modeIndex == 1:
+                self.randX.blockSignals(True)
+                self.randX.setChecked(True)
+                self.randX.blockSignals(False)
+                self.randY.blockSignals(True)
+                self.randY.setChecked(True)
+                self.randY.blockSignals(False)
+                self.randLen.setValue(4)
+
+            object.randX = modeIndex
+            object.randY = modeIndex
+            object.randLen = 4 if modeIndex == 1 else 0
             object.tilingMethodIdx = 0
             object.clearRepetitionXY()
             object.upperslope = [0, 0]
@@ -3561,28 +3573,25 @@ class tileOverlord(QtWidgets.QWidget):
             self.editor.setDirty()
 
         elif modeIndex == 2:
-            repX = self.repXCheck.isChecked()
-            repY = self.repYCheck.isChecked()
-            if not repX and not repY:
-                self.repXCheck.blockSignals(True)
-                self.repXCheck.setChecked(True)
-                self.repXCheck.blockSignals(False)
-                repX = True
+            self.repXCheck.blockSignals(True)
+            self.repXCheck.setChecked(True)
+            self.repXCheck.blockSignals(False)
+            self.repYCheck.blockSignals(True)
+            self.repYCheck.setChecked(False)
+            self.repYCheck.blockSignals(False)
+            object.randX = 0
+            object.randY = 0
+            object.randLen = 0
             object.upperslope = [0, 0]
             object.lowerslope = [0, 0]
-            if repX and not object.repeatX:
+            if not object.repeatX:
                 object.createRepetitionX()
                 self.repeatX.update()
-            elif not repX:
-                object.clearRepetitionX()
-            if repY and not object.repeatY:
-                object.createRepetitionY(0, object.height)
-                self.repeatY.update()
-            elif not repY:
+            if object.repeatY:
                 object.clearRepetitionY()
-            object.tilingMethodIdx = 3 if (repX and repY) else (1 if repX else 2)
-            self.repeatX.setVisible(repX)
-            self.repeatY.setVisible(repY)
+            object.tilingMethodIdx = 1
+            self.repeatX.setVisible(True)
+            self.repeatY.setVisible(False)
             self.tiles.slope = 0
             self.tiles.update()
             self.editor.setDirty()
@@ -3592,6 +3601,9 @@ class tileOverlord(QtWidgets.QWidget):
             tilingIdx = self._SLOPE_TO_IDX[slopeIdx]
             _upper = {4: 0x90, 5: 0x91, 6: 0x92, 7: 0x93}[tilingIdx]
             object.tilingMethodIdx = tilingIdx
+            object.randX = 0
+            object.randY = 0
+            object.randLen = 0
             object.clearRepetitionXY()
             if object.upperslope[0] != _upper:
                 object.upperslope = [_upper, 1]
@@ -3603,6 +3615,9 @@ class tileOverlord(QtWidgets.QWidget):
             self.editor.setDirty()
 
     def changeRepX(self, checked):
+        if not (checked or self.repYCheck.isChecked()):
+            self.repYCheck.setChecked(True)
+
         idx = self.editor.objectList.currentIndex().row()
         if idx < 0 or idx >= len(self.editor.tileset.objects):
             return
@@ -3616,22 +3631,16 @@ class tileOverlord(QtWidgets.QWidget):
         else:
             object.clearRepetitionX()
         repX, repY = checked, self.repYCheck.isChecked()
-        if not repX and not repY:
-            self.behaviorCombo.blockSignals(True)
-            self.behaviorCombo.setCurrentIndex(0)
-            self.behaviorStack.setCurrentIndex(0)
-            self.behaviorCombo.blockSignals(False)
-            self.behaviorStack.setVisible(False)
-            self.behaviorSeparator.setVisible(False)
-            object.tilingMethodIdx = 0
-        else:
-            object.tilingMethodIdx = 3 if (repX and repY) else (1 if repX else 2)
+        object.tilingMethodIdx = 3 if (repX and repY) else (1 if repX else 2)
         self.repeatX.setVisible(repX)
         self.tiles.slope = 0
         self.tiles.update()
         self.editor.setDirty()
 
     def changeRepY(self, checked):
+        if not (checked or self.repXCheck.isChecked()):
+            self.repXCheck.setChecked(True)
+
         idx = self.editor.objectList.currentIndex().row()
         if idx < 0 or idx >= len(self.editor.tileset.objects):
             return
@@ -3645,16 +3654,7 @@ class tileOverlord(QtWidgets.QWidget):
         else:
             object.clearRepetitionY()
         repX, repY = self.repXCheck.isChecked(), checked
-        if not repX and not repY:
-            self.behaviorCombo.blockSignals(True)
-            self.behaviorCombo.setCurrentIndex(0)
-            self.behaviorStack.setCurrentIndex(0)
-            self.behaviorCombo.blockSignals(False)
-            self.behaviorStack.setVisible(False)
-            self.behaviorSeparator.setVisible(False)
-            object.tilingMethodIdx = 0
-        else:
-            object.tilingMethodIdx = 3 if (repX and repY) else (1 if repX else 2)
+        object.tilingMethodIdx = 3 if (repX and repY) else (1 if repX else 2)
         self.repeatY.setVisible(repY)
         self.tiles.update()
         self.editor.setDirty()
@@ -3737,6 +3737,9 @@ class tileOverlord(QtWidgets.QWidget):
 
 
     def changeRandX(self, toggled):
+        if not (toggled or self.randY.isChecked()):
+            self.randY.setChecked(True)
+
         index = self.editor.objectList.currentIndex()
         self.tiles.object = index.row()
 
@@ -3745,11 +3748,13 @@ class tileOverlord(QtWidgets.QWidget):
 
         object = self.editor.tileset.objects[self.tiles.object]
         object.randX = 1 if toggled else 0
-        self.randLen.setEnabled(object.randX + object.randY > 0)
         self.editor.setDirty()
 
 
     def changeRandY(self, toggled):
+        if not (toggled or self.randX.isChecked()):
+            self.randX.setChecked(True)
+
         index = self.editor.objectList.currentIndex()
         self.tiles.object = index.row()
 
@@ -3758,7 +3763,6 @@ class tileOverlord(QtWidgets.QWidget):
 
         object = self.editor.tileset.objects[self.tiles.object]
         object.randY = 1 if toggled else 0
-        self.randLen.setEnabled(object.randX + object.randY > 0)
         self.editor.setDirty()
 
 
@@ -4177,7 +4181,7 @@ class tileWidget(QtWidgets.QWidget):
 
         if 0 <= self.object < len(self.editor.tileset.objects):
             object = self.editor.tileset.objects[self.object]
-            if object.repeatX:
+            if object.repeatX and not (object.randX or object.randY):
                 pen = QtGui.QPen()
                 pen.setStyle(Qt.DashLine)
                 pen.setWidth(2)
@@ -4189,7 +4193,7 @@ class tileWidget(QtWidgets.QWidget):
                     painter.drawLine(upperLeftX + startX * 24, upperLeftY + y * 24, upperLeftX + startX * 24, upperLeftY + y * 24 + 24)
                     painter.drawLine(upperLeftX +   endX * 24, upperLeftY + y * 24, upperLeftX +   endX * 24, upperLeftY + y * 24 + 24)
 
-            if object.repeatY:
+            if object.repeatY and not (object.randX or object.randY):
                 pen = QtGui.QPen()
                 pen.setStyle(Qt.DashLine)
                 pen.setWidth(2)
