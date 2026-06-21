@@ -1598,8 +1598,8 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         self.tabWidget.addTab(self.generalTab, 'General')
         self.tabWidget.addTab(self.toolbarTab, 'Toolbar')
-        self.tabWidget.addTab(self.themesTab, 'Themes')
         self.tabWidget.addTab(self.gameSetupTab, 'Game Setup')
+        self.tabWidget.addTab(self.themesTab, 'Themes')
         self.tabWidget.addTab(self.resourcesTab, 'Resources')
 
         # Create the buttonbox
