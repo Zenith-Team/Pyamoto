@@ -1882,6 +1882,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                         clipboard_c.append(obj)
 
             if objs_to_delete or sprs_to_delete or ents_to_delete or locs_to_delete or paths_to_delete or nPaths_to_delete or coms_to_delete:
+                self.actions['cut'].setEnabled(False)
+                self.actions['paste'].setEnabled(True)
+                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s, clipboard_e, clipboard_l, clipboard_p, clipboard_n, clipboard_c)
+                self.systemClipboard.setText(self.clipboard)
+
                 globals.UndoManager.begin_compound("Cut Selection")
                 if objs_to_delete:
                     globals.UndoManager.push(undomanager.DeleteObjectsCommand(objs_to_delete))
@@ -1898,11 +1903,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 if coms_to_delete:
                     globals.UndoManager.push(undomanager.DeleteCommentsCommand(coms_to_delete))
                 globals.UndoManager.end_compound()
-
-                self.actions['cut'].setEnabled(False)
-                self.actions['paste'].setEnabled(True)
-                self.clipboard = self.encodeObjects(clipboard_o, clipboard_s, clipboard_e, clipboard_l, clipboard_p, clipboard_n, clipboard_c)
-                self.systemClipboard.setText(self.clipboard)
 
                 # Get the current flower/grass type
                 grassType = 5
@@ -2093,6 +2093,8 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         """
         Decode and place a set of objects
         """
+        from math import floor, ceil
+
         self.SelectionUpdateFlag = True
         self.scene.clearSelection()
         added = []
@@ -2167,12 +2169,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         # Go through the locations
         for loc in locations:
-            x = loc.objx / 16
-            y = loc.objy / 16
-            if x < x1: x1 = x
-            if x > x2: x2 = x
-            if y < y1: y1 = y
-            if y > y2: y2 = y
+            xs = loc.objx / 16
+            xe = (loc.objx + loc.width) / 16 - 1
+            ys = loc.objy / 16
+            ye = (loc.objy + loc.height) / 16 - 1
+            if xs < x1: x1 = xs
+            if xe > x2: x2 = xe
+            if ys < y1: y1 = ys
+            if ye > y2: y2 = ye
 
             globals.UndoManager.push(undomanager.AddLocationCommand(loc))
             added.append(loc)
@@ -2227,30 +2231,35 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         viewporty = (self.view.YScrollBar.value() / zoomscaler) / globals.TileWidth
         viewportwidth = (self.view.width() / zoomscaler) / globals.TileWidth
         viewportheight = (self.view.height() / zoomscaler) / globals.TileWidth
+        scene_pos = self.view.mapToScene(self.view.viewport().mapFromGlobal(QtGui.QCursor.pos()))
+        mousex = scene_pos.x() / globals.TileWidth
+        mousey = scene_pos.y() / globals.TileWidth
+        centerx = max(min(mousex, floor(viewportx + viewportwidth) - (width / 2)), min(ceil(viewportx) + (width / 2), 1024 - (width / 2)))
+        centery = max(min(mousey, floor(viewporty + viewportheight) - (height / 2)), min(ceil(viewporty) + (height / 2), 512 - (height / 2)))
 
         # tiles
         if xOverride is None:
-            xoffset = int(0 - x1 + viewportx + ((viewportwidth / 2) - (width / 2)))
+            xoffset = round(0 - x1 + centerx - (width / 2))
             xpixeloffset = xoffset * 16
         else:
-            xoffset = int(0 - x1 + (xOverride / 16) - (width / 2))
+            xoffset = round(0 - x1 + (xOverride / 16) - (width / 2))
             xpixeloffset = xoffset * 16
         if yOverride is None:
-            yoffset = int(0 - y1 + viewporty + ((viewportheight / 2) - (height / 2)))
+            yoffset = round(0 - y1 + centery - (height / 2))
             ypixeloffset = yoffset * 16
         else:
-            yoffset = int(0 - y1 + (yOverride / 16) - (height / 2))
+            yoffset = round(0 - y1 + (yOverride / 16) - (height / 2))
             ypixeloffset = yoffset * 16
 
         for item in added:
             if isinstance(item, ObjectItem):
                 item.setPos((item.objx + xoffset) * globals.TileWidth, (item.objy + yoffset) * globals.TileWidth)
-            elif isinstance(item, SpriteItem):
+            elif isinstance(item, SpriteItem) and globals.SpriteImagesShown:
                 item.setPos(
                     (item.objx + xpixeloffset + item.ImageObj.xOffset) * globals.TileWidth / 16,
                     (item.objy + ypixeloffset + item.ImageObj.yOffset) * globals.TileWidth / 16,
                 )
-            elif isinstance(item, (EntranceItem, LocationItem, PathItem, NabbitPathItem, CommentItem)):
+            elif isinstance(item, (SpriteItem, EntranceItem, LocationItem, PathItem, NabbitPathItem, CommentItem)):
                 item.setPos(
                     (item.objx + xpixeloffset) * globals.TileWidth / 16,
                     (item.objy + ypixeloffset) * globals.TileWidth / 16,
