@@ -20,6 +20,8 @@ class Command:
     @staticmethod
     def _set_item_pos(item, x, y):
         """Helper to set item position correctly across different item types."""
+        globals.OverrideSnapping = True
+
         if hasattr(item, 'setNewObjPos'):
             item.setNewObjPos(x, y)
         else:
@@ -31,6 +33,8 @@ class Command:
             else:
                 # LocationItem/SpriteItem-like (locations/paths use pixel-based objx/objy)
                 item.setPos(x * (globals.TileWidth / 16), y * (globals.TileWidth / 16))
+
+        globals.OverrideSnapping = False
 
 
 class CompoundCommand(Command):
