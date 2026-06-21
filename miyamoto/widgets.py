@@ -5131,8 +5131,8 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 if clicked.x() < 0: clicked.setX(0)
                 if clicked.y() < 0: clicked.setY(0)
 
-                clickedx = int(clicked.x() / globals.TileWidth * 2) * 8
-                clickedy = int(clicked.y() / globals.TileWidth * 2) * 8
+                clickedx = int(clicked.x() // globals.TileWidth) * 16
+                clickedy = int(clicked.y() // globals.TileWidth) * 16
 
                 allID = set()  # faster 'x in y' lookups for sets
                 newID = 1
@@ -5144,7 +5144,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         break
                     newID += 1
 
-                loc = LocationItem(clickedx, clickedy, 8, 8, newID)
+                loc = LocationItem(clickedx, clickedy, 16, 16, newID)
 
                 mw = globals.mainWindow
                 loc.positionChanged = mw.HandleLocPosChange
@@ -5522,14 +5522,17 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         width = clickx - dsx + 8
                     else:
                         x = clickx
-                        width = dsx - clickx + 8
+                        width = dsx - clickx + 16
 
                     if clicky >= dsy:
                         y = dsy
                         height = clicky - dsy + 8
                     else:
                         y = clicky
-                        height = dsy - clicky + 8
+                        height = dsy - clicky + 16
+
+                    width = max(width, 16)
+                    height = max(height, 16)
 
                     # if the position changed, set the new one
                     if cx != x or cy != y:
