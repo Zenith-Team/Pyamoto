@@ -359,8 +359,8 @@ class TilesetEditor(QtWidgets.QWidget):
         with open(path, 'rb') as file:
             self.data = file.read()
 
-        if self.openTileset():
-            self.setDirty()
+        imported = self.openTileset()
+        if imported: self.setDirty()
         
     def openImage(self, nml=False):
         '''Opens an Image from png, and creates a new tileset from it.'''
