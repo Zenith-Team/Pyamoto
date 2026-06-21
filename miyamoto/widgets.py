@@ -5049,7 +5049,6 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 #    QtWidgets.QMessageBox.warning(None, 'Error', 'No pathnode selected. Select a pathnode of the path you want to create a new node in.')
                 if selectedpn is None:
                     getids = [False for x in range(256)]
-                    getids[0] = True
                     getids[90] = True  # Skip Nabbit path
                     for pathdatax in globals.Area.pathdata:
                         # if(len(pathdatax['nodes']) > 0):
