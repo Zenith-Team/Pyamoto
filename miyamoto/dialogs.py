@@ -835,8 +835,8 @@ class ZoneTab:
 
         # Common retail zone presets
         self.Zone_presets_values = (
-            '0: 416x224', '0: 448x224', '0: 512x272',
-            '2: 560x304', '2: 608x320', '3: 704x384', '4: 944x448')
+            '26×14', '28×14', '32×17',
+            '35×19', '38×20', '44×24', '59×28')
         self.Zone_presets = QtWidgets.QComboBox()
         self.Zone_presets.addItems(self.Zone_presets_values)
         self.Zone_presets.setToolTip('<b>Select Preset:</b><br>Snaps the zone to common sizes.<br>The number before each entry specifies which zoom level works best with each size.')
@@ -917,10 +917,10 @@ class ZoneTab:
     def PresetSelected(self, info=None):
         if self.AutoChangingSize: return
         if self.Zone_presets.currentText() == '(None)': return
-        w, h = self.Zone_presets.currentText()[3:].split('x')
+        w, h = self.Zone_presets.currentText().split('×')
         self.AutoChangingSize = True
-        self.Zone_width.setValue(int(w))
-        self.Zone_height.setValue(int(h))
+        self.Zone_width.setValue(int(w) * 16)
+        self.Zone_height.setValue(int(h) * 16)
         self.AutoChangingSize = False
         if self.Zone_presets.itemText(0) == '(None)':
             self.Zone_presets.removeItem(0)
@@ -928,8 +928,8 @@ class ZoneTab:
     def PresetDeselected(self, info=None):
         if self.AutoChangingSize: return
         self.AutoChangingSize = True
-        check = '%dx%d' % (self.Zone_width.value(), self.Zone_height.value())
-        found = next((p for p in self.Zone_presets_values if check == p[3:]), None)
+        check = '%g×%g' % (self.Zone_width.value() / 16, self.Zone_height.value() / 16)
+        found = next((p for p in self.Zone_presets_values if check == p), None)
         if found is not None:
             self.Zone_presets.setCurrentIndex(self.Zone_presets.findText(found))
             if self.Zone_presets.itemText(0) == '(None)':
