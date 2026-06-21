@@ -343,6 +343,7 @@ class TilesetEditor(QtWidgets.QWidget):
 
         self.setuptile()
         SetupObjectModel(self.objmodel, self, self.tileset.objects, self.tileset.tiles)
+        self.setDirty()
 
         return True
 
