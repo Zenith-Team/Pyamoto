@@ -5131,8 +5131,8 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 if clicked.x() < 0: clicked.setX(0)
                 if clicked.y() < 0: clicked.setY(0)
 
-                clickedx = int(clicked.x() // globals.TileWidth) * 16
-                clickedy = int(clicked.y() // globals.TileWidth) * 16
+                clickedx = int(clicked.x() / globals.TileWidth * 2) * 8
+                clickedy = int(clicked.y() / globals.TileWidth * 2) * 8
 
                 allID = set()  # faster 'x in y' lookups for sets
                 newID = 1
@@ -5144,9 +5144,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         break
                     newID += 1
 
-                globals.OverrideSnapping = True
                 loc = LocationItem(clickedx, clickedy, 8, 8, newID)
-                globals.OverrideSnapping = False
 
                 mw = globals.mainWindow
                 loc.positionChanged = mw.HandleLocPosChange
@@ -5515,35 +5513,23 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     clicked = self.mapToScene(event.x(), event.y())
                     if clicked.x() < 0: clicked.setX(0)
                     if clicked.y() < 0: clicked.setY(0)
-                    clickx = int(clicked.x() / globals.TileWidth * 16)
-                    clicky = int(clicked.y() / globals.TileWidth * 16)
-
-                    if clickx % 8 < 4:
-                        clickx -= (clickx % 8)
-                    else:
-                        clickx += 8 - (clickx % 8)
-                    if clicky % 8 < 4:
-                        clicky -= (clicky % 8)
-                    else:
-                        clicky += 8 - (clicky % 8)
+                    clickx = int(clicked.x() / globals.TileWidth * 2) * 8
+                    clicky = int(clicked.y() / globals.TileWidth * 2) * 8
 
                     # allow negative width/height and treat it properly :D
                     if clickx >= dsx:
                         x = dsx
-                        width = clickx - dsx
+                        width = clickx - dsx + 8
                     else:
                         x = clickx
-                        width = dsx - clickx
+                        width = dsx - clickx + 8
 
                     if clicky >= dsy:
                         y = dsy
-                        height = clicky - dsy
+                        height = clicky - dsy + 8
                     else:
                         y = clicky
-                        height = dsy - clicky
-
-                    width = max(width, 8)
-                    height = max(height, 8)
+                        height = dsy - clicky + 8
 
                     # if the position changed, set the new one
                     if cx != x or cy != y:
