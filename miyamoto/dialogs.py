@@ -835,8 +835,8 @@ class ZoneTab:
 
         # Common retail zone presets
         self.Zone_presets_values = (
-            '26×14', '28×14', '32×17',
-            '35×19', '38×20', '44×24', '59×28')
+            '26×14 Tiles', '28×14 Tiles', '32×17 Tiles',
+            '35×19 Tiles', '38×20 Tiles', '44×24 Tiles', '59×28 Tiles')
         self.Zone_presets = QtWidgets.QComboBox()
         self.Zone_presets.addItems(self.Zone_presets_values)
         self.Zone_presets.setToolTip('<b>Select Preset:</b><br>Snaps the zone to common sizes.')
@@ -917,7 +917,7 @@ class ZoneTab:
     def PresetSelected(self, info=None):
         if self.AutoChangingSize: return
         if self.Zone_presets.currentText() == '(None)': return
-        w, h = self.Zone_presets.currentText().split('×')
+        w, h = self.Zone_presets.currentText()[:6].split('×')
         self.AutoChangingSize = True
         self.Zone_width.setValue(int(w) * 16)
         self.Zone_height.setValue(int(h) * 16)
@@ -929,7 +929,7 @@ class ZoneTab:
         if self.AutoChangingSize: return
         self.AutoChangingSize = True
         check = '%g×%g' % (self.Zone_width.value() / 16, self.Zone_height.value() / 16)
-        found = next((p for p in self.Zone_presets_values if check == p), None)
+        found = next((p for p in self.Zone_presets_values if check == p[:6]), None)
         if found is not None:
             self.Zone_presets.setCurrentIndex(self.Zone_presets.findText(found))
             if self.Zone_presets.itemText(0) == '(None)':
