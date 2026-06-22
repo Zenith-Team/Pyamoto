@@ -839,7 +839,7 @@ class ZoneTab:
             '35×19', '38×20', '44×24', '59×28')
         self.Zone_presets = QtWidgets.QComboBox()
         self.Zone_presets.addItems(self.Zone_presets_values)
-        self.Zone_presets.setToolTip('<b>Select Preset:</b><br>Snaps the zone to common sizes.<br>The number before each entry specifies which zoom level works best with each size.')
+        self.Zone_presets.setToolTip('<b>Select Preset:</b><br>Snaps the zone to common sizes.')
         self.Zone_presets.currentIndexChanged.connect(self.PresetSelected)
         self.PresetDeselected()
 
