@@ -3151,8 +3151,8 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
         # Main layout
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self._source_combo)
-        layout.addWidget(self._stack)
         layout.addLayout(searchLayout)
+        layout.addWidget(self._stack)
         layout.addLayout(buttonLayout)
         self.setLayout(layout)
         self.setMinimumWidth(360)
