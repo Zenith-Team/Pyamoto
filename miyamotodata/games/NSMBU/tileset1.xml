@@ -1,61 +1,61 @@
 <?xml version="1.0"?>
 <descriptions>
     <tile id="0" name="Blank tile"/>
-    <tile id="1" name="Invisible Solid Block"/>
-    <tile id="2" name="Invisible Semi-Solid Block"/>
-    <tile id="3" name="Invisible Half Solid Block (Broken)"/>
-    <tile id="4" name="Vine Stopper"/>
-    <tile id="5" name="Invisible Block containing a Coin"/>
-    <tile id="6" name="Invisible Block containing a Fire Flower"/>
-    <tile id="7" name="Invisible Block containing a Star"/>
-    <tile id="8" name="Invisible Block containing a 1-Up Mushroom"/>
-    <tile id="9" name="Invisible Block containing a Vine"/>
-    <tile id="10" name="Invisible Block containing a Mini Mushroom"/>
-    <tile id="11" name="Invisible Block containing a Propeller Shroom"/>
-    <tile id="12" name="Invisible Block containing a Penguin Suit"/>
-    <tile id="13" name="Invisible Block containing an Ice Flower"/>
-    <tile id="14" name="Invisible Block containing an Acorn Mushroom"/>
+    <tile id="1" name="Invisible Tile"/>
+    <tile id="2" name="Invisible Solid-on-Top Tile"/>
+    <tile id="3" name="Invisible Mini Mario Passageway [Broken]"/>
+    <tile id="4" name="Vine Stop"/>
+    <tile id="5" name="Hidden Block Containing a Coin"/>
+    <tile id="6" name="Hidden Block Containing a Fire Flower"/>
+    <tile id="7" name="Hidden Block Containing a Super Star"/>
+    <tile id="8" name="Hidden Block Containing a 1-Up Mushroom"/>
+    <tile id="9" name="Hidden Block Containing a Vine"/>
+    <tile id="10" name="Hidden Block Containing a Mini Mushroom"/>
+    <tile id="11" name="Hidden Block Containing a Propeller Mushroom"/>
+    <tile id="12" name="Hidden Block Containing a Penguin Suit"/>
+    <tile id="13" name="Hidden Block Containing an Ice Flower"/>
+    <tile id="14" name="Hidden Block Containing a Super Acorn"/>
     <tile id="15" name="Brick Block"/>
-    <tile id="16" name="Brick Block containing a Coin"/>
-    <tile id="17" name="Brick Block containing 10 Coins"/>
-    <tile id="18" name="Brick Block containing a Fire Flower"/>
-    <tile id="19" name="Brick Block containing a Star"/>
-    <tile id="20" name="Brick Block containing a 1-Up Mushroom"/>
-    <tile id="21" name="Brick Block containing a Vine"/>
-    <tile id="22" name="Brick Block containing a Mini Mushroom"/>
-    <tile id="23" name="Brick Block containing a Propeller Shroom"/>
-    <tile id="24" name="Brick Block containing a Penguin Suit"/>
-    <tile id="25" name="Brick Block containing a Yoshi Egg"/>
-    <tile id="26" name="Brick Block containing an Ice Flower"/>
-    <tile id="27" name="Brick Block containing an Acorn Mushroom"/>
-    <tile id="28" name="? Block containing a Coin"/>
-    <tile id="29" name="? Block containing a Fire Flower"/>
-    <tile id="30" name="? Block containing a Star"/>
-    <tile id="31" name="? Block containing a Continuous Star?"/>
-    <tile id="32" name="? Block containing a Vine"/>
-    <tile id="33" name="? Block containing a Spring"/>
-    <tile id="34" name="? Block containing a Mini Mushroom"/>
-    <tile id="35" name="? Block containing a Propeller Shroom"/>
-    <tile id="36" name="? Block containing a Penguin Suit"/>
-    <tile id="37" name="? Block containing a Yoshi Egg"/>
-    <tile id="38" name="? Block containing an Ice Flower"/>
-    <tile id="39" name="? Block containing an Acorn Mushroom"/>
+    <tile id="16" name="Brick Block Containing a Coin"/>
+    <tile id="17" name="Brick Block Containing 10 Coins"/>
+    <tile id="18" name="Brick Block Containing a Fire Flower"/>
+    <tile id="19" name="Brick Block Containing a Super Star"/>
+    <tile id="20" name="Brick Block Containing a 1-Up Mushroom"/>
+    <tile id="21" name="Brick Block Containing a Vine"/>
+    <tile id="22" name="Brick Block Containing a Mini Mushroom"/>
+    <tile id="23" name="Brick Block Containing a Propeller Mushroom"/>
+    <tile id="24" name="Brick Block Containing a Penguin Suit"/>
+    <tile id="25" name="Brick Block Containing a Yoshi Egg"/>
+    <tile id="26" name="Brick Block Containing an Ice Flower"/>
+    <tile id="27" name="Brick Block Containing a Super Acorn"/>
+    <tile id="28" name="? Block Containing a Coin"/>
+    <tile id="29" name="? Block Containing a Fire Flower"/>
+    <tile id="30" name="? Block Containing a Super Star"/>
+    <tile id="31" name="? Block Containing a Continuous Super Star"/>
+    <tile id="32" name="? Block Containing a Vine"/>
+    <tile id="33" name="? Block Containing a Spring"/>
+    <tile id="34" name="? Block Containing a Mini Mushroom"/>
+    <tile id="35" name="? Block Containing a Propeller Mushroom"/>
+    <tile id="36" name="? Block Containing a Penguin Suit"/>
+    <tile id="37" name="? Block Containing a Yoshi Egg"/>
+    <tile id="38" name="? Block Containing an Ice Flower"/>
+    <tile id="39" name="? Block Containing a Super Acorn"/>
     <tile id="40" name="Empty Block"/>
     <tile id="41" name="Wooden Block"/>
     <tile id="42" name="Stone Block"/>
-    <tile id="43" name="Donut Lift"/>
+    <tile id="43" name="Donut Block"/>
     <tile id="44" name="Steel Block"/>
     <tile id="45" name="Bridge"/>
-    <tile id="46" name="Mini-Mario Passageway (Broken)"/>
+    <tile id="46" name="Mini Mario Passageway [Broken]"/>
     <tile id="47" name="Coin"/>
-    <tile id="48" name="Coin (NW-SE slope alternating pattern)"/>
-    <tile id="49" name="Coin (horizontal alternating pattern)"/>
-    <tile id="50" name="Coin (vertical alternating pattern)"/>
-    <tile id="51" name="P-switch Coin"/>
-    <tile id="52" name="Coin Outline (turns into coin when touched)"/>
-    <tile id="53" name="Coin Outline (NW-SE slope alternating pattern)"/>
-    <tile id="54" name="Coin Battle-only coin outline"/>
-    <tile id="55" name="Coin Battle-only Coin Outline (NW-SE slope alternating pattern)"/>
+    <tile id="48" name="Coin (Checkerboard Pattern)"/>
+    <tile id="49" name="Coin (Horizontal Alternating Pattern)"/>
+    <tile id="50" name="Coin (Vertical Alternating Pattern)"/>
+    <tile id="51" name="Blue Coin"/>
+    <tile id="52" name="Dash Coin (Turns Into a Coin When Touched)"/>
+    <tile id="53" name="Dash Coin (Checkerboard Pattern)"/>
+    <tile id="54" name="Coin Battle-only Dash Coin"/>
+    <tile id="55" name="Coin Battle-only Dash Coin (Checkerboard Pattern)"/>
     <tile id="56" name="Green Pipe Top"/>
     <tile id="57" name="Green Pipe Bottom"/>
     <tile id="58" name="Green Pipe Left"/>
@@ -74,86 +74,86 @@
     <tile id="71" name="Red Pipe Right"/>
     <tile id="72" name="Red Pipe Vertical Center"/>
     <tile id="73" name="Red Pipe Horizontal Center"/>
-    <tile id="74" name="Pipe Joint/Connector/Junction"/>
+    <tile id="74" name="Pipe Joint"/>
     <tile id="75" name="Green Mini Pipe Top"/>
     <tile id="76" name="Green Mini Pipe Bottom"/>
     <tile id="77" name="Green Mini Pipe Left"/>
     <tile id="78" name="Green Mini Pipe Right"/>
     <tile id="79" name="Green Mini Pipe Vertical Center"/>
     <tile id="80" name="Green Mini Pipe Horizontal Center"/>
-    <tile id="81" name="Mini Pipe Joint/Connector/Junction"/>
-    <tile id="82" name="Muncher Collisions Tile"/>
-    <tile id="83" name="Brick Block (Empty)"/>
-    <tile id="84" name="Line: Horizontal"/>
-    <tile id="85" name="Line: Vertical"/>
-    <tile id="86" name="Line: Bottom-Right Corner"/>
-    <tile id="87" name="Line: Top-Left Corner"/>
-    <tile id="88" name="Line: Steep Upward Slope"/>
-    <tile id="89" name="Line: Steep Downward Slope"/>
-    <tile id="90" name="Line: Upward Slope"/>
-    <tile id="91" name="Line: Downward Slope"/>
-    <tile id="92" name="Line: Gentle Upward Slope"/>
-    <tile id="93" name="Line: Gentle Downward Slope"/>
-    <tile id="94" name="Line: Small Circle"/>
-    <tile id="95" name="Line: Medium Circle"/>
-    <tile id="96" name="Line: Large Circle"/>
-    <tile id="97" name="Line: Medium Circle (Top-Left)"/>
-    <tile id="98" name="Line: Medium Circle (Top-Right)"/>
-    <tile id="99" name="Line: Medium Circle (Bottom-Left)"/>
-    <tile id="100" name="Line: Medium Circle (Bottom-Right)"/>
-    <tile id="101" name="Line: Large Circle (Top-Left)"/>
-    <tile id="102" name="Line: Large Circle (Top-Right)"/>
-    <tile id="103" name="Line: Large Circle (Bottom-Left)"/>
-    <tile id="104" name="Line: Large Circle (Bottom-Right)"/>
-    <tile id="105" name="Line: End (Top)"/>
-    <tile id="106" name="Line: End (Bottom)"/>
-    <tile id="107" name="Line: End (Left)"/>
-    <tile id="108" name="Line: End (Right)"/>
-    <tile id="109" name="Line: End (Top-Left)"/>
-    <tile id="110" name="Line: End (Bottom-Left)"/>
-    <tile id="111" name="Line: End (Top-Right)"/>
-    <tile id="112" name="Line: End (Bottom-Right)"/>
-    <tile id="113" name="Conveyor Belt (Right)"/>
-    <tile id="114" name="Conveyor Belt (Left)"/>
-    <tile id="115" name="Fast Conveyor Belt (Right)"/>
-    <tile id="116" name="Fast Conveyor Belt (Left)"/>
-    <tile id="117" name="Bush"/>
+    <tile id="81" name="Mini Pipe Joint"/>
+    <tile id="82" name="Muncher Collision Tile"/>
+    <tile id="83" name="Brick Block (Doesn't Break When Hit)"/>
+    <tile id="84" name="Rail: Horizontal"/>
+    <tile id="85" name="Rail: Vertical"/>
+    <tile id="86" name="Rail: Bottom-Right Corner"/>
+    <tile id="87" name="Rail: Top-Left Corner"/>
+    <tile id="88" name="Rail: Steep Upslope"/>
+    <tile id="89" name="Rail: Steep Downslope"/>
+    <tile id="90" name="Rail: Upslope"/>
+    <tile id="91" name="Rail: Downslope"/>
+    <tile id="92" name="Rail: Gentle Upslope"/>
+    <tile id="93" name="Rail: Gentle Downslope"/>
+    <tile id="94" name="Rail: 1x1 Circle"/>
+    <tile id="95" name="Rail: 2x2 Circle"/>
+    <tile id="96" name="Rail: 4x4 Circle"/>
+    <tile id="97" name="Rail: 2x2 Circle (Top-Left)"/>
+    <tile id="98" name="Rail: 2x2 Circle (Top-Right)"/>
+    <tile id="99" name="Rail: 2x2 Circle (Bottom-Left)"/>
+    <tile id="100" name="Rail: 2x2 Circle (Bottom-Right)"/>
+    <tile id="101" name="Rail: 4x4 Circle (Top-Left)"/>
+    <tile id="102" name="Rail: 4x4 Circle (Top-Right)"/>
+    <tile id="103" name="Rail: 4x4 Circle (Bottom-Left)"/>
+    <tile id="104" name="Rail: 4x4 Circle (Bottom-Right)"/>
+    <tile id="105" name="Rail: End (Top)"/>
+    <tile id="106" name="Rail: End (Bottom)"/>
+    <tile id="107" name="Rail: End (Left)"/>
+    <tile id="108" name="Rail: End (Right)"/>
+    <tile id="109" name="Rail: End (Top-Left)"/>
+    <tile id="110" name="Rail: End (Bottom-Left)"/>
+    <tile id="111" name="Rail: End (Top-Right)"/>
+    <tile id="112" name="Rail: End (Bottom-Right)"/>
+    <tile id="113" name="Rightward Conveyor Belt"/>
+    <tile id="114" name="Leftward Conveyor Belt"/>
+    <tile id="115" name="Rightward Conveyor Belt (Fast)"/>
+    <tile id="116" name="Leftward Fast Conveyor Belt (Fast)"/>
+    <tile id="117" name="Grass"/>
     <tile id="118" name="Yellow Flower"/>
     <tile id="119" name="Red Flower"/>
     <tile id="120" name="Blue Flower"/>
-    <tile id="121" name="Yellow Flower with Bush"/>
-    <tile id="122" name="Red Flower with Bush"/>
-    <tile id="123" name="Blue Flower with Bush"/>
-    <tile id="124" name="Bush (Left)"/>
-    <tile id="125" name="Bush (Middle 1)"/>
-    <tile id="126" name="Bush (Middle 2)"/>
-    <tile id="127" name="Bush (Middle 3)"/>
-    <tile id="128" name="Bush (Right)"/>
+    <tile id="121" name="Yellow Flower with Grass"/>
+    <tile id="122" name="Red Flower with Grass"/>
+    <tile id="123" name="Blue Flower with Grass"/>
+    <tile id="124" name="Grass (Left)"/>
+    <tile id="125" name="Grass (Middle-Left)"/>
+    <tile id="126" name="Grass (Middle)"/>
+    <tile id="127" name="Grass (Middle-Right)"/>
+    <tile id="128" name="Grass (Right)"/>
     <tile id="129" name="Destroyed Sky Grass Edge (Right)"/>
-    <tile id="130" name="Destroyed Sky Dirt Edge (Right) 1"/>
-    <tile id="131" name="Destroyed Sky Dirt Edge (Right) 2"/>
-    <tile id="132" name="Destroyed Sky Dirt Edge (Right) 3"/>
-    <tile id="133" name="Destroyed Sky Dirt Edge (Right) 4"/>
+    <tile id="130" name="Destroyed Sky Ground Edge (Right 1)"/>
+    <tile id="131" name="Destroyed Sky Ground Edge (Right 2)"/>
+    <tile id="132" name="Destroyed Sky Ground Edge (Right 3)"/>
+    <tile id="133" name="Destroyed Sky Ground Edge (Right 4)"/>
     <tile id="134" name="Destroyed Sky Grass Edge (Left)"/>
-    <tile id="135" name="Destroyed Sky Dirt Edge (Left) 1"/>
-    <tile id="136" name="Destroyed Sky Dirt Edge (Left) 2"/>
-    <tile id="137" name="Destroyed Sky Dirt Edge (Left) 3"/>
-    <tile id="138" name="Destroyed Sky Dirt Edge (Left) 4"/>
-    <tile id="139" name="Bridge Steep Slope Up"/>
-    <tile id="140" name="Bridge Steep Slope Down"/>
-    <tile id="141" name="Bridge Slope Up"/>
-    <tile id="142" name="Bridge Slope Down"/>
+    <tile id="135" name="Destroyed Sky Ground Edge (Left 1)"/>
+    <tile id="136" name="Destroyed Sky Ground Edge (Left 2)"/>
+    <tile id="137" name="Destroyed Sky Ground Edge (Left 3)"/>
+    <tile id="138" name="Destroyed Sky Ground Edge (Left 4)"/>
+    <tile id="139" name="Steep Upsloped Bridge"/>
+    <tile id="140" name="Steep Downsloped Bridge"/>
+    <tile id="141" name="Gentle Upsloped Bridge"/>
+    <tile id="142" name="Gentle Downsloped Bridge"/>
     <tile id="143" name="Red Block"/>
-    <tile id="144" name="Muncher Collisions Tile 2"/>
-    <tile id="145" name="Rotation Pivot"/>
-    <tile id="146" name="Cracked Wooden Plank 1"/>
-    <tile id="147" name="Cracked Wooden Plank 2"/>
-    <tile id="148" name="Cracked Wooden Plank 3"/>
-    <tile id="149" name="Cracked Wooden Plank 4"/>
-    <tile id="150" name="Cracked Wooden Plank 5"/>
-    <tile id="151" name="Cracked Wooden Plank 6"/>
-    <tile id="152" name="Cracked Wooden Plank 7"/>
-    <tile id="153" name="Cracked Wooden Plank 8"/>
-    <tile id="154" name="Cracked Wooden Plank 9"/>
-    <tile id="155" name="Cracked Wooden Plank 10"/>
+    <tile id="144" name="Muncher Collision Tile 2"/>
+    <tile id="145" name="Swinging Chain Anchor"/>
+    <tile id="146" name="Destroyed Airship Floor Edge (Right)"/>
+    <tile id="147" name="Destroyed Airship Plank Edge (Right 1)"/>
+    <tile id="148" name="Destroyed Airship Plank Edge (Right 2)"/>
+    <tile id="149" name="Destroyed Airship Plank Edge (Right 3)"/>
+    <tile id="150" name="Destroyed Airship Plank Edge (Right 4)"/>
+    <tile id="151" name="Destroyed Airship Floor Edge (Left)"/>
+    <tile id="152" name="Destroyed Airship Plank Edge (Left 1)"/>
+    <tile id="153" name="Destroyed Airship Plank Edge (Left 2)"/>
+    <tile id="154" name="Destroyed Airship Plank Edge (Left 3)"/>
+    <tile id="155" name="Destroyed Airship Plank Edge (Left 4)"/>
 </descriptions>
