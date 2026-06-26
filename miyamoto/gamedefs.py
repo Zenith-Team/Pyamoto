@@ -86,17 +86,19 @@ class MiyamotoGameDefinition:
 
         self.files = {
             'bg': gdf(None, False),
-            'bgTrans': gdf(None, False),
+            'blankcourse': gdf(None, False),
+            'entrances': gdf(None, False),
             'entrancetypes': gdf(None, False),
             'levelnames': gdf(None, False),
             'music': gdf(None, False),
+            'overrides': gdf(None, False),
             'spritecategories': gdf(None, False),
             'spritedata': gdf(None, False),
             'spritelistdata': gdf(None, False),
             'spritenames': gdf(None, False),
             'spriteresources': gdf(None, False),
             'tilesets': gdf(None, False),
-            'ts1_descriptions': gdf(None, False),
+            'tileset1': gdf(None, False),
         }
         self.folders = {
             'bg': gdf(None, False),
@@ -153,7 +155,7 @@ class MiyamotoGameDefinition:
                                 ref_root = _mod_root(ref_def.gamepath)
                             fpath = os.path.join(ref_root, ref_def.gamepath, node.attrib['path'])
                     else:
-                        fpath = os.path.join(globals.miyamoto_path, 'miyamotodata', node.attrib['path'])
+                        fpath = os.path.join(globals.miyamoto_path, 'miyamotodata', 'games', 'NSMBU', node.attrib['path'])
 
                 target = self.files if n == 'file' else self.folders
                 target[node.attrib['name']] = self.GameDefinitionFile(fpath, patch)
@@ -353,64 +355,29 @@ class MiyamotoGameDefinition:
         return images
 
 
-_DATA_FILES = {
-    'bg': 'bg.txt',
-    'bgTrans': 'bgTrans.txt',
-    'entrancetypes': 'entrancetypes.txt',
-    'levelnames': 'levelnames.xml',
-    'music': 'music.txt',
-    'spritecategories': 'spritecategories.xml',
-    'spritedata': 'spritedata.xml',
-    'tilesets': 'tilesets.xml',
-    'ts1_descriptions': 'ts1_descriptions.txt',
-}
-
-def GetPath(id_):
-    """
-    Checks the game definition and returns the appropriate data file path.
-    """
-    if globals.gamedef.custom:
-        path = globals.gamedef.file(id_)
-        if path is not None:
-            return path
-
-    return os.path.join(globals.miyamoto_path, 'miyamotodata', _DATA_FILES[id_])
-
-
 def getMusic():
     """
-    Uses the current gamedef + translation to get the music data, and returns it as a list of tuples
+    Uses the current gamedef to get the music data, and returns it as a list of tuples
     """
 
-    transsong = os.path.join(globals.miyamoto_path, 'miyamotodata', 'music.txt')
-    gamedefsongs, isPatch = globals.gamedef.recursiveFiles('music', True)
-    if isPatch:
-        paths = [transsong]
-        for path in gamedefsongs: paths.append(path)
-    else:
-        paths = gamedefsongs
+    paths = globals.gamedef.recursiveFiles('music')
 
     songs = []
     for path in paths:
-        musicfile = open(path)
-        data = musicfile.read()
-        musicfile.close()
-        del musicfile
-
-        # Split the data
-        data = data.split('\n')
-        while '' in data: data.remove('')
-        for i, line in enumerate(data): data[i] = line.split(':')
-
-        # Apply it
-        for songid, name in data:
+        tree = etree.parse(path)
+        root = tree.getroot()
+        for song in root:
+            if song.tag.lower() != 'song':
+                continue
+            sid = song.attrib['id']
+            name = song.attrib['name']
             found = False
-            for song in songs:
-                if song[0] == songid:
-                    song[1] = name
+            for s in songs:
+                if s[0] == sid:
+                    s[1] = name
                     found = True
             if not found:
-                songs.append([songid, name])
+                songs.append([sid, name])
 
     return songs
 

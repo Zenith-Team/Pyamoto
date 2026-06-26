@@ -76,7 +76,7 @@ class AboutDialog(QtWidgets.QDialog):
 
         import platform as _platform
         icon_name = 'pyamoto1024mac.png' if _platform.system() == 'Darwin' else 'pyamoto1024.png'
-        icon_path = os.path.join(globals.miyamoto_path, 'miyamotodata', icon_name)
+        icon_path = os.path.join(globals.miyamoto_path, 'miyamotodata', 'app_icons', icon_name)
         if os.path.isfile(icon_path):
             self.setWindowIcon(QtGui.QIcon(icon_path))
         else:
@@ -1425,16 +1425,31 @@ class BGTab(QtWidgets.QWidget):
 
     def updatePreview(self):
         if self.useCustomFname.isChecked():
-            filename = os.path.join(globals.miyamoto_path, 'miyamotodata', 'bg', 'no_preview.png')
+            folders = globals.gamedef.recursiveFiles('bg', False, True)
+            filename = None
+            for folder in folders:
+                candidate = os.path.join(folder, 'no_preview.png')
+                if os.path.isfile(candidate):
+                    filename = candidate
+                    break
+            if filename is None:
+                filename = os.path.join(globals.miyamoto_path, 'miyamotodata', 'bg', 'no_preview.png')
         else:
             folders = globals.gamedef.recursiveFiles('bg', False, True)
-            folders.append(os.path.join(globals.miyamoto_path, 'miyamotodata', 'bg'))
             for folder in folders:
                 filename = os.path.join(folder, self.bgName.currentText() + '.png')
                 if os.path.isfile(filename):
                     break
             else:
-                filename = os.path.join(globals.miyamoto_path, 'miyamotodata', 'bg', 'no_preview.png')
+                folders = globals.gamedef.recursiveFiles('bg', False, True)
+                filename = None
+                for folder in folders:
+                    candidate = os.path.join(folder, 'no_preview.png')
+                    if os.path.isfile(candidate):
+                        filename = candidate
+                        break
+                if filename is None:
+                    filename = os.path.join(globals.miyamoto_path, 'miyamotodata', 'bg', 'no_preview.png')
 
         pix = QtGui.QPixmap(filename)
         self.preview.setPixmap(pix)
@@ -2910,7 +2925,7 @@ class WelcomeDialog(QtWidgets.QDialog):
 
         import platform as _platform
         icon_name = 'pyamoto1024mac.png' if _platform.system() == 'Darwin' else 'pyamoto1024.png'
-        icon_path = os.path.join(globals.miyamoto_path, 'miyamotodata', icon_name)
+        icon_path = os.path.join(globals.miyamoto_path, 'miyamotodata', 'app_icons', icon_name)
         if os.path.isfile(icon_path):
             self.setWindowIcon(QtGui.QIcon(icon_path))
 
@@ -3163,14 +3178,6 @@ class ChooseLevelNameDialog(QtWidgets.QDialog):
             if not game_path:
                 continue
             names = LoadLevelNamesForDef(def_)
-            if not names:
-                try:
-                    from xml.etree import ElementTree as _et
-                    from .loading import LoadLevelNames_Category
-                    _tree = _et.parse(os.path.join(globals.miyamoto_path, 'miyamotodata', 'levelnames.xml'))
-                    names = LoadLevelNames_Category(_tree.getroot())
-                except Exception:
-                    names = []
             if not names:
                 names = self._scanGamePathForLevels(game_path)
             if names:

@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<entrancetypes>
+    <entrance id="0" name="Normal"/>
+    <entrance id="1" name="Checkpoint"/>
+    <entrance id="2" name="Door Exit"/>
+    <entrance id="3" name="Pipe Facing Up"/>
+    <entrance id="4" name="Pipe Facing Down"/>
+    <entrance id="5" name="Pipe Facing Left"/>
+    <entrance id="6" name="Pipe Facing Right"/>
+    <entrance id="7" name="Falling (Fast)"/>
+    <entrance id="8" name="Ground Pound"/>
+    <entrance id="9" name="Sliding"/>
+    <entrance id="10" name="Swimming"/>
+    <entrance id="11" name="Normal (Mispositioned)"/>
+    <entrance id="12" name="Normal (Mispositioned)"/>
+    <entrance id="13" name="Normal (Mispositioned)"/>
+    <entrance id="14" name="Unknown"/>
+    <entrance id="15" name="Unknown"/>
+    <entrance id="16" name="Mini Pipe Facing Up"/>
+    <entrance id="17" name="Mini Pipe Facing Down"/>
+    <entrance id="18" name="Mini Pipe Facing Left"/>
+    <entrance id="19" name="Mini Pipe Facing Right"/>
+    <entrance id="20" name="Jumping (Facing Right)"/>
+    <entrance id="21" name="Vine Entrance"/>
+    <entrance id="22" name="Pipe Facing Towards Screen"/>
+    <entrance id="23" name="Boss Entrance (Standing)"/>
+    <entrance id="24" name="Walking Right (From Entrance Pos. to 8 Blocks Right of Entrance Pos.)"/>
+    <entrance id="25" name="Boss Entrance (Jumping Right)"/>
+    <entrance id="26" name="Boss Entrance (Falling Right)"/>
+    <entrance id="27" name="Boost Rush Results"/>
+    <entrance id="28" name="Unknown (Crash)"/>
+    <entrance id="29" name="Credits (Player 1)"/>
+    <entrance id="30" name="Credits (Player 2)"/>
+    <entrance id="31" name="Credits (Player 3)"/>
+    <entrance id="32" name="Credits (Player 4)"/>
+    <entrance id="33" name="Title Screen"/>
+    <entrance id="34" name="Ambush entrance (Center)"/>
+</entrancetypes>

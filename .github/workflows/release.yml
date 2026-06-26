@@ -256,7 +256,7 @@ jobs:
           mkdir -p "${APPDIR}"
           cp -r "distrib/miyamoto_v${V}/." "${APPDIR}/"
           cp buildtools/Pyamoto.desktop "${APPDIR}/Pyamoto.desktop"
-          cp miyamotodata/icon.png       "${APPDIR}/Pyamoto.png"
+
           cp buildtools/AppRun           "${APPDIR}/AppRun"
           chmod +x "${APPDIR}/AppRun" "${APPDIR}/Pyamoto"
 

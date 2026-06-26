@@ -218,7 +218,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         _base_title = 'Pyamoto Nightly' if globals.MiyamotoReleaseType == 'nightly' else 'Pyamoto'
         self.setWindowTitle(_base_title)
         _icon_name = 'pyamoto1024mac.png' if platform.system() == 'Darwin' else 'pyamoto1024.png'
-        self.setWindowIcon(QtGui.QIcon(os.path.join(globals.miyamoto_path, 'miyamotodata', _icon_name)))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(globals.miyamoto_path, 'miyamotodata', 'app_icons', _icon_name)))
         self.setIconSize(QtCore.QSize(16, 16))
         self.setUnifiedTitleAndToolBarOnMac(True)
 
@@ -2784,7 +2784,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         newID = len(globals.Level.areas) + 1
 
-        with open(os.path.join(globals.miyamoto_path, 'miyamotodata', 'blankcourse.bin'), 'rb') as blank:
+        with open(globals.gamedef.file('blankcourse'), 'rb') as blank:
             course = blank.read()
 
         L0 = None
@@ -6228,7 +6228,7 @@ def main():
 
     # Set the default window icon (used for random popups and stuff)
     _icon_name = 'pyamoto1024mac.png' if platform.system() == 'Darwin' else 'pyamoto1024.png'
-    globals.app.setWindowIcon(QtGui.QIcon(os.path.join(globals.miyamoto_path, 'miyamotodata', _icon_name)))
+    globals.app.setWindowIcon(QtGui.QIcon(os.path.join(globals.miyamoto_path, 'miyamotodata', 'app_icons', _icon_name)))
     globals.app.setApplicationDisplayName('Pyamoto')
 
     gt = setting('GridType')

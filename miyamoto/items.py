@@ -2181,7 +2181,7 @@ class EntranceItem(LevelEditorItem):
         """
         if EntranceItem.EntranceImages is None:
             ei = []
-            src = QtGui.QPixmap(os.path.join(globals.miyamoto_path, 'miyamotodata', 'entrances.png'))
+            src = QtGui.QPixmap(globals.gamedef.file('entrances'))
             for i in range(17):
                 ei.append(src.copy(i * globals.TileWidth, 0, globals.TileWidth, globals.TileWidth))
             EntranceItem.EntranceImages = ei

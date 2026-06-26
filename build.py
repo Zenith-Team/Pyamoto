@@ -149,7 +149,7 @@ setup(
             },
         'bdist_mac': {
             'bundle_name': 'Pyamoto',
-            'iconfile': 'miyamotodata/pyamoto.icns',
+            'iconfile': 'miyamotodata/app_icons/pyamoto.icns',
         }
         },
     cmdclass = cmdclass_dict,
@@ -158,7 +158,7 @@ setup(
         Executable(
             'pyamoto.py',
             target_name = 'Pyamoto',
-            icon = 'miyamotodata/win_icon.ico',
+            icon = 'miyamotodata/app_icons/win_icon.ico',
             base = base,
             ),
         ],

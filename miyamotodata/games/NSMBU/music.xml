@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<music>
+    <song id="1" name="Overworld"/>
+    <song id="2" name="Underground"/>
+    <song id="12" name="Bonus Room"/>
+    <song id="6" name="Desert"/>
+    <song id="20" name="Beach"/>
+    <song id="3" name="Underwater"/>
+    <song id="7" name="Snow"/>
+    <song id="18" name="Jungle"/>
+    <song id="5" name="Ghost House"/>
+    <song id="4" name="Athletic"/>
+    <song id="8" name="Lava"/>
+    <song id="21" name="Lava Underground"/>
+    <song id="9" name="Tower"/>
+    <song id="10" name="Castle"/>
+    <song id="11" name="Airship"/>
+    <song id="24" name="Before Boss Area"/>
+    <song id="14" name="Tower Boss"/>
+    <song id="15" name="Castle Boss"/>
+    <song id="17" name="Airship Boss"/>
+    <song id="28" name="Final Castle"/>
+    <song id="13" name="Bowser Corridor"/>
+    <song id="25" name="Bowser Battle 1"/>
+    <song id="26" name="Bowser Battle 2"/>
+    <song id="27" name="Princess Peach's Room"/>
+    <song id="23" name="Credits"/>
+    <song id="16" name="Toad House"/>
+    <song id="22" name="Records House"/>
+    <song id="19" name="Enemy Ambush"/>
+</music>

@@ -21,7 +21,7 @@ from xml.etree import ElementTree as etree
 
 from . import globals
 from . import spritelib as SLib
-from .gamedefs import MiyamotoGameDefinition, GetPath
+from .gamedefs import MiyamotoGameDefinition
 from .misc import SpriteDefinition, BGName, setting, setSetting
 import SarcLib
 
@@ -49,12 +49,17 @@ def LoadBGNames():
     """
     Loads the BG names and their translations
     """
-    # Sort BG Names
     globals.names_bg = []
 
-    with open(GetPath('bg'), 'r') as txt, open(GetPath('bgTrans'), 'r') as txt2:
-        for line, lineTrans in zip(txt.readlines(), txt2.readlines()):
-            name, trans = line.rstrip(), lineTrans.rstrip()
+    paths = globals.gamedef.recursiveFiles('bg')
+    for path in paths:
+        tree = etree.parse(path)
+        root = tree.getroot()
+        for bg_node in root:
+            if bg_node.tag.lower() != 'bg':
+                continue
+            name = bg_node.attrib['name']
+            trans = bg_node.text.strip() if bg_node.text else ''
             if name and trans:
                 globals.names_bg.append(BGName(name, trans))
 
@@ -65,9 +70,7 @@ def LoadLevelNames():
     """
     Ensures that the level name info is loaded
     """
-    paths, isPatch = globals.gamedef.recursiveFiles('levelnames', True)
-    if isPatch:
-        paths = [os.path.join(globals.miyamoto_path, 'miyamotodata', 'levelnames.xml')] + paths
+    paths = globals.gamedef.recursiveFiles('levelnames')
 
     globals.LevelNames = []
 
@@ -135,9 +138,6 @@ def LoadTilesetNames(reload_=False):
 
     # Get paths
     paths = globals.gamedef.recursiveFiles('tilesets')
-    new = [os.path.join(globals.miyamoto_path, 'miyamotodata', 'tilesets.xml')]
-    for path in paths: new.append(path)
-    paths = new
 
     # Read each file
     globals.TilesetNames = [[[], False], [[], False], [[], False], [[], False]]
@@ -198,22 +198,16 @@ def LoadObjDescriptions(reload_=False):
     """
     if (globals.ObjDesc is not None) and not reload_: return
 
-    paths, isPatch = globals.gamedef.recursiveFiles('ts1_descriptions', True)
-    if isPatch:
-        new = []
-        new.append(os.path.join(globals.miyamoto_path, 'miyamotodata', 'ts1_descriptions.txt'))
-        for path in paths: new.append(path)
-        paths = new
+    paths = globals.gamedef.recursiveFiles('tileset1')
 
     globals.ObjDesc = {}
     for path in paths:
-        f = open(path)
-        raw = [x.strip() for x in f.readlines()]
-        f.close()
-
-        for line in raw:
-            w = line.split('=')
-            globals.ObjDesc[int(w[0])] = w[1]
+        tree = etree.parse(path)
+        root = tree.getroot()
+        for tile in root:
+            if tile.tag.lower() != 'tile':
+                continue
+            globals.ObjDesc[int(tile.attrib['id'])] = tile.attrib['name']
 
 
 def LoadSpriteData():
@@ -435,22 +429,16 @@ def LoadEntranceNames(reload_=False):
     """
     if (globals.EntranceTypeNames is not None) and not reload_: return
 
-    paths, isPatch = globals.gamedef.recursiveFiles('entrancetypes', True)
-    if isPatch:
-        new = [os.path.join(globals.miyamoto_path, 'miyamotodata', 'entrancetypes.txt')]
-        for path in paths: new.append(path)
-        paths = new
+    paths = globals.gamedef.recursiveFiles('entrancetypes')
 
     NameList = {}
     for path in paths:
-        newNames = {}
-        with open(path, 'r') as f:
-            for line in f.readlines():
-                id_ = int(line.split(':')[0])
-                newNames[id_] = line.split(':')[1].replace('\n', '')
-
-        for idx in newNames:
-            NameList[idx] = newNames[idx]
+        tree = etree.parse(path)
+        root = tree.getroot()
+        for entrance in root:
+            if entrance.tag.lower() != 'entrance':
+                continue
+            NameList[int(entrance.attrib['id'])] = entrance.attrib['name']
 
     globals.EntranceTypeNames = []
     idx = 0
@@ -612,7 +600,8 @@ def LoadOverrides():
     """
     Load overrides
     """
-    OverrideBitmap = QtGui.QPixmap(os.path.join(globals.miyamoto_path, 'miyamotodata', 'overrides.png'))
+    path = globals.gamedef.file('overrides')
+    OverrideBitmap = QtGui.QPixmap(path)
     idx = 0
     xcount = OverrideBitmap.width() // globals.TileWidth
     ycount = OverrideBitmap.height() // globals.TileWidth
@@ -698,7 +687,7 @@ def LoadGameDef(base_game=None, mods=None, dlg=None):
             globals.mainWindow.spriteDataEditor.update()
 
         # Reload tilesets
-        LoadObjDescriptions(True)  # reloads ts1_descriptions
+        LoadObjDescriptions(True)  # reloads tileset1 descriptions
         LoadTilesetNames(True)  # reloads tileset names
 
         # Load sprites.py

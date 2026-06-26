@@ -7,4 +7,17 @@
     <file name="spritelistdata"   path="spritelistdata.txt"   patch="false" />
     <file name="spriteresources"  path="spriteresources.xml"  patch="false" />
 
+    <!-- Global data moved from miyamotodata root -->
+    <file name="bg"              path="bg.xml"              patch="true" />
+    <file name="blankcourse"     path="blankcourse.bin"     patch="true" />
+    <file name="entrances"       path="entrances.png"       patch="true" />
+    <file name="entrancetypes"   path="entrancetypes.xml"   patch="true" />
+    <file name="levelnames"      path="levelnames.xml"      patch="true" />
+    <file name="music"           path="music.xml"           patch="true" />
+    <file name="overrides"       path="overrides.png"       patch="true" />
+    <file name="tilesets"        path="tilesets.xml"        patch="true" />
+    <file name="tileset1"        path="tileset1.xml"        patch="true" />
+
+    <folder name="bg" path="bg" />
+
 </game>
