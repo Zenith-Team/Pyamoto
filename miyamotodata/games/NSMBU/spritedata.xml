@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
 <sprites>
 	<sprite id="0" name="Goomba" notes="A simple walking mushroom head that takes 1 hit to kill.">
-		<list nybble="6" title="Spawned Child Direction (No ground pound)" comment="Controls the direction (and z order) of the Goombas spawned by a Medium Goomba, without ground pound. Higher values cause an overflow with probably unexpected results." category="behavior">
+		<list nybble="6" title="Spawned Child Direction" comment="Controls the direction (and z order) of the Goombas spawned by a Medium Goomba, without ground pound. Higher values cause an overflow with probably unexpected results." category="behavior" requirednybble="12.2" requiredval="4">
 			<entry value="0">Right</entry>
 			<entry value="1">Left</entry>
 			<entry value="2">???</entry>
 			<entry value="3">???</entry>
 		</list>
 		<value nybble="6" title="Additional Pipe Goomba Z-Order" comment="Additional Z-Order nybble" category="behavior" />
-		<list nybble="6" title="Spawned Child Direction (Ground pound)" comment="Controls the direction (and z order) of the Goombas spawned by a bigger Goomba with a ground pound. Higher values cause an overflow with probably unexpected results." category="behavior">
+		<list nybble="6" title="Spawned Child Direction" comment="Controls the direction (and z order) of the Goombas spawned by a bigger Goomba with a ground pound. Higher values cause an overflow with probably unexpected results." category="behavior" requirednybble="12.2" requiredval="5">
 			<entry value="0">Right/High</entry>
 			<entry value="1">Left/High</entry>
 			<entry value="2">Right/Low</entry>
@@ -21,7 +21,7 @@
 			<entry value="3">Player 4</entry>
 		</list>
 		<checkbox nybble="8" title="Z-Order" comment="Unused! Checking this box places the Goomba behind layer 1 tiles and other sprites." category="behavior" />
-		<checkbox nybble="9" title="Doesn't disappear" comment="When checked, this Goomba doesn't despawn when leaving the visible camera window." category="behavior" />
+		<dualbox nybble="9" title1="Despawns off-screen" title2="Stays loaded off-screen" comment="When checked, this Goomba doesn't despawn when leaving the visible camera window." category="behavior" />
 		<list nybble="11" title="Pipe Direction" comment="This sets the pipe direction for Pipe Enemy Generator Goombas." category="behavior">
 			<entry value="0">Up</entry>
 			<entry value="1">Down</entry>
@@ -115,8 +115,38 @@
 		<value nybble="20" title="Unknown Value 20" />
 	</sprite>
 	<sprite id="19" name="Koopa Troopa" notes="A familiar shelled foe: The Koopa Troopa. Since 1989.&#13;&#10;Jumping on it makes it hide in its shell which can then be kicked or picked up and then thrown by the player. After a specific amount of time, it comes out of its shell again.">
-		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior">
-			<entry value="0">Normal (Using Walk Direction)</entry>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="0">
+			<entry value="0">Towards Player (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="1">
+			<entry value="0">Walking Left (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="2">
+			<entry value="0">Walking Right (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="3">
+			<entry value="0">Towards Player (Using Walk Direction)</entry>
 			<entry value="1">Pipe Exit (Right)</entry>
 			<entry value="2">Pipe Exit (Left)</entry>
 			<entry value="3">Pipe Exit (Up)</entry>
@@ -127,39 +157,40 @@
 		</list>
 		<value nybble="7" title="Unknown Value 7" comment="Probably does nothing" />
 		<checkbox nybble="9" title="Allow the staircase 1UP Trick" comment="If this is not checked, the classic Koopa 1UP-Staircase trick is not possible to pull off" category="behavior" />
-		<list nybble="10" title="Walk Direction" category="behavior">
+		<list nybble="10" title="Walk Direction" category="behavior" requirednybble="5.1" requiredval="0">
 			<entry value="0">Towards Player</entry>
 			<entry value="1">Left</entry>
 			<entry value="2">Right</entry>
 		</list>
 		<checkbox nybble="11" title="Spawns being in Shell" comment="When checked, the Koopa Troopa will spawn hiding in its shell." category="behavior" />
-		<list nybble="12" title="Color" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior">
-			<entry value="0">Green</entry>
-			<entry value="1">Red</entry>
-		</list>
+		<dualbox nybble="12" title1="Green" title2="Red" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior"/>
 		<value nybble="19" title="Unknown Value 19" comment="Probably does nothing" />
 		<checkbox nybble="20" title="Spawns on ground" comment="This will make the Koopa Troopa spawn on the first solid ground (including sprites) below it, even if it's placed in mid-air." category="behavior" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="20" name="Koopa Paratroopa" notes="A koopa troopa with wings. Can either jump or fly depending on what you set it to. The default is &quot;jumping&quot;. Red koopa paratroopas will not walk off cliffs, and the green ones will. The size of the koopa paratroopas wings are also different (green having shorter wings, red having longer wings).">
-		<list nybble="9" title="Initial direction" comment="The movement of the Koopa Paratroopa when it is spawned." category="movement">
+		<list nybble="9" title="Initial direction" comment="The movement of the Koopa Paratroopa when it is spawned." category="movement" requirednybble="11.2" requiredval="0">
 			<entry value="0">Start Going Towards Player</entry>
-			<entry value="1">Start Going Up / Right</entry>
-			<entry value="2">Start going Down / Left</entry>
+			<entry value="1">Start Going Right</entry>
+			<entry value="2">Start going Left</entry>
 		</list>
-		<list nybble="10" title="Flying Start Position" comment="The path starts from this position relative to the location of the Koopa Paratroopa's placement." category="movement">
-			<entry value="0">Midway</entry>
-			<entry value="1">Edge of Flying Path</entry>
+		<list nybble="9" title="Initial direction" comment="The movement of the Koopa Paratroopa when it is spawned." category="movement" requirednybble="11.2" requiredval="1">
+			<entry value="0">Start Going Towards Player</entry>
+			<entry value="1">Start Going Right</entry>
+			<entry value="2">Start going Left</entry>
 		</list>
+		<list nybble="9" title="Initial direction" comment="The movement of the Koopa Paratroopa when it is spawned." category="movement" requirednybble="11.2" requiredval="2">
+			<entry value="0">Start Going Towards Player</entry>
+			<entry value="1">Start Going Up</entry>
+			<entry value="2">Start going Down</entry>
+		</list>
+		<dualbox bit="40" title1="Start in middle" title2="Start at edge" comment="The path starts from this position relative to the location of the Koopa Paratroopa's placement." category="movement"/>
 		<list nybble="11" title="Movement Type" category="behavior">
 			<entry value="0">Jumping</entry>
-			<entry value="1">Flying Left and Right</entry>
-			<entry value="2">Flying Up and Down</entry>
+			<entry value="1">Flying Horizontally</entry>
+			<entry value="2">Flying Vertically</entry>
 		</list>
-		<list nybble="12" title="Color" comment="Red Koopa Troopas don't walk off ledges." category="behavior">
-			<entry value="0">Green</entry>
-			<entry value="1">Red</entry>
-		</list>
+		<dualbox nybble="12" title1="Green" title2="Red" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior"/>
 	</sprite>
 	<sprite id="21" name="Grouped Koopa Paratroopa" notes="A Koopa Troopa with wings which allow it to jump or even fly. It can jump two blocks high at max. Jumping on it makes it a normal Koopa Troopa. This Koopa Paratroopa's movements can be linked together with others for synchronization.">
 		<value nybble="5-6" title="Group ID" comment="The ID used to chain sprites together. Use sprite 196 to create the groups. If not linked, the Koopa Paratroopa will appear frozen and collisionless. If linked, this sprite's movement is synced to other Koopa Paratroopa's that are linked to the same group controller." id_type="group" category="behavior" />
@@ -177,10 +208,7 @@
 			<entry value="1">Flying Left and Right</entry>
 			<entry value="2">Flying Up and Down</entry>
 		</list>
-		<list nybble="12" title="Color" comment="Red Koopa Troopas don't walk off ledges." category="behavior">
-			<entry value="0">Green</entry>
-			<entry value="1">Red</entry>
-		</list>
+		<dualbox nybble="12" title1="Green" title2="Red" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior"/>
 	</sprite>
 	<sprite id="22" name="Buzzy Beetle">
 		<checkbox nybble="9" title="Unknown Checkbox 9" comment="No visible effect...as far as I can see." />
@@ -223,14 +251,14 @@
 	<sprite id="26" name="Zoom Area" notes="Screen width and height (in blocks) with the different zoom values are: -2 = H:7 W:12.4, -1 = H:10.5 W:18.7, 0 = H:14 W:24.9, 1 = H:17 W:30.2, 2 = H:19 W:33.8, 3 = H:20 W:35.6, 4 = H:24 W:42.7, 5 = H:28 W:49.8">
 		<checkbox bit="17" title="Disables Scroll Limit" comment="When the player enters this zoom area if there are any scroll limit sprites that have 'Disabled by Zoom Area' checked it will deactivate them." category="behavior" />
 		<list bit="18-20" title="Zoom Value" comment="Changes what zoom it will have when the player enters the area. *Zoom 0 takes priority if many zoom areas are in one place." category="behavior">
-			<entry value="0">Zoom 2</entry>
-			<entry value="1">Zoom 4</entry>
-			<entry value="2">Zoom 5</entry>
-			<entry value="3">Zoom 5</entry>
-			<entry value="4">Zoom 3</entry>
+			<entry value="0">19 Blocks</entry>
+			<entry value="1">24 Blocks</entry>
+			<entry value="2">28 Blocks</entry>
+			<entry value="3">28 Blocks</entry>
+			<entry value="4">20 Blocks</entry>
 			<entry value="5">Same as view</entry>
 			<entry value="6">Same as view</entry>
-			<entry value="7">Zoom 0*</entry>
+			<entry value="7">14 Blocks*</entry>
 		</list>
 		<list nybble="6" title="Triggered if" category="behavior">
 			<entry value="0">One player at least is in the zoom area</entry>
@@ -242,10 +270,7 @@
 		<value nybble="11-12" title="Width" comment="The width of the zoom area" category="behavior" />
 	</sprite>
 	<sprite id="27" name="Vertical Scroll Limit - Left" notes="Place this sprite on the same horizontal line as a 28 to create a camera barrier.">
-		<list nybble="5" title="Type" comment="Has to match with the corresponding 28." category="behavior">
-			<entry value="0">Limits bottom</entry>
-			<entry value="1">Limits top</entry>
-		</list>
+		<dualbox nybble="5" title1="Limits bottom" title2="Limits top" catgeory="behavior"/>
 		<list nybble="6" title="Multiplayer" category="behavior">
 			<entry value="0">Always limit</entry>
 			<entry value="1">Only limit a single player</entry>
@@ -262,10 +287,7 @@
 		<value nybble="19-20" title="Only limit entrance ID" comment="The limit will work only if the zone is entered using one of these entrances." id_type="entrance" category="behavior" />
 	</sprite>
 	<sprite id="28" name="Vertical Scroll Limit - Right" notes="Place this sprite on the same horizontal line as a 27 to create a camera barrier.">
-		<list nybble="5" title="Type" comment="Has to match with the corresponding 27." category="behavior">
-			<entry value="0">Limits bottom</entry>
-			<entry value="1">Limits top</entry>
-		</list>
+		<dualbox nybble="5" title1="Limits bottom" title2="Limits top" catgeory="behavior"/>
 		<list nybble="6" title="Multiplayer" category="behavior">
 			<entry value="0">Always limit</entry>
 			<entry value="1">Only limit a single player</entry>
@@ -282,10 +304,7 @@
 		<value nybble="19-20" title="Only limit entrance ID" comment="The limit will work only if the zone is entered using one of these entrances." id_type="entrance" category="behavior" />
 	</sprite>
 	<sprite id="29" name="Horizontal Scroll Limit - Top">
-		<list nybble="5" title="Limit scrolling to the" comment="Has to match corresponding sprite 30." category="behavior">
-			<entry value="0">Right</entry>
-			<entry value="1">Left</entry>
-		</list>
+		<dualbox nybble="5" title1="Limits right" title2="Limits left" catgeory="behavior"/>
 		<list nybble="6" title="Multiplayer" category="behavior">
 			<entry value="0">Always limit</entry>
 			<entry value="1">Only limit a single player</entry>
@@ -302,10 +321,7 @@
 		<value nybble="19-20" title="Only limit entrance ID" comment="The limit will work only if the zone is entered with this entrance ID." id_type="entrance" category="behavior" />
 	</sprite>
 	<sprite id="30" name="Horizontal Scroll Limit - Bottom">
-		<list nybble="5" title="Limit scrolling to the" comment="Has to match corresponding sprite 29." category="behavior">
-			<entry value="0">Right</entry>
-			<entry value="1">Left</entry>
-		</list>
+		<dualbox nybble="5" title1="Limits right" title2="Limits left" category="behavior"/>
 		<list nybble="6" title="Multiplayer" category="behavior">
 			<entry value="0">Always limit</entry>
 			<entry value="1">Only limit a single player</entry>
@@ -322,7 +338,7 @@
 		<value nybble="19-20" title="Only limit entrance ID" comment="The limit will work only if the zone is entered using one of these entrances." id_type="entrance" category="behavior" />
 	</sprite>
 	<sprite id="31" name="Goal Pole" notes="Ends the level for the player (if the stage doesn't have a boss). Where the player lands on the Goal Pole determines how many points the player will earn. Player receives a 1-up at the very top.">
-		<checkbox nybble="5" title="Secret Exit" comment="Makes the path when the level is completed lead to the secret path, and changes the appearance." category="behavior" />
+		<dualbox nybble="5" title1="Regular Exit" title2="Secret Exit" category="behavior"/>
 		<checkbox nybble="11" title="No Castle" comment="There is no castle. Mario will just walk to the right for a while and then stand still." category="behavior" />
 		<checkbox nybble="12" title="Snowy Castle" comment="Makes the castle laden with snow, for snowy/icy levels." category="behavior" />
 	</sprite>
@@ -340,8 +356,14 @@
 			<entry value="3">Rock</entry>
 			<entry value="4">Spooky (gray)</entry>
 		</list>
-		<checkbox nybble="8" title="Is path controlled" comment="Will forcibly disable &quot;Affected by gravity&quot;." category="behavior" />
-		<list nybble="9" title="Bolt movement speed" comment="Unused" category="movement">
+		<checkbox nybble="8" title="Is path controlled" comment="Will forcibly disable &quot;Affected by gravity&quot;." category="movement" />
+		<checkbox nybble="11" title="Place behind other sprites" comment="Changes z-order to -2500 if the other z-order nybble is 0" category="behavior" />
+		<checkbox nybble="11" title="Affected by gravity" mask="2" comment="Will be forcibly disabled if &quot;Is path controlled&quot; is enabled." category="movement" requirednybble="8.4" requiredval="0"/>
+		<checkbox nybble="11" title="&lt;span style=&quot;color:red&quot;&gt;(Disabled) Affected by gravity&lt;/span&gt;" mask="2" comment="Will be ignored because &quot;Is path controlled&quot; is enabled." category="movement" requirednybble="8.4" requiredval="1"/>
+		<checkbox nybble="13" title="Use above collision sensor" comment="When enabled, the above collision sensor will be set instead of the adjacent ones." category="movement" requirednybble="11.3" requiredval="2-3"/>
+		<checkbox nybble="11" title="Is bolt controlled" mask="4" category="movement" requirednybble="8.4" requiredval="0"/>
+		<checkbox nybble="11" title="&lt;span style=&quot;color:red&quot;&gt;(Disabled) Is bolt controlled&lt;/span&gt;" mask="4" category="movement" requirednybble="8.4" requiredval="1"/>
+		<list nybble="9" title="Bolt movement speed" comment="Unused" category="movement" requirednybble="11.2" requiredval="4-7">
 			<entry value="0">0.0</entry>
 			<entry value="1">1.0</entry>
 			<entry value="2">1.5</entry>
@@ -349,15 +371,12 @@
 			<entry value="4">3.0</entry>
 			<entry value="5">4.0</entry>
 		</list>
-		<list nybble="10" title="Bolt movement direction" category="movement">
+		<list nybble="10" title="Bolt movement direction" category="movement" requirednybble="11.2" requiredval="4-7">
 			<entry value="0">Right</entry>
 			<entry value="1">Left</entry>
 			<entry value="2">Up</entry>
 			<entry value="3">Down</entry>
 		</list>
-		<checkbox nybble="11" title="Place behind other sprites" comment="Changes z-order to -2500 if the other z-order nybble is 0" category="behavior" />
-		<checkbox nybble="11" title="Affected by gravity" mask="2" comment="Will be forcibly disabled if &quot;Is path controlled&quot; is enabled." category="behavior" />
-		<checkbox nybble="11" title="Is bolt controlled" mask="4" category="behavior" />
 		<list nybble="12" title="Inscription" comment="Sets the inscription of the signboard." category="behavior">
 			<entry value="0">Right</entry>
 			<entry value="1">Up + right</entry>
@@ -368,7 +387,6 @@
 			<entry value="6">Down</entry>
 			<entry value="7">Down + right</entry>
 		</list>
-		<checkbox nybble="13" title="Use above collision sensor" comment="When enabled, the above collision sensor will be set instead of the adjacent ones. Needs &quot;Affected by gravity&quot; to be enabled." category="behavior" />
 		<value nybble="16" title="Unknown Value 16" comment="[1 bit?] No visible change. Only used in as 1 or 0. Levels: NSLU5-21A1 and NSLU5-17A1" />
 		<value nybble="20" title="Unknown Value 20" comment="[2 bits?] Related to &quot;Affected by gravity&quot;. If that bit is not set and this bit is, the level will crash on Cemu." />
 		<value nybble="21-22" title="Movement ID" comment="Bolt ID / Path Controller ID" id_type="movement" category="movement" />
@@ -434,10 +452,7 @@
 		<value nybble="1-2" title="Target Event ID 1" id_type="event" category="events" />
 		<value nybble="3-4" title="Target Event ID 2" id_type="event" category="events" />
 		<value nybble="5-6" title="Time active" comment="Only used if the sprite is activating an event." category="behavior" />
-		<list nybble="11" title="Switch Mode" category="behavior">
-			<entry value="0">Deactivates event</entry>
-			<entry value="1">Activates event</entry>
-		</list>
+		<dualbox nybble="11" title1="Deactivates event" title2="Activates event" category="behavior"/>
 		<checkbox nybble="12" title="Does nothing" comment="Disables the sprite's function" category="behavior" />
 	</sprite>
 	<sprite id="37" name="Event Controller - AND (&quot;if X AND Y, do Z&quot;)">
@@ -451,10 +466,7 @@
 			<entry value="1">Multi Use</entry>
 			<entry value="2">Only while All Events are Active</entry>
 		</list>
-		<list nybble="12" title="Switch Mode" category="behavior">
-			<entry value="0">Activates Target</entry>
-			<entry value="1">Deactivates Target</entry>
-		</list>
+		<dualbox nybble="12" title1="Activates event" title2="Deactivates event" category="behavior"/>
 	</sprite>
 	<sprite id="38" name="Event Controller - OR (&quot;if X OR Y, do Z&quot;)" notes="This sprite is glitched in the launch version of NSMBU and works exactly like a sprite 37 (AND). It was fixed in an update, however.">
 		<value nybble="1-2" title="Triggering Event ID 1" comment="Don't leave as 0; put the same event multiple times if less that four events should activate the Target ID." id_type="event" category="events" />
@@ -467,10 +479,7 @@
 			<entry value="1">Multi-Use</entry>
 			<entry value="2">Only while Any Event is Active</entry>
 		</list>
-		<list nybble="12" title="Switch Mode" category="behavior">
-			<entry value="0">Activates Target</entry>
-			<entry value="1">Deactivates Target</entry>
-		</list>
+		<dualbox nybble="12" title1="Activates event" title2="Deactivates event" category="behavior"/>
 	</sprite>
 	<sprite id="39" name="Event Controller - RANDOM (&quot;if X, do Y OR Z&quot;) [UNUSED]" notes="Triggers a randomly selected event from the four specified, or, if none are specified, event ID 1.">
 		<value nybble="1-2" title="Target Event ID 1" comment="Don't leave as 0; put the same event multiple times if you want a smaller selection of events to trigger." id_type="event" category="events" />
@@ -478,14 +487,8 @@
 		<value nybble="5-6" title="Target Event ID 2" comment="Don't leave as 0; put the same event multiple times if you want a smaller selection of events to trigger." id_type="event" category="events" />
 		<value nybble="7-8" title="Target Event ID 3" comment="Don't leave as 0; put the same event multiple times if you want a smaller selection of events to trigger." id_type="event" category="events" />
 		<value nybble="9-10" title="Target Event ID 4" comment="Don't leave as 0; put the same event multiple times if you want a smaller selection of events to trigger." id_type="event" category="events" />
-		<list nybble="11" title="Usage Mode" category="behavior">
-			<entry value="0">Single Use</entry>
-			<entry value="1">Multi Use</entry>
-		</list>
-		<list nybble="12" title="Switch Mode" category="behavior">
-			<entry value="0">Activates Target</entry>
-			<entry value="1">Deactivates Target</entry>
-		</list>
+		<dualbox nybble="11" title1="Single use" title2="Multi use" category="behavior"/>
+		<dualbox nybble="12" title1="Activates event" title2="Deactivates event" category="behavior"/>
 	</sprite>
 	<sprite id="40" name="Event Controller - IF (&quot;if X, do Y&quot;)">
 		<value nybble="1-2" title="Triggering Event ID" comment="Operation is performed when this event is activated." id_type="event" category="events" />
@@ -499,14 +502,8 @@
 			<entry value="0">Triggering event is activated</entry>
 			<entry value="1">Triggering event is deactivated</entry>
 		</list>
-		<list nybble="11" title="Usage Mode" category="behavior">
-			<entry value="0">Single Use</entry>
-			<entry value="1">Multi-Use</entry>
-		</list>
-		<list nybble="12" title="Switch Mode" comment="What should be done to the Target ID after the delay." category="behavior">
-			<entry value="0">Activate Event</entry>
-			<entry value="1">Deactivate Event</entry>
-		</list>
+		<dualbox nybble="11" title1="Single use" title2="Multi use" category="behavior"/>
+		<dualbox nybble="12" title1="Activates event" title2="Deactivates event" category="behavior"/>
 		<checkbox nybble="20" title="Special deletion flag" comment="Only useful if two chainers are used that are placed on top of each other, and both have this flag enabled. If one of the two chainers gets activated (this one must be set to single use), the game deletes the other one when reloading the zone, making sure that chainer is never activated." category="behavior" />
 		<value nybble="21-22" title="Useless" comment="Nintendo used the movement id nybbles a few times, but it isn't used by the game." />
 	</sprite>
@@ -521,9 +518,9 @@
 			<entry value="15">All players</entry>
 		</list>
 		<value nybble="3-4" title="Target Event ID" comment="Event ID that is activated once the condions are met." id_type="event" category="events" />
-		<value nybble="5-6" title="Player Location ID" comment="Set the location ID the player needs to be in for the Event to be turned on." id_type="location" category="behavior" />
+		<value nybble="5-6" title="Player Location ID" comment="Set the location ID the player needs to be in for the Event to be turned on." id_type="location" category="behavior" requirednybble="5-6" requiredval="0-254"/>
 		<checkbox nybble="5-6" title="Ignore player location" mask="255" comment="Tick this to disregard the player location ID" category="behavior" />
-		<value nybble="7-8" title="Enemy Location ID" comment="Set the location ID the enemy needs to be in for the Event to be turned on." id_type="location" category="behavior" />
+		<value nybble="7-8" title="Enemy Location ID" comment="Set the location ID the enemy needs to be in for the Event to be turned on." id_type="location" category="behavior" requirednybble="7-8" requiredval="0-254"/>
 		<checkbox nybble="7-8" title="Ignore enemy location" mask="255" comment="Tick this to disregard the enemy location ID" category="behavior" />
 		<list nybble="9" title="Player powerup" comment="Extra condition: Player must have this powerup." category="behavior">
 			<entry value="0">Any powerup</entry>
@@ -593,7 +590,8 @@
 	<sprite id="45" name="Star Coin" notes="There may be a nybble to disable falling from a pow block.">
 		<value nybble="3-4" title="Target Event ID" comment="Triggers this Event when collected." id_type="event" category="events" />
 		<checkbox nybble="5" title="Don't appear in challenges" category="behavior" />
-		<checkbox nybble="5" mask="2" title="Don't appear in challenges + unknown behaviour depending on Nybble 8 Mask 2" />
+		<checkbox nybble="5" mask="2" title="Unknown behaviour" requirednybble="8.3" requiredval="2-3"/>
+		<checkbox nybble="5" mask="2" title="Don't appear in challenges 2" requirednybble="8.3" requiredval="0-2"/>
 		<value nybble="6" title="Unknown Value 6" />
 		<checkbox nybble="7" title="Unknown Checkbox 7" />
 		<checkbox nybble="8" mask="2" title="Unknown Checkbox 8 Mask 2" />
@@ -623,7 +621,7 @@
 	<sprite id="46" name="Star Coin - Uses Lines">
 		<value nybble="3-4" title="Target Event ID" comment="The star coin will activate this ID when collected." id_type="event" category="events" />
 		<checkbox nybble="7" title="Unknown Checkbox 7" />
-		<checkbox nybble="8" title="Move Left/Down" category="behavior" />
+		<dualbox nybble="8" title1="Move Right/Up" title2="Move Left/Down" category="behavior" />
 		<checkbox nybble="8" mask="2" title="Unknown Checkbox 8 Mask 2" />
 		<list bit="29-30" title="Unknown Nybble 8 Mask 12">
 			<entry value="0">Unknown</entry>
@@ -692,7 +690,7 @@
 			<entry value="2">Two-Way (70, 642)</entry>
 			<entry value="3">Shifting Rectangle Platform (132)</entry>
 		</list>
-		<value nybble="20" title="Unknown Value 20" />
+		<checkbox nybble="20" title="Upside-down" category="behavior"/>
 		<value nybble="21-22" title="Movement ID" comment="Use this to match it to a rotation controller or sprite 70." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="49" name="Red Coin">
@@ -706,7 +704,7 @@
 		<value nybble="9" title="Unknown Value 9" />
 		<value nybble="10" title="Z-Order" comment="Possible values are 0, 1, and 2." category="behavior" />
 		<value nybble="12" title="Unknown Value 12" />
-        <list bit="62-64" title="Bolt Movement Speed" category="movement">
+        <list bit="62-64" title="Bolt Movement Speed" category="movement" requirednybble="19.1" requiredval="2">
             <entry value="0">1.0</entry>
             <entry value="1">1.5</entry>
             <entry value="2">2.0</entry>
@@ -716,12 +714,12 @@
             <entry value="6">0.0</entry>
             <entry value="7">0.0</entry>
         </list>
-        <list nybble="20" title="Rectangle Platform Info" category="movement">
+        <list nybble="20" title="Rectangle Platform Info" category="movement" requirednybble="19.1" requiredval="8">
             <entry value="0">Follow Top platform</entry>
             <entry value="1">Follow Bottom platform</entry>
             <entry value="2">Doesn't move</entry>
         </list>
-        <list nybble="20" title="Bolt Direction" category="movement">
+        <list nybble="20" title="Bolt Direction" category="movement" requirednybble="19.1" requiredval="2">
             <entry value="0">Right</entry>
             <entry value="1">Left</entry>
             <entry value="2">Up</entry>
@@ -758,7 +756,7 @@
 			<entry value="4">Five</entry>
 		</list>
 		<value nybble="12" title="Unused Value 12" />
-        <list bit="62-64" title="Bolt Movement Speed" category="movement">
+        <list bit="62-64" title="Bolt Movement Speed" category="movement" requirednybble="19.1" requiredval="2">
             <entry value="0">1.0</entry>
             <entry value="1">1.5</entry>
             <entry value="2">2.0</entry>
@@ -768,12 +766,12 @@
             <entry value="6">0.0</entry>
             <entry value="7">0.0</entry>
         </list>
-        <list nybble="20" title="Rectangle Platform Info" category="movement">
+        <list nybble="20" title="Rectangle Platform Info" category="movement" requirednybble="19.1" requiredval="8">
             <entry value="0">Follow Top platform</entry>
             <entry value="1">Follow Bottom platform</entry>
             <entry value="2">Doesn't move</entry>
         </list>
-        <list nybble="20" title="Bolt Direction" category="movement">
+        <list nybble="20" title="Bolt Direction" category="movement" requirednybble="19.1" requiredval="2">
             <entry value="0">Right</entry>
             <entry value="1">Left</entry>
             <entry value="2">Up</entry>
@@ -806,10 +804,7 @@
 		</list>
 	</sprite>
 	<sprite id="52" name="Grrrol Passage" notes="Notes: A hole which lets Grrrols through, but nothing else (including the player).">
-		<list nybble="12" title="Direction" comment="Sets the direction the broken end faces." category="behavior">
-			<entry value="0">Left</entry>
-			<entry value="1">Right</entry>
-		</list>
+		<dualbox nybble="12" title1="Left" title2="Right" comment="Sets the direction the broken end faces." category="behavior"/>
 	</sprite>
 	<sprite id="53" name="Porcupuffer [UNUSED]">
 		<value nybble="7" title="Unknown Value 7" />
@@ -821,8 +816,38 @@
 		<value nybble="10" title="Unknown Value 10" />
 	</sprite>
 	<sprite id="55" name="Koopa Troopa (2)" notes="Another Koopa Troopa.">
-		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior">
-			<entry value="0">Normal (Using Walk Direction)</entry>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="0">
+			<entry value="0">Towards Player (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="1">
+			<entry value="0">Walking Left (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="2">
+			<entry value="0">Walking Right (Using Walk Direction)</entry>
+			<entry value="1">Pipe Exit (Right)</entry>
+			<entry value="2">Pipe Exit (Left)</entry>
+			<entry value="3">Pipe Exit (Up)</entry>
+			<entry value="4">Pipe Exit (Down)</entry>
+			<entry value="5">Walking Right?</entry>
+			<entry value="6">Walking Right?</entry>
+			<entry value="7">Walking Right?</entry>
+		</list>
+		<list nybble="5" title="Spawns" comment="Can't be higher than 7. But seems to be a flag?" category="behavior" requirednybble="10.2" requiredval="3">
+			<entry value="0">Towards Player (Using Walk Direction)</entry>
 			<entry value="1">Pipe Exit (Right)</entry>
 			<entry value="2">Pipe Exit (Left)</entry>
 			<entry value="3">Pipe Exit (Up)</entry>
@@ -833,18 +858,16 @@
 		</list>
 		<value nybble="7" title="Unknown Value 7" comment="Probably does nothing" />
 		<checkbox nybble="9" title="Allow the staircase 1UP Trick" comment="If this is not checked, the classic Koopa 1UP-Staircase trick is not possible to pull off" category="behavior" />
-		<list nybble="10" title="Walk Direction" category="behavior">
+		<list nybble="10" title="Walk Direction" category="behavior" requirednybble="5.1" requiredval="0">
 			<entry value="0">Towards Player</entry>
 			<entry value="1">Left</entry>
 			<entry value="2">Right</entry>
 		</list>
 		<checkbox nybble="11" title="Spawns being in Shell" comment="When checked, the Koopa Troopa will spawn hiding in its shell." category="behavior" />
-		<list nybble="12" title="Color" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior">
-			<entry value="0">Green</entry>
-			<entry value="1">Red</entry>
-		</list>
+		<dualbox nybble="12" title1="Green" title2="Red" comment="If set to &amp;quot;Red&amp;quot;, the Koopa Troopa won't walk off ledges." category="behavior"/>
 		<value nybble="19" title="Unknown Value 19" comment="Probably does nothing" />
 		<checkbox nybble="20" title="Spawns on ground" comment="This will make the Koopa Troopa spawn on the first solid ground (including sprites) below it, even if it's placed in mid-air." category="behavior" />
+		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="56" name="Porcupuffer Spawn Area">
 		<value nybble="6" title="Unknown Value 6" />
@@ -857,16 +880,12 @@
 			<entry value="0">Only when player is in water</entry>
 			<entry value="1">Always</entry>
 		</list>
-		<checkbox nybble="11" title="Start Facing Left" category="behavior" />
-		<list nybble="12" title="Swim Distance" comment="2 is unused, a port from NSMBW. Defines the swim distance of the fishbone." category="behavior">
-			<entry value="0">Short</entry>
-			<entry value="1">Normal</entry>
-			<entry value="2">Long</entry>
-		</list>
+		<dualbox nybble="11" title1="Faces Right" title2="Faces Left" category="behavior" />
+		<value nybble="12" title="Swim Distance" catgory="behavior"/>
 	</sprite>
 	<sprite id="58" name="Grrrol (duplicate) [UNUSED]" />
 	<sprite id="59" name="Question Block">
-		<value nybble="3-4" title="Target ID [NSLU]" comment="Activates this event ID if struck" category="behavior" />
+		<value nybble="3-4" title="Target ID [NSLU]*" comment="Activates this event ID if struck, *Only works in NSLU" category="behavior" />
 		<value nybble="5" title="Unknown Value 5" comment="No visible change " />
 		<value nybble="7" title="Unknown Value 7" />
 		<checkbox nybble="9-10" title="Place Behind Other Sprites" mask="17" comment="Unused; when checked, it will be placed behind other sprites. (1100 gives this result, 0x11= 17)" category="behavior" />
@@ -931,7 +950,11 @@
 	</sprite>
     <sprite id="61" name="Invisible Item Block">
 		<checkbox nybble="13" title="Spawns Acorn Mushroom" comment="When ticked, it spawns an acorn mushroom." category="behavior" />
-		<checkbox nybble="19" title="Moves" category="behavior" />
+		<list nybble="19" title="Movement Type" comment="Specifies which movement controller to hook to." category="movement">
+            <entry value="0">None / Path (100)</entry>
+            <entry value="1">Two-Way (70, 642)</entry>
+            <entry value="8">Clapping controller (?)</entry>
+        </list>
 		<list nybble="20" title="Contains" category="behavior">
 			<entry value="0">Nothing</entry>
 			<entry value="1">1 coin</entry>
@@ -960,7 +983,7 @@
 		<value nybble="10" title="Delay Before Stretching" comment="The delay the piranha plant has before it stretches upwards." category="behavior" />
 		<value nybble="11" title="Delay Before Stretching (2)" comment="Does the same thing as nybble 10?" category="behavior" />
 		<value nybble="12" title="Movement Distance" comment="How far the piranha plant will wander in both directions from its starting point." category="behavior" />
-		<checkbox nybble="20" title="Starts Moving Left" comment="Moves left when ticked." category="behavior" />
+		<dualbox nybble="20" title1="Moves Right" title2="Moves Left" comment="Moves left when ticked." category="behavior" />
 	</sprite>
 	<sprite id="64" name="River Piranha Plant" notes="A piranha plant that sits on a lilipad and spits out a cactus ball and keeps it in the air by blowing on it." />
 	<sprite id="65" name="Coin" notes="&lt;font color=&quot;green&quot;&gt;Yoshi can eat this sprite&lt;/font&gt;">
@@ -1004,9 +1027,26 @@
 		<value nybble="21-22" title="Movement ID" comment="Can match to 70 for sure." id_type="movement" category="movement" />
 		<value nybble="23-24" title="Coin ID" comment="Use this to link it to a the clapping controller." id_type="coin" category="behavior" />
 	</sprite>
-    <sprite id="66" name="Moving Solid Platform Coin" notes="A coin that uses lines to move. Hooks up to sprite 70.">
-		<value nybble="16" title="Unknown Value 16" />
-		<value nybble="17" title="Unknown Value 17" />
+    <sprite id="66" name="Coin - (Two-Way)" notes="A coin specially made to be moved using a Two-Way (70) that can have precise distance multipliers">
+		<list nybble="16" title="Distance Multiplier" category="behavior">
+            <entry value="0">1.0</entry>
+            <entry value="1">0.1</entry>
+            <entry value="2">0.2</entry>
+            <entry value="3">0.3</entry>
+            <entry value="4">0.4</entry>
+            <entry value="5">0.5</entry>
+            <entry value="6">0.6</entry>
+            <entry value="7">0.7</entry>
+            <entry value="8">0.8</entry>
+            <entry value="9">0.9</entry>
+            <entry value="10">1.0</entry>
+            <entry value="11">1.1</entry>
+            <entry value="12">1.2</entry>
+            <entry value="13">1.3</entry>
+            <entry value="14">1.4</entry>
+            <entry value="15">1.5</entry>
+        </list>
+        <value nybble="17" title="Distance Multiplier (added)" comment="Value / 100" category="behavior"/>
 		<value nybble="21-22" title="Movement ID" comment="Connects to a movement controller." id_type="movement" category="movement" />
 		<value nybble="23-24" title="Coin ID" comment="Use this to assign the coin an id to another controller." id_type="coin" category="behavior" />
 	</sprite>
@@ -1019,7 +1059,7 @@
 		<value nybble="21-22" title="Movement ID" comment="Use this id to hook the sprite to a path controller (100)." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="68" name="Movement Controller - Pivotal Rotation (Swaying)" notes="Use this to sway some objects. The controller will be the pivot (center) of rotation.">
-		<value nybble="3-4" title="Triggering Event ID" comment="Use this to activate the movement once." id_type="event" category="events" />
+		<value nybble="3-4" title="Triggering Event ID" comment="Use this to activate the movement once." id_type="event" category="events" requirednybble="9.2" requiredval="4-7"/>
 		<checkbox nybble="5" title="Unknown Value 5" comment="No effect at all." />
 		<list nybble="6" title="Sway Start Offset" comment="Offset [Sway Direction]. Sway direction is inverted when 'Reversed Movement' is used." category="behavior">
 			<entry value="0">None [Counter-Clockwise]</entry>
@@ -1086,7 +1126,7 @@
 		<value nybble="21-22" title="Movement ID" comment="Use this to link this controller with the objects you want to sway." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="69" name="Movement Controller - Pivotal Rotation (Spinning)" notes="Used for rolling hills, among other things. The controller will be the pivot (center) of rotation.">
-		<value nybble="3-4" title="Triggering Event ID" comment="The ID that triggers the controller." id_type="event" category="events" />
+		<value nybble="3-4" title="Triggering Event ID" comment="The ID that triggers the controller." id_type="event" category="events"/>
 		<list nybble="5" title="Starting Rotation" comment="The angle it starts rotating at in degrees. Used to desync other sprites." category="behavior">
 			<entry value="0">0°</entry>
 			<entry value="1">22.5°</entry>
@@ -1130,7 +1170,7 @@
 			<entry value="4">Event Triggered - Rotates Back When Deactivated (Slow)</entry>
 			<entry value="8">Event Triggered - Rotates Back When Deactivated (Slowest)</entry>
 		</list>
-		<checkbox nybble="9" title="Spins Clockwise" comment="Makes the sprite spin clockwise." category="behavior" />
+		<dualbox bit="36" title1="Spins Counter-Clockwise" title2="Spins Clockwise" category="behavior" />
 		<list nybble="10" title="Effect" category="behavior">
 			<entry value="0">No Effect</entry>
 			<entry value="1">POW-Block-Sound</entry>
@@ -1186,12 +1226,48 @@
 		<value nybble="20" title="Useless 2" comment="Used by Nintendo, but ignored by the game" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="71" name="Moving Iron Tower Platform (Two-Way) [UNUSED]">
+	<sprite id="71" name="Movement-controlled Tiltable Iron Tower Platform (Two-Way) [UNUSED]">
+		<list nybble="7" title="Tilt" comment="Counter-clockwise around the center of the platform." category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
 		<value nybble="18" title="Width" comment="Width of the block. Value + 1." category="behavior" />
 		<value nybble="20" title="Height" comment="Height of the block. Value + 1." category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="The movement ID of the sprite. " id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="72" name="Moving Acorn Plains Land Block" notes="Overworld-styled moving block of land. Needs to be hooked to a Two-Way Movement Controller (sprite 70) to show up ingame.">
+	<sprite id="72" name="Movement-controlled Tiltable Acorn Plains Land Block (Two-Way)" notes="Overworld-styled moving block of land. Needs to be hooked to a Two-Way Movement Controller (sprite 70) to show up ingame.">
+		<list nybble="7" title="Tilt" comment="Counter-clockwise around the center of the platform." category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
 		<value nybble="18" title="Width" comment="Width of the block. Value + 1." category="behavior" />
 		<value nybble="20" title="Height" comment="Height of the block. Value + 1." category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="The movement ID of the sprite. " id_type="movement" category="movement" />
@@ -1219,9 +1295,9 @@
 		<value nybble="21-22" title="Useless Value 21-22" />
 	</sprite>
 	<sprite id="74" name="Huckit Crab" notes="A crab that chucks rocks.">
-		<checkbox nybble="10" title="Blue" comment="Makes the crab blue." />
-		<checkbox nybble="11" title="Stationary" comment="Makes the crab not hop backwards if checked." category="behavior" />
-		<value nybble="12" title="Direction" comment="If this follows NSMBW's spritedata, all 15 the values here are different" category="behavior" />
+		<dualbox bit="40" title1="Red" title2="Blue (Unused)"/>
+		<dualbox bit="44" title1="Hops backwards" title2="Stationary"/>
+		<dualbox bit="48" title1="Faces Left" title2="Faces Right"/>
 	</sprite>
     <sprite id="75" name="Ice Bro." notes="A brother that shoots ice balls that can freeze the player." />
 	<sprite id="76" name="Hammer Bro." notes="Boost Mode tap behaviour:&#13;&#10;Falls over, cannot attack, stays like this for a while.">
@@ -1319,18 +1395,16 @@
 	<sprite id="85" name="Flame Chomp" notes="Spawns a Flame Chomp." />
 	<sprite id="86" name="Urchin" notes="The normal-sized, spiky fish that lives near the water's surface. It loves the warmth of the water geyser. Once shot with a fireball, the urchin will &quot;die&quot; and fall to the very bottom of the lake/ocean.">
 		<value nybble="6" title="Z-Order" category="behavior" />
-		<value nybble="7" title="Chase Movement Distance (Down)" comment="Used with movement type 3. The urchin will move down this far when the player gets close under it and then up again." category="behavior" />
-		<value nybble="8" title="Chase Movement Distance (Up)" comment="Used with movement type 3. The urchin will move up this far when the player gets close over it and then down again." category="behavior" />
-		<list nybble="9" title="Rise/Fall Behavior" comment="*Use this with Urchin type 2 to get the chasing behavior.&lt;br&gt;&lt;br&gt;**Gravity doesn't work with Urchin type 0, with type 1 it will work correctly if the urchin is placed under water. Both types will slowly return back to its original move pattern if moved by something. &lt;br&gt;&lt;br&gt;***Value 2 only gives the sinking effect to Urchin type 2." category="behavior">
+		<value nybble="7" title="Chase Movement Distance (Down)" comment="Used with movement type 3. The urchin will move down this far when the player gets close under it and then up again." category="behavior" requirednybble="12.3" requiredval="2"/>
+		<value nybble="8" title="Chase Movement Distance (Up)" comment="Used with movement type 3. The urchin will move up this far when the player gets close over it and then down again." category="behavior" requirednybble="12.3" requiredval="2"/>
+		<list nybble="9" title="Rise/Fall Behavior" comment="*Use this with Urchin type 2 to get the chasing behavior.&lt;br&gt;&lt;br&gt;**Gravity doesn't work with Urchin type 0, with type 1 it will work correctly if the urchin is placed under water. Both types will slowly return back to its original move pattern if moved by something. &lt;br&gt;&lt;br&gt;***Value 2 only gives the sinking effect to Urchin type 2." category="behavior" requirednybble="12.3" requiredval="2">
 			<entry value="0">None / *Chasing</entry>
 			<entry value="1">Affected by geysers + **Gravity</entry>
 			<entry value="2">Affected by geysers + **Gravity + ***Sinks to bottom</entry>
 		</list>
-		<list nybble="10" title="Start Direction" comment="Used with movement type 1 and 2." category="behavior">
-			<entry value="0">Up/Left</entry>
-			<entry value="1">Down/Right</entry>
-		</list>
-		<value nybble="11" title="Movement Distance" comment="Used with movement type 1 and 2. The urchin starts centered." category="behavior" />
+		<dualbox nybble="10" title1="Moves Up" title2="Moves Down" category="behavior" requirednybble="12.3" requiredval="0"/>
+		<dualbox nybble="10" title1="Moves Left" title2="Moves Right" category="behavior" requirednybble="12.3" requiredval="1"/>
+		<value nybble="11" title="Movement Distance" comment="Used with movement type 1 and 2. The urchin starts centered." category="behavior" requirednybble="12.3" requiredval="0-1"/>
 		<list nybble="12" title="Type" category="behavior">
 			<entry value="0">Moves up and down</entry>
 			<entry value="1">Moves left and right</entry>
@@ -1352,10 +1426,10 @@
 		<value nybble="21-22" title="Movement ID" comment="Use this to link this coin to a pivotal rotation controller." id_type="movement" category="movement" />
 		<value nybble="23-24" title="Coin ID" comment="Assign this ID to crowd clapping controllers, and whatnot." id_type="coin" category="behavior" />
 	</sprite>
-	<sprite id="88" name="Water" notes="Another name for this is H2O. It is refreshing in warm areas, but it could freeze you in cold environments, so be careful! The water also is the natural habitat of many enemies, so once again, be careful! Based on the lava sprite, there should be nybbles for delays before rising/lowering, but the giant waves don't seem to work on this sprite.">
+	<sprite id="88" name="Water" notes="Based on the lava sprite, there should be nybbles for delays before rising/lowering, but the giant waves don't seem to work on this sprite.">
 		<value nybble="1-2" title="Triggering Event ID" comment="The ID that triggers the water to begin rising or falling." id_type="event" category="events" />
 		<value nybble="3-4" title="Target Event ID" comment="Once the water finishes rising/falling, this event is activated." id_type="event" category="events" />
-		<list nybble="5" title="Rising/Lowering Speed/Direction" comment="Values with a * will cause the water to lower." category="behavior">
+		<list bit="18-20" title="Rising Speed" category="behavior" requirednybble="5.1" requiredval="0-7">
 			<entry value="0">0.0</entry>
 			<entry value="1">1.0</entry>
 			<entry value="2">1.25</entry>
@@ -1364,27 +1438,39 @@
 			<entry value="5">0.125</entry>
 			<entry value="6">0.25</entry>
 			<entry value="7">0.5</entry>
-			<entry value="8">0.0*</entry>
-			<entry value="9">1.0*</entry>
-			<entry value="10">1.25*</entry>
-			<entry value="11">1.5*</entry>
-			<entry value="12">0.75*</entry>
-			<entry value="13">0.125*</entry>
-			<entry value="14">0.25*</entry>
-			<entry value="15">0.5*</entry>
 		</list>
+		<list bit="18-20" title="Lowering Speed" category="behavior" requirednybble="5.1" requiredval="8-15">
+			<entry value="0">0.0</entry>
+			<entry value="1">1.0</entry>
+			<entry value="2">1.25</entry>
+			<entry value="3">1.5</entry>
+			<entry value="4">0.75</entry>
+			<entry value="5">0.125</entry>
+			<entry value="6">0.25</entry>
+			<entry value="7">0.5</entry>
+		</list>
+		<dualbox bit="17" title1="Rising" title2="Falling*" comment="Falling water has buggy behaviour, once it finishes falling, it snaps up a few blocks and rises infinitely" category="behavior" />
+		<value nybble="8-9" title="Rising Height" comment="The height the water rises, in blocks." category="behavior" requirednybble="5.1" requiredval="0-7"/>
+		<value nybble="8-9" title="Lowering Height*" comment="The height the water lowers, in blocks. Falling water has buggy behaviour, once it finishes falling, it snaps up a few blocks and rises infinitely" category="behavior" requirednybble="5.1" requiredval="8-15"/>
+		<value nybble="6" title="Delay Before Lowering" comment="If the water rises/falls, this modifies the delay before lowering." category="behavior"/>
+		<value nybble="7" title="Delay Before Rising" comment="This delay before rising will only take effect after the first round of rising/lowering." category="behavior"/>
+		<list bit="40" title="Rising Type" category="behavior">
+			<entry value="0">Only rises*</entry>
+			<entry value="1">Rises and lowers</entry>
+		</list>
+		<dualbox bit="39" title1="Weak Crest Wave" title2="Strong Crest Wave" category="behavior"/>
 		<checkbox nybble="10" title="Place Behind Layer 1" mask="2" category="behavior" />
 		<checkbox nybble="10" title="Place Behind Layer 0" mask="4" category="behavior" />
 		<checkbox nybble="10" title="Topless and Invisible" mask="8" comment="The water will have no top and the water effect will cover the entire screen, but the water collision stays where the sprite is placed. Use underwater background for this." category="behavior" />
 		<value nybble="11-12" title="Location ID" id_type="location" category="behavior" />
-		<value nybble="13" title="Unknown Value 13" comment="Bitfield of some kind." />
+		<checkbox nybble="13" title="Don't Rise Slightly Before Falling" comment="If this is turned off, the water will rise up half a tile before falling." category="behavior"/>
 		<value nybble="14" title="Unknown Value 14" />
 		<value nybble="16" title="Z-order related?" category="behavior" />
 	</sprite>
-	<sprite id="89" name="Lava" notes="This hot liquid hides different species that are adjusted to the high temperature. Mario, Luigi, Nabbit and the Toads are not, so be careful not to jump into this!">
+	<sprite id="89" name="Lava" notes="The rising lava tileset overlay will only show when Crest Wave Strength is set to 1.">
 		<value nybble="1-2" title="Triggering Event ID" comment="The ID that triggers the lava to begin rising or falling." id_type="event" category="events" />
 		<value nybble="3-4" title="Target Event ID" comment="Once the lava finishes rising/falling, this event is activated." id_type="event" category="events" />
-		<list nybble="5" title="Rising/Lowering Speed/Direction" comment="Values without a * will cause the lava to rise. Values with a * will cause the lava to lower." category="behavior">
+		<list bit="18-20" title="Rising Speed" category="behavior" requirednybble="5.1" requiredval="0-7">
 			<entry value="0">0.0</entry>
 			<entry value="1">1.0</entry>
 			<entry value="2">1.25</entry>
@@ -1393,45 +1479,33 @@
 			<entry value="5">0.125</entry>
 			<entry value="6">0.25</entry>
 			<entry value="7">0.5</entry>
-			<entry value="8">0.0*</entry>
-			<entry value="9">1.0*</entry>
-			<entry value="10">1.25*</entry>
-			<entry value="11">1.5*</entry>
-			<entry value="12">0.75*</entry>
-			<entry value="13">0.125*</entry>
-			<entry value="14">0.25*</entry>
-			<entry value="15">0.5*</entry>
 		</list>
-		<checkbox nybble="5" title="Falling" mask="8" comment="Causes the lava to lower instead of rise." category="behavior" />
-		<value nybble="6" title="Delay Before Lowering" comment="If the lava rises/falls, this modifies the delay before lowering." category="behavior" />
-		<value nybble="7" title="Delay Before Rising" comment="This delay before rising will only take effect after the first round of rising/lowering." category="behavior" />
-		<value nybble="8-9" title="Rising/Lowering Height" comment="The height the lava rises, in blocks." category="behavior" />
-		<list nybble="10" title="Crest Wave Strength" comment="Seen http://i.imgur.com/vbwHW4u.jpg here. The top of the wave once it hits it's max height." category="behavior">
-			<entry value="0">Normal</entry>
-			<entry value="1">Stronger</entry>
-			<entry value="2">Even Stronger</entry>
-			<entry value="3">Strongest</entry>
-			<entry value="4">Normal</entry>
-			<entry value="5">Stronger</entry>
-			<entry value="6">Even Stronger</entry>
-			<entry value="7">Strongest</entry>
-			<entry value="8">Normal</entry>
-			<entry value="9">Stronger</entry>
-			<entry value="10">Even Stronger</entry>
-			<entry value="11">Strongest</entry>
-			<entry value="12">Normal</entry>
-			<entry value="13">Stronger</entry>
-			<entry value="14">Even Stronger</entry>
-			<entry value="15">Strongest</entry>
+		<list bit="18-20" title="Lowering Speed" category="behavior" requirednybble="5.1" requiredval="8-15">
+			<entry value="0">0.0</entry>
+			<entry value="1">1.0</entry>
+			<entry value="2">1.25</entry>
+			<entry value="3">1.5</entry>
+			<entry value="4">0.75</entry>
+			<entry value="5">0.125</entry>
+			<entry value="6">0.25</entry>
+			<entry value="7">0.5</entry>
 		</list>
+		<dualbox bit="17" title1="Rising" title2="Falling" category="behavior" />
+		<value nybble="8-9" title="Rising Height" comment="The height the lava rises, in blocks." category="behavior" requirednybble="5.1" requiredval="0-7"/>
+		<value nybble="8-9" title="Lowering Height*" comment="The height the lava lowers, in blocks." category="behavior" requirednybble="5.1" requiredval="8-15"/>
+		<value nybble="6" title="Delay Before Lowering" comment="If the lava rises/falls, this modifies the delay before lowering." category="behavior"/>
+		<value nybble="7" title="Delay Before Rising" comment="This delay before rising will only take effect after the first round of rising/lowering." category="behavior"/>
+		<list bit="40" title="Rising Type" comment="*The rising lava tileset overlay won't show unless this is set to 1." category="behavior">
+			<entry value="0">Only rises*</entry>
+			<entry value="1">Rises and lowers</entry>
+		</list>
+		<dualbox bit="39" title1="Weak Crest Wave" title2="Strong Crest Wave" category="behavior"/>
 		<checkbox nybble="10" title="Layer 0" mask="4" comment="Makes the lava spawn on layer 0 so the player can walk behind it." category="behavior" />
 		<checkbox nybble="10" title="Topless" mask="8" comment="The lava will have no top, but will be fully functional." category="behavior" />
 		<value nybble="11-12" title="Location ID" id_type="location" category="behavior" />
-		<list nybble="13" title="Rise Slightly Before Falling" comment="If this is turned on, the lava will rise up half a tile before falling." category="behavior">
-			<entry value="0">Yes</entry>
-			<entry value="1">No</entry>
-		</list>
-		<list nybble="14" title="Giant Waves: Bounciness" comment="This causes the giant lava waves to bounce up and down." category="behavior">
+		<checkbox nybble="13" title="Don't Rise Slightly Before Falling" comment="If this is turned off, the lava will rise up half a tile before falling." category="behavior"/>
+		<checkbox nybble="20" title="Giant Waves" comment="When checked, this will create giant waves in the lava." category="behavior" />
+		<list nybble="14" title="Giant Waves: Bounciness" comment="This causes the giant lava waves to bounce up and down." category="behavior" requirednybble="20.4">
 			<entry value="0">16.0</entry>
 			<entry value="1">0.0</entry>
 			<entry value="2">0.5</entry>
@@ -1449,7 +1523,7 @@
 			<entry value="14">6.5</entry>
 			<entry value="15">7.0</entry>
 		</list>
-		<list nybble="15" title="Giant Waves: Mini-Wave Animation Speed" comment="The speed at which the mini-waves on top of each giant wave animate." category="behavior">
+		<list nybble="15" title="Giant Waves: Mini-Wave Animation Speed" comment="The speed at which the mini-waves on top of each giant wave animate." category="behavior" requirednybble="20.4">
 			<entry value="0">8.0</entry>
 			<entry value="1">-20.0</entry>
 			<entry value="2">-10.0</entry>
@@ -1467,7 +1541,7 @@
 			<entry value="14">10.0</entry>
 			<entry value="15">20.0</entry>
 		</list>
-		<list nybble="16" title="Giant Waves: Height of Mini-Waves" comment="This determines the height of each mini-wave on top of each giant wave." category="behavior">
+		<list nybble="16" title="Giant Waves: Height of Mini-Waves" comment="This determines the height of each mini-wave on top of each giant wave." category="behavior" requirednybble="20.4">
 			<entry value="0">4</entry>
 			<entry value="1">0</entry>
 			<entry value="2">10</entry>
@@ -1485,7 +1559,7 @@
 			<entry value="14">130</entry>
 			<entry value="15">140</entry>
 		</list>
-		<list nybble="17" title="Giant Waves: Width" comment="The width of each giant lava wave." category="behavior">
+		<list nybble="17" title="Giant Waves: Width" comment="The width of each giant lava wave." category="behavior" requirednybble="20.4">
 			<entry value="0">2.5</entry>
 			<entry value="1">0.0</entry>
 			<entry value="2">0.5</entry>
@@ -1503,7 +1577,7 @@
 			<entry value="14">6.5</entry>
 			<entry value="15">7.0</entry>
 		</list>
-		<list nybble="18" title="Giant Waves: Speed/Direction" comment="The speed of each giant lava wave. Values marked with a * cause the waves to move left instead of right." category="behavior">
+		<list nybble="18" title="Giant Waves: Speed/Direction" comment="The speed of each giant lava wave. Values marked with a * cause the waves to move left instead of right." category="behavior" requirednybble="20.4">
 			<entry value="0">-0.65</entry>
 			<entry value="1">3.0</entry>
 			<entry value="2">2.5</entry>
@@ -1521,7 +1595,7 @@
 			<entry value="14">2.5*</entry>
 			<entry value="15">3.0*</entry>
 		</list>
-		<list nybble="19" title="Giant Waves: Height" comment="The height of each giant lava wave, in blocks." category="behavior">
+		<list nybble="19" title="Giant Waves: Height" comment="The height of each giant lava wave, in blocks." category="behavior" requirednybble="20.4">
 			<entry value="0">60</entry>
 			<entry value="1">0</entry>
 			<entry value="2">10</entry>
@@ -1539,11 +1613,9 @@
 			<entry value="14">130</entry>
 			<entry value="15">140</entry>
 		</list>
-		<checkbox nybble="20" title="Giant Waves" comment="When checked, this will create giant waves in the lava." category="behavior" />
 	</sprite>
 	<sprite id="90" name="Poison Water" notes="Water that is &lt;font color=&quot;purple&quot;&gt;poisonous&lt;/font&gt;. Kills the player upon touch.">
-		<checkbox nybble="5" title="Lower instead of rising" mask="8" category="behavior" />
-		<list nybble="5" title="Rising Speed" comment="The rising speed of the poison water." category="behavior">
+		<list bit="18-20" title="Rising Speed" category="behavior" requirednybble="5.1" requiredval="0-7">
 			<entry value="0">0.0</entry>
 			<entry value="1">1.0</entry>
 			<entry value="2">1.25</entry>
@@ -1553,10 +1625,19 @@
 			<entry value="6">0.25</entry>
 			<entry value="7">0.5</entry>
 		</list>
-		<value nybble="6" title="Lowering Delay" category="behavior" />
-		<value nybble="7" title="Rising Delay" category="behavior" />
-		<value nybble="8-9" title="Rising Height" comment="The height, in blocks, that the poison water will rise." category="behavior" />
-		<checkbox nybble="10" title="Rising" comment="If checked, the poisinous water will rise quickly." category="behavior" />
+		<list bit="18-20" title="Lowering Speed" category="behavior" requirednybble="5.1" requiredval="8-15">
+			<entry value="0">0.0</entry>
+			<entry value="1">1.0</entry>
+			<entry value="2">1.25</entry>
+			<entry value="3">1.5</entry>
+			<entry value="4">0.75</entry>
+			<entry value="5">0.125</entry>
+			<entry value="6">0.25</entry>
+			<entry value="7">0.5</entry>
+		</list>
+		<dualbox bit="17" title1="Rising" title2="Falling" category="behavior" />
+		<value nybble="6" title="Delay Before Lowering" comment="If the poison water rises/falls, this modifies the delay before lowering." category="behavior" requirednybble="8-9"/>
+		<value nybble="7" title="Delay Before Rising" comment="This delay before rising will only take effect after the first round of rising/lowering." category="behavior" requirednybble="8-9"/>
 		<checkbox nybble="10" title="Topless" mask="8" comment="The poison water will have no top, but will be fully functional." category="behavior" />
 		<value nybble="11-12" title="Location ID" id_type="location" category="behavior" />
 	</sprite>
@@ -1578,24 +1659,18 @@
 			<entry value="2">Up</entry>
 			<entry value="3">Down</entry>
 		</list>
-		<checkbox nybble="11" title="Only solid-from-top" comment="Lets you pass through the cloud from the bottom if ticked." category="behavior" />
+		<dualbox nybble="11" title1="Fully Solid" title2="Semi-solid" category="behavior" />
 		<checkbox nybble="12" title="Bounce Higher" comment="Bounce MUCH higher!" category="behavior" />
 		<value nybble="13" title="Delay on midway loop" comment="After it moves in the direction from it's spawn point, it will delay for the specified time." category="behavior" />
 		<value nybble="14" title="Delay on next loop" comment="After looping once, it will delay it's next loop by the specified time." category="behavior" />
 		<value nybble="15" title="Distance" comment="The distance the cloud moves." category="behavior" />
 		<value nybble="16" title="Movement Speed" comment="The speed the cloud moves." category="behavior" />
-		<list nybble="18" title="Size" comment="Size of the cloud." category="behavior">
-			<entry value="0">Short</entry>
-			<entry value="1">Longer and a bit bigger</entry>
-		</list>
+		<dualbox nybble="18" title1="Small" title2="Big" comment="Size of the cloud." category="behavior"/>
 	</sprite>
 	<sprite id="95" name="Move-when-on Bouncy Cloud [UNUSED]" />
 	<sprite id="96" name="Lighting - Pivotal-rotation-controlled Lamp/Candle" notes="A weak light source that will light up a small area around it.">
 		<checkbox nybble="12" title="Unknown Checkbox 12 Mask 2" mask="2" />
-		<list bit="48" title="Style" category="behavior">
-			<entry value="0">Lamp</entry>
-			<entry value="1">Candle</entry>
-		</list>
+		<dualbox bit="48" title1="Lamp" title2="Candle" category="behavior"/>
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="97" name="Background Center-er" notes="Centers the background." />
@@ -1639,24 +1714,41 @@
 		</list>
 	</sprite>
 	<sprite id="100" name="Movement Controller - Path" notes="Follows the path by default in a &quot;curly&quot;, realistic manner. This means the game takes speed into account and calculates a path that is roughly the same as the path you set. This behaviour can be turned off to make this sprite function more like in previous games.">
-		<value nybble="3-4" title="Triggering Event ID" comment="Movement gets activated when this Event ID is set." id_type="event" category="events" />
+		<value nybble="3-4" title="Triggering Event ID" comment="Movement gets activated when this Event ID is set." id_type="event" category="events" requirednybble="12.1" requiredval="8-15"/>
 		<value nybble="5-6" title="Starting node" category="behavior" />
 		<value nybble="7" title="Path ID" id_type="path" category="movement" />
 		<checkbox nybble="8" title="Smooth movement" mask="4" comment="This nybble is separate from the &quot;Move strictly&quot; nybble and uses a different algorithm." category="behavior" />
 		<checkbox nybble="8" title="Move strictly" mask="8" comment="Used to determine how the path should be followed. Elaboration can be found in this sprite's notes." category="behavior" />
-		<list nybble="8" title="When the last node is reached" category="behavior">
+		<list bit="31-32" title="When the last node is reached" category="behavior">
             <entry value="0">Stop</entry>
             <entry value="1">Go to loop start</entry>
             <entry value="2">Fall down</entry>
             <entry value="3">Stop with rumble</entry>
 		</list>
-		<value nybble="9-10" title="Loop starting node" category="behavior" />
+		<value nybble="9-10" title="Loop starting node" category="behavior" requirednybble="8.3" requiredval="1"/>
 		<checkbox nybble="12" title="Event activated" mask="8" category="behavior" />
 		<list nybble="13" title="Sine effect type" category="behavior">
 			<entry value="0">Vertical</entry>
 			<entry value="1">Horizontal</entry>
 		</list>
-		<value nybble="14" title="Initial sine angle" category="behavior" />
+		<list nybble="14" title="Initial sine angle" category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
 		<value nybble="15" title="Sine effect strength" category="behavior" />
 		<value nybble="16" title="Sine effect speed" category="behavior" />
 		<checkbox nybble="20" title="Reset when off-screen" comment="When the path controller is off-screen, it resets itself to its original position and waits for the triggering event id to be activated, regardless of the &quot;Event activated&quot; checkbox." category="behavior" />
@@ -1945,7 +2037,7 @@
 			<entry value="14">315°</entry>
 			<entry value="15">337.5°</entry>
 		</list>
-		<list nybble="6" title="Swing Arc" category="behavior">
+		<list nybble="15" title="Swing Arc" category="behavior">
 			<entry value="0">0°</entry>
 			<entry value="1">22.5°</entry>
 			<entry value="2">45°</entry>
@@ -1986,7 +2078,7 @@
 			<entry value="11">Zoom alteration</entry>
 			<entry value="12">Zoom alteration</entry>
 		</list>
-		<list nybble="16" title="Spinning Speed" comment="The spinning speed." category="behavior">
+		<list bit="62-64" title="Spinning Speed" comment="The spinning speed." category="behavior">
 			<entry value="4">Very Slow</entry>
 			<entry value="7">Slow</entry>
 			<entry value="0">Slow - Medium</entry>
@@ -3028,13 +3120,13 @@
 		</list>
 		<checkbox nybble="15" title="Move with Ground" comment="When checked, the Cannon can be placed on moving blocks." category="behavior" />
 	</sprite>
-	<sprite id="177" name="4-Way Cannon - Crashes (NSMBW) [UNUSED]" notes="Crashes because 'houdai_rot.szs' does not exist">
+	<sprite id="177" name="4-Way Cannon (CRASHES) (NSMBW) [UNUSED]" notes="Crashes because 'houdai_rot.szs' does not exist. Resources aren't present, needs a new model file.">
 		<checkbox nybble="7" title="Cannonballs follows screen" category="behavior" />
 		<checkbox nybble="10" title="Clockwise" category="behavior" />
 		<checkbox nybble="11" title="Upside-down" category="behavior" />
 		<checkbox nybble="12" title="Starts Diagonal" category="behavior" />
 	</sprite>
-	<sprite id="178" name="Giant 4-Way Cannon - Crashes (NSMBW) [UNUSED]" notes="Crashes because 'houdai_rot_large_B.szs' does not exist">
+	<sprite id="178" name="Giant 4-Way Cannon (CRASHES) (NSMBW) [UNUSED]" notes="Crashes because 'houdai_rot_large_B.szs' does not exist. Resources aren't present, needs a new model file.">
 		<checkbox nybble="7" title="Cannonballs follows screen" category="behavior" />
 		<checkbox nybble="10" title="Clockwise" category="behavior" />
 		<checkbox nybble="11" title="Upside-down" category="behavior" />
@@ -3086,6 +3178,20 @@
 			<entry value="0">Up and Down</entry>
 			<entry value="1">Down and Up</entry>
 		</list>
+		<list nybble="13" title="Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
+        <list nybble="14" title="Movement Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
 		<value nybble="15" title="Movement Distance" comment="The distance it moves." category="behavior" />
 		<list nybble="16" title="Speed" comment="The speed it moves." category="behavior">
 			<entry value="0">Fast</entry>
@@ -3136,6 +3242,20 @@
 			<entry value="0">Right to Left</entry>
 			<entry value="1">Left to Right</entry>
 		</list>
+		<list nybble="13" title="Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
+        <list nybble="14" title="Movement Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
 		<value nybble="15" title="Distance" comment="Distance for the platform to move." category="behavior" />
 		<list nybble="16" title="Speed" comment="The speed it moves." category="behavior">
 			<entry value="0">Fast</entry>
@@ -3198,18 +3318,54 @@
 		<value nybble="19" title="Unknown Value 19*" comment="*Set as 1 everywhere except DX 43-51 A1." />
 		<checkbox nybble="20" title="Grrrols die when crushed" category="behavior" />
 	</sprite>
-	<sprite id="189" name="Lakitu Block (CRASHES) (NSMBW) [UNUSED]">
+	<sprite id="189" name="Lakitu Block (CRASHES) (NSMBW) [UNUSED]" notes="Resources aren't present, needs a new model file.">
 		<value nybble="12" title="Lakitu Height" category="behavior" />
 		<checkbox nybble="13" title="Crashes" />
 		<value nybble="14" title="Approx coins + 1 coin thrown before 1-up" category="behavior" />
 	</sprite>
 	<sprite id="190" name="Pivotal-rotation-controlled Question Block" notes="Matches to pivotal rotation controllers.">
 		<value nybble="4" title="Unknown Value 4" />
-        <checkbox nybble="6" mask="1" title="Upside Down*" comment="Does not work with Gyroscopic or Tilted" category="behavior" />
+        <checkbox nybble="6" mask="1" title="Upside Down*" comment="Does not work with Gyroscopic or Tilted" category="behavior" requirednybble="21-22" requiredval="1-255"/>
+        <dualbox bit="24" title1="Clockwise Tilt" title2="Counter-Clockwise Tilt" comment="When checked, this Goomba doesn't despawn when leaving the visible camera window." category="behavior" requirednybble="21-22" requiredval="0" />
         <checkbox nybble="6" mask="2" title="Gyroscopic Movement**" category="movement" comment="incorrect block center. When this setting is checked, miyamoto will make the block extend 1 block too far down, THIS IS INTENTIONAL. The question block doesnt rotate gyroscopically in the correct manner. Instead of it rotating from the center, it rotates as if the origin is the bottom of the block. By changing the height of the block in the viewer, this accounts for this." />
         <checkbox nybble="6" mask="4" title="Tilted" category="behavior" comment="There is sadly not a possible way to code this in the viewer." />
-        <checkbox nybble="6" mask="8" title="Unknown Value 6 Mask 8" />		<value nybble="9" title="Unused Value 9" />
-		<value nybble="9" title="Unused Value 9" />
+        <checkbox nybble="6" mask="8" title="Unknown Value 6 Mask 8" />
+		<list nybble="9" title="Tilt" comment="Values may not be precise." category="behavior" requirednybble="21-22" requiredval="0">
+			<entry value="0">0°</entry>
+			<entry value="1">1°</entry>
+			<entry value="2">2°</entry>
+			<entry value="3">3°</entry>
+			<entry value="4">4°</entry>
+			<entry value="5">5°</entry>
+			<entry value="6">6°</entry>
+			<entry value="7">7°</entry>
+			<entry value="8">8°</entry>
+			<entry value="9">9°</entry>
+			<entry value="10">10°</entry>
+			<entry value="11">11°</entry>
+			<entry value="12">12°</entry>
+			<entry value="13">13°</entry>
+			<entry value="14">14°</entry>
+			<entry value="15">15°</entry>
+		</list>
+		<list nybble="9" title="&lt;span style=&quot;color:orange&quot;&gt;Tilt*&lt;/span&gt;" comment="Will be ignored if using a valid Movement ID. Values may not be precise." category="behavior" requirednybble="21-22" requiredval="1-255">
+			<entry value="0">0°</entry>
+			<entry value="1">1°</entry>
+			<entry value="2">2°</entry>
+			<entry value="3">3°</entry>
+			<entry value="4">4°</entry>
+			<entry value="5">5°</entry>
+			<entry value="6">6°</entry>
+			<entry value="7">7°</entry>
+			<entry value="8">8°</entry>
+			<entry value="9">9°</entry>
+			<entry value="10">10°</entry>
+			<entry value="11">11°</entry>
+			<entry value="12">12°</entry>
+			<entry value="13">13°</entry>
+			<entry value="14">14°</entry>
+			<entry value="15">15°</entry>
+		</list>
 		<value nybble="12" title="Unused Flag 12" />
 		<checkbox nybble="13" title="Spawn Acorn Mushroom" comment="When checked, it will spawn an acorn mushroom." category="behavior" />
 		<checkbox nybble="15" title="Unused Flag 15" />
@@ -3237,10 +3393,47 @@
 	</sprite>
 	<sprite id="191" name="Pivotal-rotation-controlled Brick Block" notes="Maybe checkbox at nybble 13 to make this spawn an acorn mushroom...">
 		<value nybble="4" title="Unknown Value 4" />
-        <checkbox nybble="6" mask="1" title="Upside Down*" comment="block position is one block lower than in editor" category="behavior" />
+        <checkbox nybble="6" mask="1" title="Upside Down*" comment="Does not work with Gyroscopic or Tilted" category="behavior" requirednybble="21-22" requiredval="1-255"/>
+        <dualbox bit="24" title1="Clockwise Tilt" title2="Counter-Clockwise Tilt" comment="When checked, this Goomba doesn't despawn when leaving the visible camera window." category="behavior" requirednybble="21-22" requiredval="0" />
         <checkbox nybble="6" mask="2" title="Gyroscopic Movement*" comment="incorrect block center." category="movement" />
         <checkbox nybble="6" mask="4" title="Tilted" category="behavior" />
         <checkbox nybble="6" mask="8" title="Unknown Value 6 Mask 8" />
+    <list nybble="9" title="Tilt" comment="Values may not be precise." category="behavior" requirednybble="21-22" requiredval="0">
+			<entry value="0">0°</entry>
+			<entry value="1">1°</entry>
+			<entry value="2">2°</entry>
+			<entry value="3">3°</entry>
+			<entry value="4">4°</entry>
+			<entry value="5">5°</entry>
+			<entry value="6">6°</entry>
+			<entry value="7">7°</entry>
+			<entry value="8">8°</entry>
+			<entry value="9">9°</entry>
+			<entry value="10">10°</entry>
+			<entry value="11">11°</entry>
+			<entry value="12">12°</entry>
+			<entry value="13">13°</entry>
+			<entry value="14">14°</entry>
+			<entry value="15">15°</entry>
+		</list>
+		<list nybble="9" title="&lt;span style=&quot;color:orange&quot;&gt;Tilt*&lt;/span&gt;" comment="Will be ignored if using a valid Movement ID. Values may not be precise." category="behavior" requirednybble="21-22" requiredval="1-255">
+			<entry value="0">0°</entry>
+			<entry value="1">1°</entry>
+			<entry value="2">2°</entry>
+			<entry value="3">3°</entry>
+			<entry value="4">4°</entry>
+			<entry value="5">5°</entry>
+			<entry value="6">6°</entry>
+			<entry value="7">7°</entry>
+			<entry value="8">8°</entry>
+			<entry value="9">9°</entry>
+			<entry value="10">10°</entry>
+			<entry value="11">11°</entry>
+			<entry value="12">12°</entry>
+			<entry value="13">13°</entry>
+			<entry value="14">14°</entry>
+			<entry value="15">15°</entry>
+		</list>
 		<value nybble="12" title="Unknown Value 12" />
         <checkbox nybble="13" title="Acorn Mushroom*" comment="When checked, the contents must be set to 'Nothing'." category="behavior" />
 		<value nybble="15" title="Unknown Value 15" />
@@ -3326,7 +3519,7 @@
 		</list>
 	</sprite>
 	<sprite id="198" name="Snow Effect (NSMBW) [UNUSED]" notes="Spawns a snow effect. Replaced by the snow effects in the Frosted Glacier backgrounds." />
-	<sprite id="199" name="Glow Block (CRASHES) [UNUSED]" notes="Leftover from NSMBW. Requires custom code to load the resource.">
+	<sprite id="199" name="Glow Block (CRASHES) (NSMBW) [UNUSED]" notes="Leftover from NSMBW. Resources aren't present, needs a new model file.">
     </sprite>
     <sprite id="200" name="Mushroom Platform" notes="A nice platform, available in different colors. The sprite should be positioned in the center of the platform.">
 		<list nybble="10" title="Color" comment="Sets the color of the mushroom platform." category="behavior">
@@ -3360,7 +3553,7 @@
 			<entry value="2">Sparse</entry>
 		</list>
 	</sprite>
-	<sprite id="202" name="Propeller Block (NSMBW) [UNUSED]" notes="A block that went unused in this game, and lacks a model. Crashes because block_fly.szs does not exist." />
+	<sprite id="202" name="Propeller Block (CRASHES) (NSMBW) [UNUSED]" notes="A block that went unused in this game, and lacks a model. Crashes because block_fly.szs does not exist." />
 	<sprite id="203" name="Portable Ice Block (NSMBW) [UNUSED]" notes="Works. Uses the same model as the gravity-affected ice blocks.">
 		<checkbox category="behavior" nybble="10" title="Frozen Coin" comment="If checked, the ice block will have a coin frozen inside. (A bit glitchy when holding...)" />
 	</sprite>
@@ -3520,8 +3713,8 @@
 		</list>
 		<value nybble="21-22" title="Movement ID" comment="Works with Sprite 297." id_type="movement" category="movement" />
 	</sprite>
-    <sprite id="211" name="Pivotal-rotation-controlled/Path-controlled Test Platform [UNUSED]">
-		<value nybble="17-18" title="Width" comment="This value can go up to 31." category="behavior" />
+    <sprite id="211" name="Pivotal-rotation-controlled/Path-controlled Gray Test Platform [UNUSED]" notes="Height is 0.5, also its semi-solid.">
+		<value bit="68-72" title="Width" comment="This value can go up to 31." category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="Can attatch to 68, 69, 90, 116, and 118." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="212" name="Autoscrolling Controller" notes="A sprite that makes the camera move at a speed defined in the path it's connected to.">
@@ -3625,8 +3818,25 @@
 			<entry value="5">World 6 - Rock-Candy Mines</entry>
 		</list>
 	</sprite>
-	<sprite id="217" name="Movement-controlled Tower Block (NSMBW) [UNUSED]">
-		<value nybble="7" title="Tilt" category="behavior" />
+	<sprite id="217" name="Movement-controlled Tiltable Tower Block (Two-Way) (NSMBW) [UNUSED]">
+		<list nybble="7" title="Tilt" comment="Counter-clockwise around the center of the platform." category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
 		<value nybble="18" title="Width" category="behavior" />
 		<value nybble="20" title="Height" category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="Attach this to a Sprite 70 to make it appear and move." id_type="movement" category="movement" />
@@ -3944,13 +4154,17 @@
 			<entry value="1">Checkers</entry>
 			<entry value="2">Inverted Checkers</entry>
 		</list>
-		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; The number in parentheses () corresponds to the position of the tile in the tileset (tile" category="behavior">
+		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Embedded)" category="behavior">
 			<entry value="0">Red Block (Pa0 tile #208) (Object #143)</entry>
 			<entry value="1">Brick Block (Pa0 tile #48) (Object #15)</entry>
 			<entry value="2">Blank Tile (Pa0 tile #0) (Object #0)</entry>
 			<entry value="3">Stone Block (Pa0 tile #52) (Object #42)</entry>
 			<entry value="4">Wooden Block (Pa0 tile #51) (Object #41)</entry>
 			<entry value="5">Wooden Block (Pa0 tile #51) (Object #41)</entry>
+			<entry value="6">Pa1 tile #240</entry>
+			<entry value="7">Pa1 tile #4</entry>
+			<entry value="12">Same as 6</entry>
+			<entry value="13">Same as 7</entry>
 		</list>
 		<list nybble="10" title="Effect" comment="Determines the effect that is triggered when the event is activated. 'Destroy Tiles' can destroy all kinds of objects. It cannot destroy sprites. 'Spawns Tiles' will even create new tiles above other tiles or objects." category="behavior">
 			<entry value="0">Destroys Tiles</entry>
@@ -3971,7 +4185,22 @@
 		<value nybble="21-22" title="Bolt ID" comment="The ID of the bolt." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="239" name="Bolt-controlled Metal Platform" notes="An almost unused platform, appearing in the unused level 13-4.&#13;&#10;Works fine.">
-		<value nybble="6" title="Unknown Value 6" />
+		<list bit="23-24" title="Direction" comment="The direction it moves" category="behavior">
+            <entry value="0">Right</entry>
+            <entry value="1">Left</entry>
+            <entry value="2">Up</entry>
+            <entry value="3">Down</entry>
+        </list>
+        <list nybble="16" title="Speed" comment="Carry over from sprite 530" category="behavior">
+            <entry value="0">1.0</entry>
+            <entry value="1">1.5</entry>
+            <entry value="2">2.0</entry>
+            <entry value="3">3.0</entry>
+            <entry value="4">4.0</entry>
+            <entry value="5">1.0</entry>
+            <entry value="6">1.0</entry>
+            <entry value="7">1.0</entry>
+        </list>
 		<value nybble="18" title="Width" comment="Width of the platform." category="behavior" />
 		<value nybble="20" title="Height" comment="Height of the platform." category="behavior" />
 		<value nybble="21-22" title="Bolt ID" comment="Use this to attach the sprite to a bolt." id_type="movement" category="movement" />
@@ -4057,9 +4286,6 @@
 		<value nybble="15" title="Moving Distance" comment="This nybble changes how far the bubble moves." category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="Hook this ID to a path controller (sprite 100) and this bubble will move. Seen in some retail levels hooked to a pivotal rotation controller with no effects." id_type="movement" category="movement" />
         <value nybble="23-24" title="Water Ball ID" id_type="waterball" category="behavior" />
-        <value nybble="1-2" title="Event ID 1" category="events" id_type="event" />
-        <value nybble="3-4" title="Event ID 2" category="events" id_type="event" />
-        <value nybble="5-6" title="Group ID" category="behavior" id_type="group" />
 	</sprite>
     <sprite id="252" name="Rope Ladder" notes="Loaded Files: hashigo.szs">
 		<list nybble="12" title="Length" comment="The number in parenthesis includes top block." category="behavior">
@@ -4087,7 +4313,7 @@
 	</sprite>
 	<sprite id="254" name="Lighting - Underwater Lamp" notes="Looks like a porthole with a metal stripe in the middle." />
 	<sprite id="255" name="Micro Goomba" notes="A tiny version of the Goomba. They can not hurt the player directly, but they can cling to him and so adversely affect his jump height and width. " />
-	<sprite id="256" name="Pivotal-rotation-controlled Mushroom block (CRASHES) [UNUSED]" comment="Requires custom code to load the resources.">
+	<sprite id="256" name="Pivotal-rotation-controlled Mushroom block (Patch Required) (CRASHES) (NSMBW) [UNUSED]" comment="Requires custom code to load the resources. Resources aren't present, needs a new model file.">
 		<checkbox nybble="5" title="Checked in NSMBUDX 50-04" category="behavior" />
 		<checkbox nybble="8" title="Ignore Model Rotation" category="behavior" />
 		<list nybble="10" title="Style/Size" category="behavior">
@@ -4203,12 +4429,13 @@
 	</sprite>
 	<sprite id="266" name="Ghost House Box (Pivotal-rotation-controlled / Path-controlled)">
 		<value nybble="6" title="Unknown Value 6" />
+		<checkbox nybble="8" title="Ignore Model Rotation" comment="Makes the ghost house box still move on a rotation controller, just does not spin around." category="behavior"/>
 		<value bit="65-67" title="Z-order" category="behavior" />
 		<value bit="68-72" title="Width" comments="Value + 3" category="behavior" />
 		<value nybble="20" title="Height" comments="Value + 3" category="behavior" />
-		<value nybble="22" title="Movement ID" comment="Should be linked to a path controller (sprite 100) or pivotal rotation controller (68, 69, 116, 118)..." id_type="movement" category="movement" />
+		<value nybble="21-22" title="Movement ID" comment="Should be linked to a path controller (sprite 100) or pivotal rotation controller (68, 69, 116, 118)..." id_type="movement" category="movement" />
 	</sprite>
-    <sprite id="267" name="Giant Koopa Shell Cave (NSMBW) [UNUSED]" notes="A giant koopa shell that was featured in NSMBW. The grass and the shell can turn black randomly. It;s somewhat inconsitstent." />
+    <sprite id="267" name="Giant Koopa Shell Cave (CRASHES) (NSMBW) [UNUSED]" notes="A giant koopa shell that was featured in NSMBW. Resources aren't present, needs a new model file. The grass and the shell can turn black randomly. It;s somewhat inconsitstent." />
 	<sprite id="268" name="1 x 1 Customizable Ice Block [UNUSED]" notes="A small ice chunk. Can't be thrown.">
 		<list nybble="12" title="Type" category="behavior">
 			<entry value="0">1x1 Block</entry>
@@ -4235,7 +4462,7 @@
 		<checkbox nybble="11" title="Shift 1/2 tile down" mask="2" category="behavior" />
 		<checkbox nybble="12" title="Place behind other sprites" category="behavior" />
 	</sprite>
-	<sprite id="271" name="Movement-controlled Metal Bridge Platform" notes="A piece of the metal bridge platform. This is the actual bridge piece.">
+	<sprite id="271" name="Pivotal-rotation-controlled Metal Bridge Platform" notes="A piece of the metal bridge platform. This is the actual bridge piece.">
 		<value nybble="9" title="Unknown Value 9" />
 		<list nybble="10" title="Type" category="behavior">
 			<entry value="0">UNUSED</entry>
@@ -4245,20 +4472,20 @@
 		</list>
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="272" name="Movement-controlled Metal Bridge Stem" notes="A piece of the metal bridge. This is the step of the platform, that connects to the base.">
+	<sprite id="272" name="Pivotal-rotation-controlled Metal Bridge Stem" notes="A piece of the metal bridge. This is the step of the platform, that connects to the base.">
 		<list nybble="12" title="Type" category="behavior">
 			<entry value="0">UNUSED</entry>
 			<entry value="1">Stone Stem</entry>
 		</list>
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="273" name="Movement-controlled Metal Bridge Base" notes="A piece of the metal bridge. This is the base with the screw in the center. ">
+	<sprite id="273" name="Pivotal-rotation-controlled Metal Bridge Base" notes="A piece of the metal bridge. This is the base with the screw in the center. ">
 		<value nybble="9" title="Unknown Value 9" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="274" name="Pivotal-rotation-controlled White Block" notes="This platform is used in one level in the entire game. It's probably used to help the shell collision in the level it's in, and it's completely invisible if placed in front of tiles.">
 		<value nybble="6" title="Z-Order" category="behavior" />
-		<list nybble="7" title="Style" category="behavior">
+		<list nybble="7" title="Style*" comment="The model for this sprite has 4 seperate color options, but are all set to white textures so this is useless without a model replacement" category="behavior">
 			<entry value="0">Red</entry>
 			<entry value="1">Blue</entry>
 			<entry value="2">Green</entry>
@@ -4355,13 +4582,16 @@
 	</sprite>
     <sprite id="279" name="Coin - Follows Screen" notes="Whenever the screen scrolls, this coin scrolls with it, always staying at the same place." />
 	<sprite id="280" name="Bolt Mushroom Platform - Uses Lines">
-		<checkbox nybble="10" title="Unknown Checkbox 10" />
-		<list nybble="11" title="Unknown Value 11">
-			<entry value="0">???</entry>
-			<entry value="1">???</entry>
-			<entry value="2">???</entry>
-			<entry value="3">???</entry>
-		</list>
+		<list bit="40" title="Direction" comment="The direction it moves" category="behavior">
+            <entry value="0">Up/Right</entry>
+            <entry value="1">Down/Left</entry>
+        </list>
+		<list bit="43-44" title="Return Type" comment="How it will return to the bottom of the line" category="behavior">
+            <entry value="0">Fast</entry>
+            <entry value="1">Medium</entry>
+            <entry value="2">Medium</entry>
+            <entry value="3">Slow</entry>
+        </list>
 		<value nybble="12" title="Movement speed?" category="behavior" />
 	</sprite>
 	<sprite id="281" name="Coin in Bubble">
@@ -4395,7 +4625,7 @@
 	</sprite>
     <sprite id="283" name="Stretch Block Controller">
 		<value nybble="15" title="Movement Distance" category="behavior" />
-		<value nybble="22" title="Stretch Block ID" comment="Use this to match the controller with sprites 284 or / and 285." id_type="stretch_block" category="behavior" />
+		<value nybble="21-22" title="Stretch Block ID" comment="Use this to match the controller with sprites 284 or / and 285." id_type="stretch_block" category="behavior" />
 	</sprite>
 	<sprite id="284" name="Stretch Block" notes="A sprite that creates a straight line of orange blocks. The line contracts and expands in a horizontal pattern depicted by a setting. The greater value of nybbles 11 and 12 determines the number of blocks used to create the line. ">
 		<checkbox nybble="5" title="Unused Flag 5" />
@@ -4419,7 +4649,9 @@
 			<entry value="5">90°</entry>
 			<entry value="6">-90°</entry>
 		</list>
-		<value nybble="22" title="Stretch Block ID" comment="Use this to match the Stretch Block with sprite 283." id_type="stretch_block" category="behavior" />
+		<value nybble="15" title="Distance" category="behavior" requirednybble="21-22" comment="the distance the block moves, gets ignored when using a stretch block id" requiredval="0"/>
+        <value nybble="15" title="&lt;span style=&quot;color:red&quot;&gt;(Disabled) Distance&lt;/span&gt;" category="behavior" requirednybble="21-22" comment="the distance the block moves, gets ignored when using a stretch block id" requiredval="1-255"/>
+		<value nybble="21-22" title="Stretch Block ID" comment="Use this to match the Stretch Block with sprite 283." id_type="stretch_block" category="behavior" />
 	</sprite>
 	<sprite id="285" name="Vertical Stretch Block" notes="A sprite that creates a vertical line of orange blocks. The line contracts and expands by moving left and right. The greater value of nybbles 11 and 12 determines the number of blocks used to create the line. ">
 		<checkbox nybble="5" title="Unused Flag 5" />
@@ -4443,7 +4675,9 @@
 			<entry value="5">90°</entry>
 			<entry value="6">-90°</entry>
 		</list>
-		<value nybble="22" title="Stretch Block ID" comment="Use this to match the Stretch Block with sprite 283." id_type="stretch_block" category="behavior" />
+		<value nybble="15" title="Distance" category="behavior" requirednybble="21-22" comment="the distance the block moves, gets ignored when using a stretch block id" requiredval="0"/>
+        <value nybble="15" title="&lt;span style=&quot;color:red&quot;&gt;(Disabled) Distance&lt;/span&gt;" category="behavior" requirednybble="21-22" comment="the distance the block moves, gets ignored when using a stretch block id" requiredval="1-255"/>
+		<value nybble="21-22" title="Stretch Block ID" comment="Use this to match the Stretch Block with sprite 283." id_type="stretch_block" category="behavior" />
 	</sprite>
 	<sprite id="286" name="Lava Bubble" notes="A bubble of fire that jumps out of lava. Will jump to the height the sprite is placed at.">
 		<list nybble="8" title="Initial Direction" comment="Only useful when &quot;Horizontal Distance&quot; is set." category="movement">
@@ -4554,6 +4788,7 @@
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="295" name="Note Block" notes="A block that you can jump on for a small boost. Also makes a ringing noise when jumped on!">
+		<value nybble="9" title="Width*" comment="*Changes the width of the model, but not the collision"/>
 		<checkbox nybble="13" title="Contains Acorn Mushroom" comment="Spawns an Acorn Mushroom if checked." category="behavior" />
 		<list nybble="20" title="Contains" comment="What the note block contains inside it." category="behavior">
 			<entry value="0">Empty</entry>
@@ -4601,6 +4836,12 @@
 	<sprite id="299" name="Rising Tilt-controlled Girder Controller" notes="Used with a Rising 5-Enemy-Max Tilt-controlled Girder (300), but also with other moving tilt-controlled platforms." />
 	<sprite id="300" name="Rising 5-Enemy-Max Tilt-controlled Girder" notes="Used with a Rising 5-Enemy-Max Tilt-controlled Girder Controller (299).">
 		<value nybble="6" title="Unknown Value 6" />
+		<list bit="35-36" title="Movement" comment="First behavior is when mario is on the platform, second behavior is when mario is off the platform." category="behavior">
+            <entry value="0">Ascends / Returns to mario above start</entry>
+            <entry value="1">Descends / Returns to mario below start</entry>
+            <entry value="2">Doesnt Move / Returns to mario below start</entry>
+            <entry value="3">Doesnt Move / Returns to mario anywhere</entry>
+        </list>
 	</sprite>
 	<sprite id="301" name="Giant Wiggler">
 		<value nybble="5-6" title="Location ID" comment="If this value in nonzero, does nothing until a player enters this location" id_type="location" category="behavior" />
@@ -4632,7 +4873,7 @@
             <entry value="0">7 Blocks</entry>
             <entry value="1">2 Blocks</entry>
         </list>
-        <checkbox nybble="12" title="Candlestick" comment="Any other value than 0 crashes the game, it's the 'Style' nybble from Wii." />
+        <checkbox nybble="12" title="Candlestick (CRASHES) (NSMBW)" comment="Resources aren't present, needs a new model file. Any other value than 0 crashes the game, it's the 'Style' nybble from Wii." />
     </sprite>
     <sprite id="306" name="kori burokku [CRASHING SPRITE] [UNUSED]" />
 	<sprite id="307" name="Moving Fence">
@@ -4704,7 +4945,7 @@
 		<value nybble="18" title="Platform width left side" comment="Width of the left platform. (Value + 3)" category="behavior" />
 		<value nybble="19" title="Platform width right side" comment="Width of the right platform. (Value + 3)" category="behavior" />
 	</sprite>
-	<sprite id="310" name="Decorative Candlestick (NSMBW) [UNUSED]" notes="Supposed to load a poltergeist item. Unknown why it crashes." />
+	<sprite id="310" name="Decorative Candlestick (CRASHES) (NSMBW) [UNUSED]" notes="Supposed to load a poltergeist item. Resources aren't present, needs a new model file." />
 	<sprite id="311" name="Brown Tower Block (NSMBW) [UNUSED]" notes="A resizable block platform originally used in NSMBW. Be aware that you cannot synchronize this block for level-wide timing purposes.">
 		<list bit="23-24" title="Direction" comment="The direction the platform goes." category="behavior">
             <entry value="0">Right</entry>
@@ -4761,7 +5002,7 @@
             <entry value="15">16 Blocks</entry>
         </list>
 	</sprite>
-    <sprite id="312" name="Line Rotating Mushroom Block (CRASHES) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing. Requires custom code to load the resource.">
+    <sprite id="312" name="Line Rotating Mushroom Block (Patch Required) (CRASHES) (NSMBW) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing. Requires custom code to load the resource.">
 		<value category="behavior" nybble="3-4" title="Target Event ID" comment="Event ID that will be triggered once player steps on block." />
 		<list category="behavior" nybble="5" title="Starting Rotation" comment="Starting rotation, Tilt center is at the screw of the mushroom block">
 			<entry value="0">0°</entry>
@@ -4893,7 +5134,7 @@
 		<value nybble="12" title="Delay Between Jumps" comment="The delay between two jumps." category="behavior" />
 		<value nybble="18" title="Horizontal Distance" comment="When set, the lava bubble also travels this number of blocks horizontally. The sprite should be placed at the highest point - the centre of the horizontal movement." category="behavior" />
 	</sprite>
-	<sprite id="319" name="Move-when-on Metal Block [UNUSED]" notes="A tall block with a lava glow underneath it that will move at any point when a specified number of 'passengers' (players + enemies) are standing on it, then goes back to the original position.">
+	<sprite id="319" name="Move-when-on Metal Block (CRASHES) (NSMBW) [UNUSED]" notes="Resources aren't present, needs a new model file. A tall block with a lava glow underneath it that will move at any point when a specified number of 'passengers' (players + enemies) are standing on it, then goes back to the original position.">
        <list category="behavior" nybble="18" title="Size" comment="This determines the size of the block.">
             <entry value="0">Small</entry>
             <entry value="1">Medium</entry>
@@ -4988,7 +5229,7 @@
 		<value nybble="21-22" title="Movement ID" comment="Use this to assign this coin to a rotation movement controller." id_type="movement" category="movement" />
 		<value nybble="23-24" title="Coin ID" comment="Use this to assign to a ID specified by the controller." id_type="coin" category="behavior" />
 	</sprite>
-	<sprite id="327" name="Movement-controlled Hanging Sledge Block">
+	<sprite id="327" name="Pivotal-rotation-controlled Hanging Sledge Block">
 		<value nybble="6" title="Unknown Value 6" comment="Setting this to 1 seems to influence the movement." />
 		<value nybble="10" title="Unknown Value 10" />
 		<value nybble="20" title="Unknown Value 20" />
@@ -5245,7 +5486,7 @@
 		<value nybble="10" title="Vertical Distance" comment="Known values are 0, 1, 2, and 3, there could be more. Exact distances are unknown." category="behavior" />
 		<checkbox nybble="12" title="Activated when past screen scroll" category="behavior" />
 	</sprite>
-	<sprite id="345" name="NSMBW Tilt-controlled girder - CRASHES [UNUSED]" notes="Crashes because it tries to load remo_lift.szs, but that file doesn't exist." />
+	<sprite id="345" name="Tilt-controlled girder (CRASHES) (NSMBW) [UNUSED]" notes="Crashes because it tries to load remo_lift.szs, but that file doesn't exist. Resources aren't present, needs a new model file."/>
 	<sprite id="346" name="Grouped Thwimp">
 		<value nybble="5-6" title="Group ID" comment="The ID used to chain sprites together. Use sprite 196 to create the groups." id_type="group" category="behavior" />
 		<value nybble="7" title="The way it jumps somehow" category="behavior" />
@@ -5313,18 +5554,32 @@
 		</list>
 	</sprite>
 	<sprite id="354" name="Horizontally-moving Rotatable Iron Platform [UNUSED]">
+		<list nybble="13" title="Rotation 2" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
+        <list nybble="14" title="Movement Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
 		<value nybble="15" title="Movement Distance" comment="The distance the platform moves." category="behavior" />
 		<checkbox nybble="16" title="Moves Slower" comment="Makes the platform move slower." category="behavior" />
 		<value nybble="18" title="Width" comment="The width of the platform." category="behavior" />
 		<list nybble="20" title="Rotation" comment="Rotation of the platform." category="behavior">
-			<entry value="0">Flat</entry>
-			<entry value="1">22.5 degrees</entry>
-			<entry value="2">45 degrees</entry>
-			<entry value="3">-22.5 degrees</entry>
-			<entry value="4">-45 degrees</entry>
+			<entry value="0">0°</entry>
+      <entry value="1">22.5°</entry>
+      <entry value="2">45°</entry>
+      <entry value="3">-22.5°</entry>
+      <entry value="4">-45°</entry>
 		</list>
 	</sprite>
-	<sprite id="355" name="Rolling Hill with Pipe (CRASHES) [UNUSED]" notes="Diameter is 50 blocks. Crashes for two reasons; the first being the rolling hill's resources missing from the game files and the other is that the resources list in the code forgets to list one of the resources. To enter the pipe, you would need to be holding up instead of down. Requires custom code to load the resource.">
+	<sprite id="355" name="Rolling Hill with 1 Pipe (Patch Required) (Enterable) (CRASHES) (NSMBW) [UNUSED]" notes="Diameter is 50 blocks. Crashes for two reasons; the first being the rolling hill's resources missing from the game files and the other is that the resources list in the code forgets to list one of the resources. To enter the pipe, you would need to be holding up instead of down. Requires custom code to load the resource.">
 		<value nybble="6" title="Initial Rotation" />
 		<list nybble="7" title="Type">
 			<entry value="0">Overworld</entry>
@@ -5336,15 +5591,29 @@
 		<value nybble="16" title="Speed" />
 	</sprite>
     <sprite id="356" name="Vertically-moving Rotatable Iron Platform [UNUSED]" notes="A platform that moves in a vertical line.">
+    	<list nybble="13" title="Rotation 2" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
+        <list nybble="14" title="Movement Rotation" category="behavior">
+            <entry value="0">0°</entry>
+            <entry value="1">22.5°</entry>
+            <entry value="2">45°</entry>
+            <entry value="3">-22.5°</entry>
+            <entry value="4">-45°</entry>
+        </list>
 		<value nybble="15" title="Movement Distance" category="behavior" />
 		<checkbox nybble="16" title="Moves Slower" category="behavior" />
 		<value nybble="18" title="Width" category="behavior" />
 		<list nybble="20" title="Rotation" category="behavior">
-			<entry value="0">Flat</entry>
-			<entry value="1">22.5 degrees</entry>
-			<entry value="2">45 degrees</entry>
-			<entry value="3">-22.5 degrees</entry>
-			<entry value="4">-45 degrees</entry>
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">-22.5°</entry>
+			<entry value="4">-45°</entry>
 		</list>
 	</sprite>
 	<sprite id="357" name="Grouped Fuzzy">
@@ -5375,7 +5644,7 @@
 		<checkbox nybble="12" title="Move Left/Down" category="behavior" />
 		<checkbox nybble="13" title="No Manual Coin Spawn" comment="If there is a coin tail, make the coins already be there on spawn. Otherwise, they will pop in one by one." category="behavior" />
 	</sprite>
-	<sprite id="358" name="Bolt-controlled Airship Platform - [UNUSED]" notes="Crashes the game. Tries to load 'lift_turi_ashiba.szs' but that file does not exist. A fully solid, airship style platform that moves down when used with a bolt. Goes with sprite 360.">
+	<sprite id="358" name="Bolt-controlled Airship Platform (CRASHES) (NSMBW) [UNUSED]" notes="Crashes the game. Tries to load 'lift_turi_ashiba.szs' but that file does not exist. A fully solid, airship style platform that moves down when used with a bolt. Goes with sprite 360.">
 		<list nybble="18" title="Width" comment="This determines the size of the platform." category="behavior">
 		    <entry value="0">2 blocks wide</entry>
 		    <entry value="1">3 blocks wide</entry>
@@ -5410,7 +5679,7 @@
 		<value nybble="10" title="Type" comment="Valid values are 0 to 12. Values 11 and 12 will crash the game." category="behavior" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
-    <sprite id="360" name="Bolt-controlled Airship Platform Wire - [UNUSED]" notes="Crashes the game. Tries to load 'lift_turi_ashiba_wire.szs' but that file does not exist. A non-solid, airship style metal wire that extends upwards 16 blocks. Moves down when used with a bolt. Goes on top of sprite 358.">
+    <sprite id="360" name="Bolt-controlled Airship Platform Wire (CRASHES) (NSMBW) [UNUSED]" notes="Crashes the game. Tries to load 'lift_turi_ashiba_wire.szs' but that file does not exist. A non-solid, airship style metal wire that extends upwards 16 blocks. Moves down when used with a bolt. Goes on top of sprite 358.">
 		<list nybble="16" title="Speed" comment="Carry-over from sprite 530" category="behavior">
 			<entry value="0">1.0</entry>
 			<entry value="1">1.5</entry>
@@ -5603,38 +5872,9 @@
 			<entry value="3">Right</entry>
 		</list>
 	</sprite>
-	<sprite id="376" name="Movement Controlled Silver-Gear Block - Crashes" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing.">
-        <value nybble="1" title="Unknown Value 1" />
-        <value nybble="2" title="Unknown Value 2" />
-        <value nybble="3" title="Unknown Value 3" />
-        <value nybble="4" title="Unknown Value 4" />
-        <value nybble="5" title="Unknown Value 5" />
-        <value nybble="6" title="Unknown Value 6" />
-        <value nybble="7" title="Unknown Value 7" />
-        <value nybble="8" title="Unknown Value 8" />
-        <value nybble="9" title="Unknown Value 9" />
-        <value nybble="10" title="Unknown Value 10" />
-        <value nybble="11" title="Unknown Value 11" />
-        <value nybble="12" title="Unknown Value 12" />
-        <value nybble="13" title="Unknown Value 13" />
-        <value nybble="14" title="Unknown Value 14" />
-        <value nybble="15" title="Unknown Value 15" />
-        <value nybble="16" title="Unknown Value 16" />
-        <value nybble="17" title="Unknown Value 17" />
-        <value nybble="18" title="Unknown Value 18" />
-        <value nybble="19" title="Unknown Value 19" />
-        <value nybble="20" title="Unknown Value 20" />
-        <value nybble="21" title="Unknown Value 21" />
-        <value nybble="22" title="Unknown Value 22" />
-        <value nybble="23" title="Unknown Value 23" />
-        <value nybble="24" title="Unknown Value 24" />
-        <value nybble="1-2" title="Event ID 1" id_type="event" category="events" />
-        <value nybble="3-4" title="Event ID 2" id_type="event" category="events" />
-        <value nybble="5-6" title="Group ID" id_type="group" category="behavior" />
-        <value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
-        <value nybble="23-24" title="Link ID" id_type="link" category="behavior" />
+	<sprite id="376" name="Movement Controlled Silver-Gear Block - (CRASHES) (NSMBW) [UNUSED]" notes="Crashes due to missing 'lift_zen_shiro' file. This is a leftover from NSMBW but the model and code are missing.">
     </sprite>
-    <sprite id="377" name="Vertical Block Platform with Light Gem - [USUSED] (NSMBW)" notes="A 2x3 solid platform that has a light gem in the shape of a downward arrow. &lt;font color=&quot;red&quot;&gt;This block can crush the player so be careful!&lt;/font&gt;">
+    <sprite id="377" name="Vertical Block Platform with Light Gem (CRASHES) (NSMBW) [UNUSED]" notes="Resources aren't present, needs a new model file. A 2x3 solid platform that has a light gem in the shape of a downward arrow. &lt;font color=&quot;red&quot;&gt;This block can crush the player so be careful!&lt;/font&gt;">
 		<value nybble="13" title="Return delay" comment="Unknown unit. Experiment and report your findings" category="behavior" />
 		<value nybble="14" title="Begin delay" comment="Unknown unit. Experiment and report your findings"  category="behavior" />
 		<value nybble="23" title="Z-order???" comment="Unknown"  category="behavior" />
@@ -5865,7 +6105,10 @@
 	</sprite>
 	<sprite id="397" name="Event Controller - Question Block (Rotation-controlled)">
 		<value nybble="3-4" title="Target Event ID" comment="Triggers this event when hit." category="events" id_type="event" />
-		<value nybble="6" title="Unknown Value 6" />
+		<checkbox nybble="6" mask="1" title="Upside Down" category="behavior" />
+		<checkbox nybble="6" mask="2" title="Gyroscopic Movement" category="behavior" />
+		<checkbox nybble="6" mask="4" title="Tilted" category="behavior" />
+		<checkbox nybble="6" mask="8" title="Unknown Value 6 Mask 8" />
 		<value nybble="13" title="Acorn Mushroom" category="behavior" />
 		<value nybble="15" title="Unknown Value 15" />
 		<list nybble="20" title="Contains" category="behavior">
@@ -5890,7 +6133,10 @@
 	</sprite>
 	<sprite id="398" name="Event Controller - Brick Block (Rotation-controlled)" notes="A brick block that can be moved by a movement controller. Probably has a checkbox at nybble 13 that makes it spawn an acorn mushroom.">
 		<value nybble="3-4" title="Target Event ID" comment="Triggers this event when hit." id_type="event" category="events" />
-		<value nybble="6" title="Unknown Value 6" />
+		<checkbox nybble="6" mask="1" title="Upside Down" category="behavior" />
+		<checkbox nybble="6" mask="2" title="Gyroscopic Movement" category="behavior" />
+		<checkbox nybble="6" mask="4" title="Tilted" category="behavior" />
+		<checkbox nybble="6" mask="8" title="Unknown Value 6 Mask 8" />
 		<checkbox nybble="13" title="Acorn Mushroom" category="behavior" />
 		<value nybble="15" title="Unknown Value 15" />
 		<list nybble="20" title="Contains" comment="The content of this block." category="behavior">
@@ -5954,8 +6200,9 @@
 		<checkbox nybble="12" title="Shift 1/2 block to the right" comment="This shifts the coin ring 1/2 block to the right." category="behavior" />
 	</sprite>
 	<sprite id="403" name="Iggy Koopa" notes="Spawns the boss Iggy Koopa. Also interesting to note that fire particles spawn with him." />
-	<sprite id="404" name="Pipe - Up (Enterable)" notes="A pipe that can get hooked to a path or line controller. Unlike the other pipes, this one doesn't need the Pa0 tileset over it for collision. What's even cooler, it creates it's own entrance! Only for entrance 0, however.">
+	<sprite id="404" name="Pipe - Up (Enterable)" notes="A pipe that can get hooked to a path or Two-Way controller. Unlike the other pipes, this one doesn't need the Pa0 tileset over it for collision. What's even cooler, it creates it's own entrance! Only for entrance 0, however.">
 		<checkbox nybble="5" title="Doesn't have a top" mask="2" category="behavior" />
+		<checkbox nybble="7" title="Has Gravity" mask="10" comment="will use gravity" category="behavior"/>
 		<list nybble="8" title="Type" comment="The pipe type." category="behavior">
 			<entry value="0">Normal</entry>
 			<entry value="1">Painted</entry>
@@ -5970,7 +6217,7 @@
 		</list>
 		<value nybble="12" title="Height" comment="Value + 2" category="behavior" />
 	</sprite>
-	<sprite id="405" name="Multi-size platform - Two way - (CRASHES) [UNUSED]" notes="Multi-size platform with unknown purpose. Crashes because lift_zen_kumiawase.szs is missing.">
+	<sprite id="405" name="Multi-size platform - (Two way) - (CRASHES) [UNUSED]" notes="Resources aren't present, needs a new model file. Multi-size platform with unknown purpose. Crashes because lift_zen_kumiawase.szs is missing.">
 		<list nybble="5" title="Direction Override" comment="Direction it moves" category="behavior">
             <entry value="0">Use ID</entry>
             <entry value="1">Right</entry>
@@ -6101,7 +6348,7 @@
 	<sprite id="428" name="Ludwig's Castle Platform Rail">
 		<value nybble="17-18" title="Length" comment="Value + 3." category="behavior" />
 	</sprite>
-	<sprite id="429" name="Giant Movement-controlled Metal Bar" notes="See 6-7 Shifting-Floor Cave and sprite 485.">
+	<sprite id="429" name="Giant Movement-controlled Metal Bar (Two-Way)" notes="See 6-7 Shifting-Floor Cave and sprite 485.">
 		<list nybble="5" title="Direction" category="behavior">
 			<entry value="0">Same as Movement Controller</entry>
 			<entry value="1">Movement Controller: Horizontal-&gt;Same, Up-&gt;Right, Down-&gt;Left</entry>
@@ -6112,17 +6359,59 @@
 		<value nybble="12" title="Type" comment="Valid values are 0 to 6." category="behavior" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="430" name="Line-controlled Iron Box [UNUSED]" notes="An iron box that you can control with a line controller. Only sprite 70 works with this sprite.">
-		<value nybble="17-18" title="Width" comment="Width of the platform." category="behavior" />
-		<value nybble="19-20" title="Height" comment="Height of the platform." category="behavior" />
-		<value nybble="21-22" title="Movement ID" comment="The ID you assign to sprite 70. (Line Controller.)" id_type="movement" category="movement" />
-	</sprite>
-	<sprite id="431" name="Movement-controlled Stone Block" notes="Only used in Morton's (W2) Castle.">
+	<sprite id="430" name="Movement-controlled Tiltable Iron Box (Two-Way) [UNUSED]" notes="An iron box that you can control with a Two-Way controller. Only sprite 70 works with this sprite.">
 		<value nybble="6" title="Unknown Value 6" />
-		<value nybble="12" title="Unknown Value 12" />
-		<value nybble="18" title="Width" comment="Value + 1" category="behavior" />
-		<value nybble="20" title="Height" comment="Value + 1" category="behavior" />
-		<value nybble="21-22" title="Movement ID" comment="Use this to give this block a movement. Can be paired with [70]. Maybe others as well." id_type="movement" category="movement" />
+		<list nybble="7" title="Tilt" category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
+		<value nybble="11" title="Unknown Value 11" />
+		<value nybble="12" title="Z-Order" comment="Higher Values = Further back. Use this if you use more than one of this sprites and they're overlapping." category="behavior" />
+		<value nybble="18" title="Width" category="behavior" />
+		<value nybble="20" title="Height" category="behavior" />
+		<value nybble="21-22" title="Movement ID" comment="Use this to make other sprites move along with the platform." id_type="movement" category="movement" />
+		<checkbox nybble="23" title="Don't move" category="movement"/>
+	</sprite>
+	<sprite id="431" name="Movement-controlled Tiltable Stone Block (Two-Way)" notes="Only used in Morton's (W2) Castle.">
+		<value nybble="6" title="Unknown Value 6" />
+		<list nybble="7" title="Tilt" category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
+		<value nybble="11" title="Unknown Value 11" />
+		<value nybble="12" title="Z-Order" comment="Higher Values = Further back. Use this if you use more than one of this sprites and they're overlapping." category="behavior" />
+		<value nybble="18" title="Width" category="behavior" />
+		<value nybble="20" title="Height" category="behavior" />
+		<value nybble="21-22" title="Movement ID" comment="Use this to make other sprites move along with the platform." id_type="movement" category="movement" />
+		<checkbox nybble="23" title="Don't move" category="movement"/>
 	</sprite>
 	<sprite id="432" name="Bowser Jr. Controller">
 		<value nybble="10" title="Entrance id" id_type="entrance" category="behavior" />
@@ -6134,15 +6423,15 @@
 		</list>
 	</sprite>
     <sprite id="433" name="Bowser Jr (Clown Car)" notes="Bowser Jr in his Clown Car. Used on the airship battle." />
-	<sprite id="434" name="Rotating Iron Block [UNUSED]" notes="An unused sprite that functions like normal. It's an iron block that can be attached to a rotation controller.">
-		<checkbox nybble="8" title="Ignore Model Rotation" comment="Makes the iron block still move on a rotation controller, just does not spin around." category="behavior" />
-		<value bit="65-67" title="Z-order?" category="behavior" />
-		<value bit="68-72" title="Width" comment="Width of the iron block." category="behavior" />
-		<value nybble="20" title="Height" comment="Height of the iron block." category="behavior" />
-		<value nybble="21-22" title="Movement ID" comment="Use this to attach a sprite to a movement controller." id_type="movement" category="movement" />
-	</sprite>
+	<sprite id="434" name="Pivotal-rotation-controlled Iron Block [UNUSED]" notes="An unused sprite that functions like normal. It's an iron block that can be attached to a rotation controller.">
+        <checkbox nybble="8" category="behavior" title="Ignore Model Rotation" comment="Makes the iron block still move on a rotation controller, just does not spin around."/>
+        <value bit="65-67" category="behavior" title="Z-order?"/>
+        <value bit="68-72" category="behavior" title="Width" comment="Value+3"/>
+        <value nybble="20" category="behavior" title="Height" comment="Height of iron block."/>
+        <value nybble="21-22" title="Movement ID" category="movement" id_type="movement" comment="Use this to attach a sprite to a movement controller. Works with pivotal-rotation for sure"/>
+    </sprite>
     <sprite id="435" name="Sumo Bro Boss Controller" notes="Only used in 6-22, of both NSMBU and NSLU." />
-    <sprite id="436" name="Group Line Rotating Mushroom Block (CRASHES) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing.">
+    <sprite id="436" name="Group Line Rotating Mushroom Block (Patch Required) (CRASHES) (NSMBW) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing. Requires custom code to load the resources.">
         <value nybble="3-4" title="Target Event ID" comment="Event ID that will be triggered once player steps on block." id_type="event" category="events" />
         <value nybble="5-6" title="Group ID" comment="The ID used to chain sprites together. Use sprite 196 to create the groups." id_type="group" category="behavior" />
         <list nybble="7" title="Starting Rotation" comment="Starting rotation, Tilt center is at the screw of the mushroom block" category="behavior">
@@ -6253,7 +6542,7 @@
 			<entry value="8">Kamek Battle</entry>
 		</list>
 	</sprite>
-	<sprite id="439" name="Pivotal-rotation-controlled Ghost House Rotating Room [UNUSED]" notes="Crashes because lift_obake_chikei_heya.szs isn't prsent">
+	<sprite id="439" name="Pivotal-rotation-controlled Ghost House Rotating Room (CRASHES) [UNUSED]" notes="Resources aren't present, needs a new model file. Crashes because lift_obake_chikei_heya.szs isn't prsent">
         <checkbox nybble="8" title="Ignore Model Rotation" category="behavior" />
         <list nybble="12" title="Size" comment="* The frame has protruding bits inside." category="behavior">
             <entry value="0">28x20</entry>
@@ -6409,7 +6698,7 @@
 		<value nybble="12" title="Punch ID" category="behavior" />
 	</sprite>
 	<sprite id="462" name="Bowser" />
-	<sprite id="463" name="Bowser Switch [UNUSED]" notes="Crashes the game.">
+	<sprite id="463" name="Bowser Switch (Patch Required) [UNUSED]" notes="Crashes the game.">
 		<checkbox nybble="5" title="Affected by gravity" comment="If this is checked, the switch will be movable by the environment." category="behavior" />
 		<checkbox nybble="7" title="Non-timed" comment="When checked, the event will not be timed when it's switched." category="behavior" />
 		<checkbox nybble="8" title="Shift a tile vertically" comment="Shift the switch a tile in the direction it's facing. Used by the game internally." category="behavior" />
@@ -6510,7 +6799,7 @@
 	<sprite id="478" name="Bowser Jr. World 7 Battle Floor Block">
 		<value nybble="12" title="Block ID" category="behavior" />
 	</sprite>
-	<sprite id="479" name="Unknown Warning Platform (EXPERIMENTAL)" notes="Unknown platform that is in the code for NSMBU, but doesn't have any model. This sprite is also original to nsmbu, so there is no other info on this sprite.">
+	<sprite id="479" name="Unknown Warning Platform (CRASHES) [UNUSED]" notes="Unknown platform that is in the code for NSMBU, but doesn't have any model. This sprite is also original to nsmbu, so there is no other info on this sprite. Appears in the unused NSMBUDX level 44-9">
         <list nybble="5" title="Direction Override" comment="Direction it moves" category="behavior">
             <entry value="0">Use ID</entry>
             <entry value="1">Right</entry>
@@ -6720,7 +7009,7 @@
 		<value nybble="19-20" title="Ordering ID" comment="This value specifies the order which the controllers activates. Almost always starts with order ID 1." id_type="ordering" category="behavior" />
 		<value nybble="21-22" title="Movement ID" comment="Use this to match sprites to the rotation movement." id_type="movement" category="movement" />
 	</sprite>
-	<sprite id="485" name="Giant Movement-controlled Metal Bar Gearbox" notes="See 6-7 Shifting-Floor Cave. Used with 429. This sprite does not physically move, but has gears that animate when its &quot;position&quot; changes.">
+	<sprite id="485" name="Giant Movement-controlled Metal Bar Gearbox (Two-Way)" notes="See 6-7 Shifting-Floor Cave. Used with 429. This sprite does not physically move, but has gears that animate when its &quot;position&quot; changes.">
 		<list nybble="5" title="Gear Rotation Direction" comment="Right and Up = Counter-Clockwise, Left and Down = Clockwise" category="behavior">
 			<entry value="0">Same as Movement Controller</entry>
 			<entry value="1">Movement Controller: Horizontal-&gt;Same, Up-&gt;Right, Down-&gt;Left</entry>
@@ -6874,7 +7163,7 @@
 		</list>
 		<value nybble="17-18" title="Count" comment="The amount of coins this sprite spawns. The amounts of coins for 0, 1 and 2 are 10, 3 and 2, respectively. For other values n, the amount of coins is n+1. If the amount of coins is odd, the left trail contains one coin more than the right trail." category="behavior" />
 	</sprite>
-	<sprite id="499" name="Moving Acorn Plains Semi-solid Land Block" notes="Needs to be hooked to a Two-Way Movement Controller (sprite 70) to show up ingame.">
+	<sprite id="499" name="Acorn Plains Semi-solid Land Block (Two-Way)" notes="Needs to be hooked to a Two-Way Movement Controller (sprite 70) to show up ingame.">
 		<value nybble="6" title="Unknown Value 6" />
 		<list nybble="7" title="Rotation" category="behavior">
 			<entry value="0">0°</entry>
@@ -6969,6 +7258,7 @@
 	</sprite>
 	<sprite id="509" name="Pipe - Right (Enterable) [UNUSED]" notes="A pipe that you can enter without having an entrance on the sprite. Seems to only send you to 0, though.">
 		<checkbox nybble="5" title="Doesn't have a top" mask="2" category="behavior" />
+		<checkbox nybble="7" title="Has Gravity" mask="10" comment="will use gravity" category="behavior"/>
 		<list nybble="8" title="Type" comment="The type of pipe." category="behavior">
 			<entry value="0">Normal</entry>
 			<entry value="1">Painted</entry>
@@ -6985,6 +7275,7 @@
 	</sprite>
 	<sprite id="510" name="Pipe - Left (Enterable) [UNUSED]" notes="A pipe that you can enter without having an entrance on the sprite. Seems to only send you to 0, though">
 		<checkbox nybble="5" title="Doesn't have a top" mask="2" category="behavior" />
+		<checkbox nybble="7" title="Has Gravity" mask="10" comment="will use gravity" category="behavior"/>
 		<list nybble="8" title="Type" comment="The type of pipe." category="behavior">
 			<entry value="0">Normal</entry>
 			<entry value="1">Painted</entry>
@@ -7024,7 +7315,7 @@
     </sprite>
 	<sprite id="513" name="Pipe Joint" />
 	<sprite id="514" name="Mini Pipe Joint" />
-	<sprite id="515" name="Movement-controlled Castle Platform" notes="A vertically moving platform which looks like the normal Castle (Lava) tileset.">
+	<sprite id="515" name="Movement-controlled Castle Platform (Two-Way)" notes="A vertically moving platform which looks like the normal Castle (Lava) tileset.">
 		<list nybble="12" title="Width" comment="The horizontal length the platform is." category="behavior">
 			<entry value="0">5 Blocks</entry>
 			<entry value="1">7 Blocks</entry>
@@ -7065,33 +7356,8 @@
 		<checkbox nybble="12" title="Upside-down" comment="If this is ticked, the switch will be upside-down." category="behavior" />
 		<checkbox nybble="17" title="Z-order" comment="Changes z-pos to 128.0" category="behavior" />
 	</sprite>
-	<sprite id="521" name="Goal Mushroom House (EXPERIMENTAL)" notes="Crashes because goal_kinoko_house.szs isn't prsent">
-        <value nybble="1" title="Unknown Value 1" />
-        <value nybble="2" title="Unknown Value 2" />
-        <value nybble="3" title="Unknown Value 3" />
-        <value nybble="4" title="Unknown Value 4" />
-        <value nybble="5" title="Unknown Value 5" />
-        <value nybble="6" title="Unknown Value 6" />
-        <value nybble="7" title="Unknown Value 7" />
-        <value nybble="8" title="Unknown Value 8" />
-        <value nybble="9" title="Unknown Value 9" />
-        <value nybble="10" title="Unknown Value 10" />
-        <value nybble="11" title="Unknown Value 11" />
-        <value nybble="12" title="Unknown Value 12" />
-        <value nybble="13" title="Unknown Value 13" />
-        <value nybble="14" title="Unknown Value 14" />
-        <value nybble="15" title="Unknown Value 15" />
-        <value nybble="16" title="Unknown Value 16" />
-        <value nybble="17" title="Unknown Value 17" />
-        <value nybble="18" title="Unknown Value 18" />
-        <value nybble="19" title="Unknown Value 19" />
-        <value nybble="20" title="Unknown Value 20" />
-        <value nybble="21" title="Unknown Value 21" />
-        <value nybble="22" title="Unknown Value 22" />
-        <value nybble="23" title="Unknown Value 23" />
-        <value nybble="24" title="Unknown Value 24" />
-    </sprite>
-    <sprite id="522" name="Floating Barrel [Crashes as sprite] [UNUSED]" notes="Needs lift_taru.szs, but this file does not exist.">
+	<sprite id="521" name="Goal Mushroom House (CRASHES) [UNUSED]" notes="Crashes because goal_kinoko_house.szs isn't prsent"/>
+    <sprite id="522" name="Floating Barrel (CRASHES) (NSMBW) [UNUSED]" notes="Resources aren't present, needs a new model file. Needs lift_taru.szs, but this file does not exist.">
 		<checkbox nybble="12" title="Large" comment="Scales this sprite to 1.5" category="behavior" />
 	</sprite>
 	<sprite id="523" name="Flying Question Block Generator - Ambush" notes="Spawns a new ? block when the previous one leaves the screen.">
@@ -7101,7 +7367,7 @@
 			<entry value="1">Right</entry>
 		</list>
 	</sprite>
-	<sprite id="524" name="Movement-controlled Tower Block">
+	<sprite id="524" name="Movement-controlled Tower Block (Two-Way)">
 		<value nybble="12" title="Unknown Value 12" />
 		<value nybble="21-22" title="Movement ID" comment="Use this to match this sprite to a movement controller (always 70?)." id_type="movement" category="movement" />
 	</sprite>
@@ -7155,7 +7421,7 @@
 			<entry value="3">Bubbles &amp; Sun Rays</entry>
 		</list>
 	</sprite>
-	<sprite id="529" name="Crowber (NSMBW) [UNUSED]" notes="Purple bird enemy that turns around twice before swooping down at the player." />
+	<sprite id="529" name="Crowber (CRASHES) (NSMBW) [UNUSED]" notes="Resources aren't present, needs a new model file. Purple bird enemy that turns around twice before swooping down at the player." />
 	<sprite id="530" name="Bolt-controlled Stone Block" notes="This sprite does exactly the same as sprite 625.">
 		<checkbox nybble="5" title="Unknown Flag 5" />
 		<list nybble="6" title="Direction" comment="I may have mixed up 'up' and 'down'." category="behavior">
@@ -7232,7 +7498,7 @@
 	</sprite>
 	<sprite id="536" name="Rocky Wrench" />
 	<sprite id="537" name="Flying Wrench [UNUSED]" notes="Name translates to Spanner. Spawns a wrench and is thrown to the left.&#13;&#10;Might be spawned by Rocky Wrenches." />
-	<sprite id="538" name="Pivotal-rotation-controlled SMB3 Roto-disc [UNUSED]">
+	<sprite id="538" name="Pivotal-rotation-controlled Roto-disc (CRASHES) [UNUSED]" notes="Resources aren't present, needs a new model file. Crashes the game, needs actor file cookie.szs to function">
         <checkbox nybble="5" title="Large" category="behavior" />
         <value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
@@ -7272,7 +7538,7 @@
 		<value nybble="18" title="Platform length" category="behavior" />
 		<value nybble="20" title="Stem length" category="behavior" />
 	</sprite>
-	<sprite id="542" name="Bouncy Movement-controlled Mushroom Platform [UNUSED]" notes="Seems to not include the stem, which makes the movement-controlled properties of it... useless?">
+	<sprite id="542" name="Bouncy Movement-controlled Mushroom Platform (Two-Way) [UNUSED]" notes="Seems to not include the stem, which makes the movement-controlled properties of it... useless?">
 		<list nybble="10" title="Color" category="behavior">
 			<entry value="0">Orange if skinny - Red if thick</entry>
 			<entry value="1">Green if skinny - Blue if thick</entry>
@@ -7354,10 +7620,10 @@
 		</list>
 	</sprite>
 	<sprite id="548" name="&quot;Block that appears in the light&quot; [UNUSED]" notes="Apparently spawns a challenge block..?&#13;&#10;Really has no real use." />
-	<sprite id="549" name="Movement-controlled Desert Block" notes="A desert block that can move.">
+	<sprite id="549" name="Movement-controlled Desert Block (Two-Way)" notes="A desert block that can move.">
 		<value nybble="18" title="Width (Useless)" />
 		<value nybble="20" title="Height (Useless)" />
-		<value nybble="22" title="Movement ID" comment="Match this to a Two-Way movement controller (sprite 70)." id_type="movement" category="movement" />
+		<value nybble="21-22" title="Movement ID" comment="Match this to a Two-Way movement controller (sprite 70)." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="550" name="Giant Pipe Piranha Plant">
 		<list nybble="5" title="Orientation" comment="Sets the direction of the piranha plant. 2 and 3 are unused." category="behavior">
@@ -7401,36 +7667,7 @@
 	<sprite id="554" name="Location-based button hint" notes="When the player is in the location specified, the image of a button will appear. Might have different button images.">
 		<value nybble="5-6" title="Location ID" id_type="location" category="behavior" />
 	</sprite>
-	<sprite id="555" name="Ball Balancing Lift (NSMBW) [UNUSED]" notes="Crashes due to missing 'cube_kinoko.szs' file. Also fails to load the model 'cube_kinoko_M'. This is a leftover from NSMBW that has code present, but the model is missing.">
-        <value nybble="1" title="Unknown Value 1" />
-        <value nybble="2" title="Unknown Value 2" />
-        <value nybble="3" title="Unknown Value 3" />
-        <value nybble="4" title="Unknown Value 4" />
-        <value nybble="5" title="Unknown Value 5" />
-        <value nybble="6" title="Unknown Value 6" />
-        <value nybble="7" title="Unknown Value 7" />
-        <value nybble="8" title="Unknown Value 8" />
-        <value nybble="9" title="Unknown Value 9" />
-        <value nybble="10" title="Unknown Value 10" />
-        <value nybble="11" title="Unknown Value 11" />
-        <value nybble="12" title="Unknown Value 12" />
-        <value nybble="13" title="Unknown Value 13" />
-        <value nybble="14" title="Unknown Value 14" />
-        <value nybble="15" title="Unknown Value 15" />
-        <value nybble="16" title="Unknown Value 16" />
-        <value nybble="17" title="Unknown Value 17" />
-        <value nybble="18" title="Unknown Value 18" />
-        <value nybble="19" title="Unknown Value 19" />
-        <value nybble="20" title="Unknown Value 20" />
-        <value nybble="21" title="Unknown Value 21" />
-        <value nybble="22" title="Unknown Value 22" />
-        <value nybble="23" title="Unknown Value 23" />
-        <value nybble="24" title="Unknown Value 24" />
-        <value nybble="1-2" title="Event ID 1" id_type="event" category="events" />
-        <value nybble="3-4" title="Event ID 2" id_type="event" category="events" />
-        <value nybble="5-6" title="Group ID" id_type="group" category="behavior" />
-        <value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
-        <value nybble="23-24" title="Link ID" id_type="link" category="behavior" />
+	<sprite id="555" name="Ball Balancing Lift (CRASHES) (NSMBW) [UNUSED]" notes="Crashes due to missing 'lift_katamukiyuka' model. The list resources are also missing.">
     </sprite>
     <sprite id="556" name="Credits Bubble Baby Yoshi [CRASHES]" notes="Unknown why it crashes." />
 	<sprite id="557" name="Credits Controller" />
@@ -7484,8 +7721,32 @@
 		<value nybble="18" title="Width" category="behavior" />
 		<value nybble="20" title="Height" category="behavior" />
 	</sprite>
-	<sprite id="563" name="Movement-controlled Tile Platform [UNUSED]">
-		<value nybble="21-22" title="Movement ID" comment="Link this sprite to a Two-Way movement controller (sprite 70)" id_type="movement" category="movement" />
+	<sprite id="563" name="Movement-controlled World 7 Tileset Platform (Two-Way) [UNUSED]">
+		<value nybble="6" title="Unknown Value 6" />
+		<list nybble="7" title="Tilt" category="behavior">
+			<entry value="0">0°</entry>
+			<entry value="1">22.5°</entry>
+			<entry value="2">45°</entry>
+			<entry value="3">67.5°</entry>
+			<entry value="4">90°</entry>
+			<entry value="5">112.5°</entry>
+			<entry value="6">135°</entry>
+			<entry value="7">157.5°</entry>
+			<entry value="8">180°</entry>
+			<entry value="9">202.5°</entry>
+			<entry value="10">225°</entry>
+			<entry value="11">247.5°</entry>
+			<entry value="12">270°</entry>
+			<entry value="13">292.5°</entry>
+			<entry value="14">315°</entry>
+			<entry value="15">337.5°</entry>
+		</list>
+		<value nybble="11" title="Unknown Value 11" />
+		<value nybble="12" title="Z-Order" comment="Higher Values = Further back. Use this if you use more than one of this sprites and they're overlapping." category="behavior" />
+		<value nybble="18" title="Width" category="behavior" />
+		<value nybble="20" title="Height" category="behavior" />
+		<value nybble="21-22" title="Movement ID" comment="Use this to make other sprites move along with the platform." id_type="movement" category="movement" />
+		<checkbox nybble="23" title="Don't move" category="movement"/>
 	</sprite>
 	<sprite id="564" name="Flower/Grass Type Setter" notes="This sprite changes the type of flowers that are used in the zone. If this sprite is not present in the zone, the standard flowers are used.">
 		<list nybble="12" title="Type" category="behavior">
@@ -7953,7 +8214,7 @@
 		<value nybble="21-22" title="Bolt ID" comment="Use this ID to assign the sprite to a bolt." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="626" name="Stationary Sumo Bro. - NSLU" />
-    <sprite id="627" name="Movement-controlled Bone Platform - NSLU" notes="Platform falls when Bowser Jr.'s clown car hits it. Used with sprite 70 (Two-Way), but it might be able to pair with other controllers as well...">
+    <sprite id="627" name="Movement-controlled Bone Platform (Two-Way/ Event-activated Two-Way) - NSLU" notes="Platform falls when Bowser Jr.'s clown car hits it. Used with sprite 70 (Two-Way), but it might be able to pair with other controllers as well...">
         <value nybble="18" title="Width" comment="Value + 1" />
         <value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
     </sprite>
@@ -8051,7 +8312,7 @@
 	<sprite id="641" name="Chain Chomp - NSLU">
 		<value nybble="12" title="Unknown Value 12" />
 	</sprite>
-	<sprite id="642" name="Movement controller - Two-Way - NSLU">
+	<sprite id="642" name="Movement controller - Event-activated Two-Way - NSLU">
 		<value nybble="3-4" title="Triggering Event ID" id_type="event" category="events" />
 		<checkbox nybble="6" title="Slower Acceleration" category="behavior" />
 		<value nybble="7" title="Unknown Value 7" />
@@ -8077,7 +8338,7 @@
 		<value nybble="17" title="Unknown Value 17" />
 		<value nybble="18" title="Useless" comment="Used by Nintendo, but ignored by the game" />
 		<value nybble="20" title="Useless 2" comment="Used by Nintendo, but ignored by the game" />
-		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
+		<value nybble="21-22" title="Movement ID*" comment="Seems to only work with sprite 627 and 669" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="643" name="Lava Bubble - NSLU">
 		<list nybble="8" title="Initial Direction" category="movement">
@@ -8141,7 +8402,7 @@
 	<sprite id="647" name="Upside-Down Banzai Bill Blaster with Luigi Emblem - NSLU (+) [UNUSED]" notes="An upside down Banzai Bill launcher. Has a Luigi logo on the cannon. (+) The initial state flag is usable. IF set to 1, the blaster will transform into a bill." />
 	<sprite id="648" name="Bull's-Eye Banzai Bill Blaster with Luigi Emblem - NSLU (+) [UNUSED]" notes="Shoots Homing Banzai Bills. Also has a Luigi logo on the cannon. Shoots bills facing the player. (+) The initial state flag is usable. IF set to 1, the blaster will transform into a bill." />
 	<sprite id="649" name="Upside-Down Bull's-Eye Banzai Bill Blaster with Luigi Emblem - NSLU (+) [UNUSED]" notes="An upside down Homing Banzai Bill launcher. Has a Luigi logo on the cannon. Shoots bills facing the player. (+) The initial state flag is usable. IF set to 1, the blaster will transform into a bill." />
-	<sprite id="650" name="Movement-controlled Star Coin - NSLU">
+	<sprite id="650" name="Pivotal-rotation-controlled Star Coin - NSLU">
 		<list nybble="9" title="Star coin number" category="behavior">
 			<entry value="0">First star coin</entry>
 			<entry value="1">Second star coin</entry>
@@ -8295,13 +8556,20 @@
 		<value nybble="9" title="Unknown Value 9" />
 		<checkbox nybble="12" title="Shift 1/2 block to the right" comment="This shifts the coin ring 1/2 block to the right." category="behavior" />
 	</sprite>
-	<sprite id="663" name="Movement-controlled Coin - NSLU">
-		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
-		<value nybble="24" title="Unknown Value 24" />
+	<sprite id="663" name="Coin - NSLU">
+		<list nybble="19" title="Movement Type" comment="Value 8 is used all over 6-23, but with no movement-controller attached." category="behavior">
+            <entry value="0">None / Path (100)</entry>
+            <entry value="1">Two-Way (70, 642)</entry>
+            <entry value="8">Clapping controller (?)</entry>
+            <entry value="15">Drop to ground when loaded</entry>
+		</list>
+		<value nybble="21-22" title="Movement ID" comment="Can match to 70 for sure." id_type="movement" category="movement" />
+		<value nybble="24" title="Unknown Value 24"/>
 	</sprite>
 	<sprite id="664" name="Sun Gleam &amp; Bubble Underwater Effect - NSLU" />
-	<sprite id="665" name="Movement-controlled Star Coin - NSLU" notes="Might have a hidden nybble for star coin number (probably nybble 6).">
-		<value nybble="1" title="Unknown Value 19" />
+	<sprite id="665" name="Pivotal-rotation-controlled Star Coin (2) - NSLU" notes="Might have a hidden nybble for star coin number (probably nybble 6).">
+		<value nybble="1" title="Unknown Value 1" />
+		<value nybble="19" title="Unknown Value 19" />
 		<value nybble="20" title="Unknown Value 20" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
@@ -8333,9 +8601,9 @@
 		<value nybble="17" title="Unknown Value 17" comment="Always 15" />
 		<value nybble="18" title="Unknown Value 18" comment="Always 15" />
 	</sprite>
-	<sprite id="669" name="Movement-controlled Tower Block - NSLU">
+	<sprite id="669" name="Movement-controlled Tower Block (Event-activated Two-Way) - NSLU">
 		<value nybble="11" title="Unknown Value 11" />
-		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
+		<value nybble="21-22" title="Movement ID" comment="Seems to only work with sprite 642" id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="670" name="Minigame Manager - NSLU [UNUSED]" />
 	<sprite id="671" name="Grrrol Passage - NSLU" notes="A rusty platform, with an end broken. The end that is broken is defined by a setting.">
@@ -8355,13 +8623,17 @@
 			<entry value="1">Checkers</entry>
 			<entry value="2">Inverted Checkers</entry>
 		</list>
-		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; The number in parentheses () corresponds to the position of the tile in the tileset (tile" category="behavior">
+		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Embedded)" category="behavior">
 			<entry value="0">Red Block (Pa0 tile #208) (Object #143)</entry>
 			<entry value="1">Brick Block (Pa0 tile #48) (Object #15)</entry>
 			<entry value="2">Blank Tile (Pa0 tile #0) (Object #0)</entry>
 			<entry value="3">Stone Block (Pa0 tile #52) (Object #42)</entry>
 			<entry value="4">Wooden Block (Pa0 tile #51) (Object #41)</entry>
 			<entry value="5">Wooden Block (Pa0 tile #51) (Object #41)</entry>
+			<entry value="6">Pa1 tile #240</entry>
+			<entry value="7">Pa1 tile #4</entry>
+			<entry value="12">Same as 6</entry>
+			<entry value="13">Same as 7</entry>
 		</list>
 		<list nybble="10" title="Effect" comment="Determines the effect that is triggered when the event is activated. 'Destroy Tiles' can destroy all kinds of objects. It cannot destroy sprites. 'Spawns Tiles' will even create new tiles above other tiles or objects." category="behavior">
 			<entry value="0">Destroys Tiles</entry>
@@ -8370,7 +8642,7 @@
 		<value nybble="18" title="Width" comment="Determines the width of the area that is affected." category="behavior" />
 		<value nybble="20" title="Height" comment="Determines the height of the area that is affected." category="behavior" />
 	</sprite>
-	<sprite id="674" name="Movement-controlled Lava Land Block - NSLU" notes="Lava themed">
+	<sprite id="674" name="Path-controlled Lava Land Block - NSLU" notes="Lava themed">
 		<value nybble="10" title="Type" category="behavior" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
 	</sprite>
@@ -8786,7 +9058,7 @@
 		<value nybble="21-22" title="Movement ID" comment="Use this to attach a sprite to a movement controller." id_type="movement" category="movement" />
 	</sprite>
 	<sprite id="708" name="Autoscrolling Player Effect (?)- NSLU" notes="This sprite sets a flag on player actors, and deletes itself. It is still unknown what this flag does." />
-	<sprite id="709" name="Movement-controlled Metal Castle Block - NSLU">
+	<sprite id="709" name="Pivotal-rotation-controlled Metal Castle Block - NSLU">
 		<value nybble="18" title="Width" comment="Value + 2 blocks. Maybe 2 nybbles..." category="behavior" />
 		<value nybble="20" title="Height" comment="Value + 2 blocks. Maybe 2 nybbles..." category="behavior" />
 		<value nybble="21-22" title="Movement ID" id_type="movement" category="movement" />
