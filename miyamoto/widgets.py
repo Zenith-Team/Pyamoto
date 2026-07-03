@@ -378,12 +378,18 @@ class ObjectPickerWidget(QtWidgets.QListView):
                                                                   'in the tileset')
             return
 
+        # Build undo command with old + new definition
+        old_obj_def = globals.ObjectDefinitions[idx][objNum]
+
         # Delete the selected object (using soft deletion)
         DeleteObject(idx, objNum, True)
 
         # Add the replacement in place of the previously deleted object
-        obj = addObjToTilesetImpl(obj, colls, img, nml, idx, fits)
-        globals.ObjectDefinitions[idx][objNum] = obj
+        new_obj = addObjToTilesetImpl(obj, colls, img, nml, idx, fits)
+        globals.ObjectDefinitions[idx][objNum] = new_obj
+
+        globals.UndoManager.push(
+            undomanager.ReplaceTilesetObjectCommand(idx, objNum, old_obj_def, new_obj))
 
         # Update all instances of the replaced object in the scene
         for obj in globals.mainWindow.scene.items():
@@ -407,29 +413,22 @@ class ObjectPickerWidget(QtWidgets.QListView):
 
         if objNum == -1: return
 
-        # Check if the object is deletable
-        matchingObjs = []
+        # ── Collect info (no mutation) ────────────────────────────────────
 
-        ## Check if the object is in the scene
+        ## Instances in scene
+        matchingObjs = []
         for layer in globals.Area.layers:
             for obj in layer:
                 if obj.tileset == idx and obj.type == objNum:
                     matchingObjs.append(obj)
 
-        if matchingObjs:
-            where = [('(%d, %d)' % (obj.objx, obj.objy)) for obj in matchingObjs]
-            dlgTxt = "You can't delete this object because there are instances of it at the following coordinates:\n"
-            dlgTxt += ', '.join(where)
-            dlgTxt += '\nPlease remove or replace them before deleting this object.'
-
-            QtWidgets.QMessageBox.critical(self, 'Cannot Delete', dlgTxt)
-            return
-
-        ## Check if the object is in the clipboard
+        ## Clipboard
         inClipboard = False
-        if globals.mainWindow.clipboard is not None:
-            if globals.mainWindow.clipboard.startswith('MiyamotoClip|') and globals.mainWindow.clipboard.endswith('|%'):
-                layers, sprites , entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(globals.mainWindow.clipboard, False)
+        cb = globals.mainWindow.clipboard
+        if cb is not None and cb.startswith('MiyamotoClip|') and cb.endswith('|%'):
+            try:
+                layers, sprites, entrances, locations, paths, nabbitPaths, comments = \
+                    globals.mainWindow.getEncodedObjects(cb, False)
                 for layer in layers:
                     for obj in layer:
                         if obj.tileset == idx and obj.type == objNum:
@@ -437,31 +436,84 @@ class ObjectPickerWidget(QtWidgets.QListView):
                             break
                     if inClipboard:
                         break
+            except Exception:
+                pass
 
-        if inClipboard:
-            dlgTxt = "You can't delete this object because it is in the clipboard."
-            dlgTxt += '\nDo you want to empty the clipboard?.'
+        ## Saved clips
+        matchingClips = []
+        for clip in globals.mainWindow.clipChooser._clips:
+            try:
+                layers, sprites, entrances, locations, paths, nabbitPaths, comments = \
+                    globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
+            except Exception:
+                continue
+            for layer in layers:
+                found = False
+                for obj in layer:
+                    if obj.tileset == idx and obj.type == objNum:
+                        matchingClips.append(clip.name)
+                        found = True
+                        break
+                if found:
+                    break
 
-            result = QtWidgets.QMessageBox.warning(self, 'Cannot Delete', dlgTxt,
+        # ── Prompt user (no mutation) ──────────────────────────────────────
+
+        ## Instances warning
+        if matchingObjs:
+            where = [('(%d, %d)' % (obj.objx, obj.objy)) for obj in matchingObjs]
+            dlgTxt = "This object has instances at the following coordinates:\n"
+            dlgTxt += ', '.join(where)
+            dlgTxt += '\n\nDo you want to delete all instances and proceed?'
+
+            result = QtWidgets.QMessageBox.warning(self, 'Delete Object', dlgTxt,
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-
             if result != QtWidgets.QMessageBox.Yes:
                 return
 
-            # Empty the clipboard
+        ## Clipboard warning
+        if inClipboard:
+            dlgTxt = "This object is in the clipboard.\n\nDo you want to empty the clipboard and proceed?"
+            result = QtWidgets.QMessageBox.warning(self, 'Delete Object', dlgTxt,
+                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if result != QtWidgets.QMessageBox.Yes:
+                return
+
+        ## Saved clips warning
+        if matchingClips:
+            dlgTxt = "This object is referenced by the following saved clips:\n"
+            dlgTxt += ', '.join(matchingClips)
+            dlgTxt += '\n\nDeleting it may break these clips. Do you want to proceed?'
+
+            result = QtWidgets.QMessageBox.warning(self, 'Delete Object', dlgTxt,
+                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if result != QtWidgets.QMessageBox.Yes:
+                return
+
+        # ── Execute with undo support ──────────────────────────────────────
+
+        globals.UndoManager.begin_compound("Delete Object from Tileset")
+
+        if matchingObjs:
+            obj_info = []
+            for obj in matchingObjs:
+                l_idx = -1
+                for i, layer in enumerate(globals.Area.layers):
+                    if obj in layer:
+                        l_idx = i
+                        break
+                if l_idx != -1:
+                    obj_info.append((obj, l_idx, globals.Area.layers[l_idx].index(obj), obj.zValue()))
+            globals.UndoManager.push(undomanager.DeleteObjectsCommand(obj_info))
+
+        if inClipboard:
             globals.mainWindow.clipboard = None
             globals.mainWindow.actions['paste'].setEnabled(False)
 
-            dlgTxt = "The clipboard has been emptied."
-            dlgTxt += '\nDo you want to proceed with deleting the object?'
+        globals.UndoManager.push(undomanager.DeleteTilesetObjectCommand(idx, objNum))
+        globals.UndoManager.end_compound()
 
-            result = QtWidgets.QMessageBox.warning(self, 'Cannot Delete', dlgTxt,
-                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-
-            if result != QtWidgets.QMessageBox.Yes:
-                return
-
-        DeleteObject(idx, objNum)
+        # ── Post-cleanup ───────────────────────────────────────────────────
         HandleTilesetEdited()
 
         if not (globals.Area.tileset1 or globals.Area.tileset2 or globals.Area.tileset3):
@@ -490,7 +542,6 @@ class ObjectPickerWidget(QtWidgets.QListView):
             return
 
         dlgTxt = "Are you sure you want to remove all instances of this object from the scene?"
-        dlgTxt += '\nThis cannot be undone!'
 
         result = QtWidgets.QMessageBox.warning(self, 'Confirm', dlgTxt,
                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -498,12 +549,17 @@ class ObjectPickerWidget(QtWidgets.QListView):
         if result != QtWidgets.QMessageBox.Yes:
             return
 
+        obj_info = []
         for obj in matchingObjs:
-            obj.delete()
-            obj.setSelected(False)
-            globals.mainWindow.scene.removeItem(obj)
-            globals.mainWindow.levelOverview.update()
-            del obj
+            l_idx = -1
+            for i, layer in enumerate(globals.Area.layers):
+                if obj in layer:
+                    l_idx = i
+                    break
+            if l_idx != -1:
+                obj_info.append((obj, l_idx, globals.Area.layers[l_idx].index(obj), obj.zValue()))
+
+        globals.UndoManager.push(undomanager.DeleteObjectsCommand(obj_info))
 
         globals.mainWindow.scene.update()
         SetDirty()

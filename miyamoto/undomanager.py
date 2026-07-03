@@ -1352,4 +1352,181 @@ class ChangeZonesCommand(Command):
             mw.scene.addItem(zone)
 
 
+class ReplaceTilesetObjectCommand(Command):
+    """Swap object definition at a tileset index. Tiles stay in place —
+    both old and new defs reference valid tile ranges."""
+    def __init__(self, idx, objNum, old_obj_def, new_obj_def):
+        super().__init__("Replace Object in Tileset")
+        self.idx = idx
+        self.objNum = objNum
+        self.old_obj_def = old_obj_def
+        self.new_obj_def = new_obj_def
+
+    def undo(self):
+        globals.ObjectDefinitions[self.idx][self.objNum] = self.old_obj_def
+        self._sync_instances()
+
+    def redo(self):
+        globals.ObjectDefinitions[self.idx][self.objNum] = self.new_obj_def
+        self._sync_instances()
+
+    def _sync_instances(self):
+        from .items import ObjectItem
+        mw = globals.mainWindow
+        for obj in mw.scene.items():
+            if isinstance(obj, ObjectItem) and obj.tileset == self.idx and obj.type == self.objNum:
+                obj.update()
+        from .tileset import HandleTilesetEdited
+        HandleTilesetEdited()
+        SetDirty()
+        mw.scene.update()
+
+
+class DeleteTilesetObjectCommand(Command):
+    """Full tileset-object deletion: removes definition, reindexes types,
+    replaces orphaned tiles, cleans up ObjectAddedtoEmbedded, clips, and
+    clipboard. Undo fully restores every change."""
+    def __init__(self, idx, objNum):
+        super().__init__("Delete Object from Tileset")
+        self.idx = idx
+        self.objNum = objNum
+
+        # Save old definition BEFORE DeleteObject removes it
+        obj = globals.ObjectDefinitions[idx][objNum]
+        self.old_obj_def = obj
+        self.folderIndex = obj.folderIndex
+        self.objAllIndex = obj.objAllIndex
+
+        # Save every tile this object references
+        self._used_tile_indices = []
+        for row in obj.rows:
+            for tile in row:
+                if len(tile) != 3:
+                    continue
+                if tile == [0, 0, 0]:
+                    continue
+                if idx != (tile[1] >> 8) & 3:
+                    continue
+                tileNum = tile[1] & 0xFF
+                randLen = obj.randByte & 0xF
+                if randLen:
+                    for z in range(randLen):
+                        gi = tileNum + z + idx * 256
+                        if gi not in self._used_tile_indices:
+                            self._used_tile_indices.append(gi)
+                else:
+                    gi = tileNum + idx * 256
+                    if gi not in self._used_tile_indices:
+                        self._used_tile_indices.append(gi)
+
+        # Snapshot tiles at those indices
+        self.replaced_tiles = {}
+        for gi in self._used_tile_indices:
+            self.replaced_tiles[gi] = globals.Tiles[gi]
+
+        # Save tileset load state (in case tileset gets unloaded)
+        tstr = "tileset%d" % idx
+        self._old_tileset_load = getattr(globals.Area, tstr, '')
+
+    # ── helpers ───────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _do_clips(idx, objNum, increment):
+        """Reindex clip types: increment=True → type+1, else type-1."""
+        mw = globals.mainWindow
+        for clip in mw.clipChooser._clips:
+            try:
+                layers, sprites, entrances, locations, paths, nabbitPaths, comments = \
+                    mw.getEncodedObjects(clip.miyamoto_clip, False)
+            except Exception:
+                continue
+            objects = []
+            for layer in layers:
+                for obj in layer:
+                    if obj.tileset == idx:
+                        if increment and obj.type >= objNum:
+                            obj.SetType(idx, obj.type + 1)
+                        elif not increment and obj.type > objNum:
+                            obj.SetType(idx, obj.type - 1)
+                    objects.append(obj)
+            clip.miyamoto_clip = mw.encodeObjects(
+                objects, sprites, entrances, locations, paths, nabbitPaths, comments)
+
+    @staticmethod
+    def _do_clipboard(idx, objNum, increment):
+        """Reindex clipboard types. Same direction as _do_clips."""
+        mw = globals.mainWindow
+        cb = mw.clipboard
+        if cb is None or not (cb.startswith('MiyamotoClip|') and cb.endswith('|%')):
+            return
+        try:
+            layers, sprites, entrances, locations, paths, nabbitPaths, comments = \
+                mw.getEncodedObjects(cb, False)
+        except Exception:
+            return
+        objects = []
+        for layer in layers:
+            for obj in layer:
+                if obj.tileset == idx:
+                    if increment and obj.type >= objNum:
+                        obj.SetType(idx, obj.type + 1)
+                    elif not increment and obj.type > objNum:
+                        obj.SetType(idx, obj.type - 1)
+                objects.append(obj)
+        mw.clipboard = mw.encodeObjects(
+            objects, sprites, entrances, locations, paths, nabbitPaths, comments)
+
+    # ── execution ─────────────────────────────────────────────────────────
+
+    def redo(self):
+        from .tileset import DeleteObject as _deleteObj
+        _deleteObj(self.idx, self.objNum)
+
+    def undo(self):
+        idx, objNum = self.idx, self.objNum
+
+        # 1. Restore object definition at original position
+        globals.ObjectDefinitions[idx].insert(objNum, self.old_obj_def)
+        globals.ObjectDefinitions[idx].pop()  # remove trailing None from del+append
+
+        # 2. Restore tiles
+        for gi, tile in self.replaced_tiles.items():
+            globals.Tiles[gi] = tile
+
+        # 3. Restore tileset load state if it was unloaded
+        tstr = "tileset%d" % idx
+        if not getattr(globals.Area, tstr, ''):
+            setattr(globals.Area, tstr, self._old_tileset_load)
+
+        # 4. Reverse ObjectAddedtoEmbedded removal + reindex
+        area_key = globals.CurrentArea
+        if area_key in globals.ObjectAddedtoEmbedded:
+            for folder in globals.ObjectAddedtoEmbedded[area_key]:
+                for key in list(globals.ObjectAddedtoEmbedded[area_key][folder].keys()):
+                    ts, tn = globals.ObjectAddedtoEmbedded[area_key][folder][key]
+                    if ts == idx and tn >= objNum:
+                        globals.ObjectAddedtoEmbedded[area_key][folder][key] = (ts, tn + 1)
+            if self.folderIndex > -1 and self.folderIndex in globals.ObjectAddedtoEmbedded[area_key]:
+                globals.ObjectAddedtoEmbedded[area_key][self.folderIndex][self.objAllIndex] = (idx, objNum)
+
+        # 5. Reverse scene-layer type reindexing
+        for layer in globals.Area.layers:
+            for obj in layer:
+                if obj.tileset == idx and obj.type >= objNum:
+                    obj.SetType(idx, obj.type + 1)
+
+        # 6. Reverse clip reindexing
+        self._do_clips(idx, objNum, increment=True)
+
+        # 7. Reverse clipboard reindexing
+        self._do_clipboard(idx, objNum, increment=True)
+
+        # 8. Refresh UI
+        from .tileset import HandleTilesetEdited
+        HandleTilesetEdited()
+        SetDirty()
+        if globals.mainWindow:
+            globals.mainWindow.scene.update()
+
+
 
