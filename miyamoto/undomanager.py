@@ -1352,4 +1352,34 @@ class ChangeZonesCommand(Command):
             mw.scene.addItem(zone)
 
 
+class ReplaceTilesetObjectCommand(Command):
+    """Swap object definition at a tileset index. Tiles stay in place —
+    both old and new defs reference valid tile ranges."""
+    def __init__(self, idx, objNum, old_obj_def, new_obj_def):
+        super().__init__("Replace Object in Tileset")
+        self.idx = idx
+        self.objNum = objNum
+        self.old_obj_def = old_obj_def
+        self.new_obj_def = new_obj_def
+
+    def undo(self):
+        globals.ObjectDefinitions[self.idx][self.objNum] = self.old_obj_def
+        self._sync_instances()
+
+    def redo(self):
+        globals.ObjectDefinitions[self.idx][self.objNum] = self.new_obj_def
+        self._sync_instances()
+
+    def _sync_instances(self):
+        from .items import ObjectItem
+        mw = globals.mainWindow
+        for obj in mw.scene.items():
+            if isinstance(obj, ObjectItem) and obj.tileset == self.idx and obj.type == self.objNum:
+                obj.update()
+        from .tileset import HandleTilesetEdited
+        HandleTilesetEdited()
+        SetDirty()
+        mw.scene.update()
+
+
 

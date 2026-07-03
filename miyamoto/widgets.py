@@ -378,12 +378,18 @@ class ObjectPickerWidget(QtWidgets.QListView):
                                                                   'in the tileset')
             return
 
+        # Build undo command with old + new definition
+        old_obj_def = globals.ObjectDefinitions[idx][objNum]
+
         # Delete the selected object (using soft deletion)
         DeleteObject(idx, objNum, True)
 
         # Add the replacement in place of the previously deleted object
-        obj = addObjToTilesetImpl(obj, colls, img, nml, idx, fits)
-        globals.ObjectDefinitions[idx][objNum] = obj
+        new_obj = addObjToTilesetImpl(obj, colls, img, nml, idx, fits)
+        globals.ObjectDefinitions[idx][objNum] = new_obj
+
+        globals.UndoManager.push(
+            undomanager.ReplaceTilesetObjectCommand(idx, objNum, old_obj_def, new_obj))
 
         # Update all instances of the replaced object in the scene
         for obj in globals.mainWindow.scene.items():
@@ -428,12 +434,17 @@ class ObjectPickerWidget(QtWidgets.QListView):
             if result != QtWidgets.QMessageBox.Yes:
                 return
 
+            obj_info = []
             for obj in matchingObjs:
-                obj.delete()
-                obj.setSelected(False)
-                globals.mainWindow.scene.removeItem(obj)
-                globals.mainWindow.levelOverview.update()
-                del obj
+                l_idx = -1
+                for i, layer in enumerate(globals.Area.layers):
+                    if obj in layer:
+                        l_idx = i
+                        break
+                if l_idx != -1:
+                    obj_info.append((obj, l_idx, globals.Area.layers[l_idx].index(obj), obj.zValue()))
+
+            globals.UndoManager.push(undomanager.DeleteObjectsCommand(obj_info))
 
         ## Check if the object is in the clipboard
         inClipboard = False
@@ -528,7 +539,6 @@ class ObjectPickerWidget(QtWidgets.QListView):
             return
 
         dlgTxt = "Are you sure you want to remove all instances of this object from the scene?"
-        dlgTxt += '\nThis cannot be undone!'
 
         result = QtWidgets.QMessageBox.warning(self, 'Confirm', dlgTxt,
                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -536,12 +546,17 @@ class ObjectPickerWidget(QtWidgets.QListView):
         if result != QtWidgets.QMessageBox.Yes:
             return
 
+        obj_info = []
         for obj in matchingObjs:
-            obj.delete()
-            obj.setSelected(False)
-            globals.mainWindow.scene.removeItem(obj)
-            globals.mainWindow.levelOverview.update()
-            del obj
+            l_idx = -1
+            for i, layer in enumerate(globals.Area.layers):
+                if obj in layer:
+                    l_idx = i
+                    break
+            if l_idx != -1:
+                obj_info.append((obj, l_idx, globals.Area.layers[l_idx].index(obj), obj.zValue()))
+
+        globals.UndoManager.push(undomanager.DeleteObjectsCommand(obj_info))
 
         globals.mainWindow.scene.update()
         SetDirty()
