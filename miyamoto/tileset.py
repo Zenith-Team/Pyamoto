@@ -1164,20 +1164,6 @@ def DeleteObject(idx, objNum, soft=False):
                 if obj.type > objNum:
                     obj.SetType(obj.tileset, obj.type - 1)
 
-    for stamp in globals.mainWindow.stampChooser.model.items:
-        layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(stamp.MiyamotoClip, False)
-        objects = []
-
-        for layer in layers:
-            for obj in layer:
-                if obj.tileset == idx:
-                    if obj.type > objNum:
-                        obj.SetType(obj.tileset, obj.type - 1)
-
-                objects.append(obj)
-
-        stamp.MiyamotoClip = globals.mainWindow.encodeObjects(objects, sprites, entrances, locations, paths, nabbitPaths, comments)
-
     for clip in globals.mainWindow.clipChooser._clips:
         try:
             layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
