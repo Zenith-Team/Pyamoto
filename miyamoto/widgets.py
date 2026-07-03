@@ -418,12 +418,22 @@ class ObjectPickerWidget(QtWidgets.QListView):
 
         if matchingObjs:
             where = [('(%d, %d)' % (obj.objx, obj.objy)) for obj in matchingObjs]
-            dlgTxt = "You can't delete this object because there are instances of it at the following coordinates:\n"
+            dlgTxt = "This object has instances at the following coordinates:\n"
             dlgTxt += ', '.join(where)
-            dlgTxt += '\nPlease remove or replace them before deleting this object.'
+            dlgTxt += '\n\nDo you want to delete all instances and proceed?'
 
-            QtWidgets.QMessageBox.critical(self, 'Cannot Delete', dlgTxt)
-            return
+            result = QtWidgets.QMessageBox.warning(self, 'Delete Object', dlgTxt,
+                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if result != QtWidgets.QMessageBox.Yes:
+                return
+
+            for obj in matchingObjs:
+                obj.delete()
+                obj.setSelected(False)
+                globals.mainWindow.scene.removeItem(obj)
+                globals.mainWindow.levelOverview.update()
+                del obj
 
         ## Check if the object is in the clipboard
         inClipboard = False
@@ -456,6 +466,34 @@ class ObjectPickerWidget(QtWidgets.QListView):
             dlgTxt += '\nDo you want to proceed with deleting the object?'
 
             result = QtWidgets.QMessageBox.warning(self, 'Cannot Delete', dlgTxt,
+                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if result != QtWidgets.QMessageBox.Yes:
+                return
+
+        ## Check if the object is in saved clips
+        matchingClips = []
+        for clip in globals.mainWindow.clipChooser._clips:
+            try:
+                layers, sprites, entrances, locations, paths, nabbitPaths, comments = globals.mainWindow.getEncodedObjects(clip.miyamoto_clip, False)
+            except Exception:
+                continue
+            for layer in layers:
+                found = False
+                for obj in layer:
+                    if obj.tileset == idx and obj.type == objNum:
+                        matchingClips.append(clip.name)
+                        found = True
+                        break
+                if found:
+                    break
+
+        if matchingClips:
+            dlgTxt = "This object is referenced by the following saved clips:\n"
+            dlgTxt += ', '.join(matchingClips)
+            dlgTxt += '\n\nDeleting it may break these clips. Do you want to proceed?'
+
+            result = QtWidgets.QMessageBox.warning(self, 'Delete Object', dlgTxt,
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
             if result != QtWidgets.QMessageBox.Yes:
