@@ -183,7 +183,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         else:
             act = QtWidgets.QAction(text, self)
 
-        if shortcut is not None: act.setShortcut(shortcut)
+        if shortcut is not None:
+            if isinstance(shortcut, list):
+                act.setShortcuts(shortcut)
+            else:
+                act.setShortcut(shortcut)
         if statustext is not None: act.setStatusTip(statustext)
         if toggle: act.setCheckable(True)
         if function is not None: act.triggered.connect(function)
@@ -511,7 +515,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             'redo', self.HandleRedo, GetIcon('redo'),
             'Redo',
             'Redo the last undone action',
-            QtGui.QKeySequence.Redo,
+            [QtGui.QKeySequence.Redo, QtGui.QKeySequence('Ctrl+Shift+Z')],
         )
 
         self.CreateAction(
