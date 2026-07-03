@@ -17,6 +17,12 @@ if _root not in sys.path:
 if sys.platform.startswith('linux') and 'QT_QPA_PLATFORM' not in os.environ:
     os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
+if '--update-helper' in sys.argv:
+    from miyamoto.updater_helper import run_helper
+    sys.argv.remove('--update-helper')
+    run_helper()
+    sys.exit(0)
+
 from miyamoto.app import main
 
 if __name__ == '__main__':

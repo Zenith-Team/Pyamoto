@@ -3062,8 +3062,10 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         # Get the Launch Behavior setting
         setSetting('LaunchBehavior', dlg.generalTab.launchBehavior.currentIndex())
 
-        # Check for updates
-        setSetting('CheckForUpdates', dlg.generalTab.checkForUpdates.isChecked())
+        # Update channel
+        from .updater import _CHANNEL_VALUES
+        idx = dlg.generalTab.updateChannel.currentIndex()
+        setSetting('UpdateChannel', _CHANNEL_VALUES[idx] if 0 <= idx < len(_CHANNEL_VALUES) else 'stable')
 
         # Get the Editor preferences
         setSetting('ShowActorNotes', dlg.editorTab.showActorNotes.isChecked())

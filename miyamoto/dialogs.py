@@ -22,6 +22,7 @@ from .bytes import bytes_to_string, to_bytes
 from . import globals
 from .items import ZoneItem
 from .misc import HexSpinBox, BGName, setting, setSetting, hasLevelNameSources
+from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES
 from .ui import MiyamotoTheme, toQColor, GetIcon, createHorzLine
 from .widgets import LoadingTab, TilesetsTab
 from .verifications import SetDirty
@@ -1686,9 +1687,11 @@ class PreferencesDialog(QtWidgets.QDialog):
                 self.launchBehavior.addItems(["Show welcome page", "Open last level"])
                 self.launchBehavior.setCurrentIndex(setting('LaunchBehavior', 0))
 
-                _update_label = 'Check for updates (%s)' % globals.MiyamotoReleaseType
-                self.checkForUpdates = QtWidgets.QCheckBox(_update_label)
-                self.checkForUpdates.setChecked(setting('CheckForUpdates', True))
+                self.updateChannel = QtWidgets.QComboBox()
+                self.updateChannel.addItems(_CHANNEL_LABELS)
+                cur = setting('UpdateChannel', 'stable')
+                idx = _CHANNEL_VALUES.index(cur) if cur in _CHANNEL_VALUES else 0
+                self.updateChannel.setCurrentIndex(idx)
 
                 gen_form = QtWidgets.QFormLayout()
                 gen_form.addRow('File opening behavior:', self.openMethod)
@@ -1711,9 +1714,10 @@ class PreferencesDialog(QtWidgets.QDialog):
                     self.useOuterSarcFormat.toggled.connect(
                         lambda checked: self.modifyInnerName.setVisible(checked))
 
+                gen_form.addRow('Update channel:', self.updateChannel)
+
                 gen_lay = QtWidgets.QVBoxLayout()
                 gen_lay.addLayout(gen_form)
-                gen_lay.addWidget(self.checkForUpdates)
                 gen_lay.addWidget(self.useOuterSarcFormat)
                 if not globals.IsNSMBUDX:
                     gen_lay.addWidget(self.modifyInnerName)

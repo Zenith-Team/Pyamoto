@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Pyamoto update checker — checks GitHub releases for available updates.
+# Pyamoto auto-updater — downloads and applies full binary updates.
 
 import json
+import os
+import platform
+import subprocess
+import sys
 import threading
 import urllib.request
-import webbrowser
 
 from PyQt5 import QtCore, QtWidgets
 
 from . import globals
-from .misc import setting
+from .misc import setting, setSetting
 
 GITHUB_REPO = 'Zenith-Team/Pyamoto'
 _API_BASE = f'https://api.github.com/repos/{GITHUB_REPO}/releases'
+_API_LATEST = f'{_API_BASE}/latest'
 _API_RECENT = f'{_API_BASE}?per_page=10'
-DOWNLOADS_URL = f'https://github.com/{GITHUB_REPO}/releases'
 
 _HEADERS = {
     'Accept': 'application/vnd.github+json',
@@ -24,18 +27,75 @@ _HEADERS = {
     'User-Agent': 'Pyamoto-updater',
 }
 
+_OS_MAP = {
+    'Darwin': 'macOS-x86_64',
+    'Windows': 'Windows-amd64',
+    'Linux': 'Linux-x86_64',
+}
+
+CHANNEL_STABLE = 'stable'
+CHANNEL_NIGHTLY = 'nightly'
+CHANNEL_OFF = 'off'
+
+_CHANNEL_LABELS = ['Stable', 'Nightly', 'Off']
+_CHANNEL_VALUES = [CHANNEL_STABLE, CHANNEL_NIGHTLY, CHANNEL_OFF]
+
+
+def _current_channel():
+    val = setting('UpdateChannel', None)
+    if val is not None:
+        return val if val in _CHANNEL_VALUES else CHANNEL_STABLE
+    old = setting('CheckForUpdates', None)
+    if old is False:
+        return CHANNEL_OFF
+    return CHANNEL_STABLE
+
+
+def _install_dir():
+    exe = os.path.realpath(sys.executable)
+    if platform.system() == 'Darwin':
+        parts = exe.split(os.sep)
+        for i, part in enumerate(parts):
+            if part.endswith('.app'):
+                return os.sep.join(parts[:i + 1])
+        return os.path.dirname(exe)
+    else:
+        return os.path.dirname(exe)
+
+
+def _executable_name():
+    if platform.system() == 'Windows':
+        return 'Pyamoto.exe'
+    return 'Pyamoto'
+
+
+def _asset_url(release_data):
+    os_name = _OS_MAP.get(platform.system())
+    if not os_name:
+        return None
+    ver = release_data['tag_name'].lstrip('v')
+    expected = f'pyamoto_v{ver}_{os_name}.zip'
+    for asset in release_data.get('assets', []):
+        if asset['name'] == expected:
+            return asset['browser_download_url']
+    for asset in release_data.get('assets', []):
+        if asset['name'].endswith('.zip'):
+            return asset['browser_download_url']
+    return None
+
 
 class _UpdateChecker(QtCore.QObject):
-    update_found = QtCore.pyqtSignal(str, str)  # current_version, latest_version
+    update_found = QtCore.pyqtSignal(str, str, str)
 
     def start(self):
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self):
         try:
-            if globals.MiyamotoReleaseType == 'nightly':
+            channel = _current_channel()
+            if channel == CHANNEL_NIGHTLY:
                 self._check_nightly()
-            else:
+            elif channel == CHANNEL_STABLE:
                 self._check_release()
         except Exception:
             pass
@@ -45,36 +105,180 @@ class _UpdateChecker(QtCore.QObject):
         with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read())
 
-    def _check_nightly(self):
-        releases = self._fetch(_API_RECENT)
-        nightlies = [r for r in releases
-                     if r.get('prerelease') and r['tag_name'].startswith('nightly-')]
-        if not nightlies:
-            return
-        # Sort by tag name (lexicographic == commit-chronological order) so a
-        # slow build from an older commit can't masquerade as the latest one.
-        # Tag format: nightly-YYYY-MM-DDTHH-MM-SS-<sha>
-        nightlies.sort(key=lambda r: r['tag_name'], reverse=True)
-        latest_sha = nightlies[0]['tag_name'].rsplit('-', 1)[-1]
-        current_sha = globals.MiyamotoVersion
-        if latest_sha != current_sha:
-            self.update_found.emit(current_sha, latest_sha)
-
     def _check_release(self):
-        latest = self._fetch(f'{_API_BASE}/latest')
-        latest_ver = latest['tag_name'].lstrip('v')
+        data = self._fetch(_API_LATEST)
+        latest_ver = data['tag_name'].lstrip('v')
         current_ver = globals.MiyamotoVersion.lstrip('v')
         if latest_ver != current_ver:
-            self.update_found.emit(current_ver, latest_ver)
+            url = _asset_url(data)
+            if url:
+                self.update_found.emit(current_ver, latest_ver, url)
+
+    def _check_nightly(self):
+        releases = self._fetch(_API_RECENT)
+        nightlies = [
+            r for r in releases
+            if r.get('prerelease') and r['tag_name'].startswith('nightly-')
+        ]
+        if not nightlies:
+            return
+        nightlies.sort(key=lambda r: r['tag_name'], reverse=True)
+        latest = nightlies[0]
+        latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
+        current_sha = globals.MiyamotoVersion
+        if latest_sha != current_sha:
+            url = _asset_url(latest)
+            if url:
+                self.update_found.emit(current_sha, latest_sha, url)
 
 
-# Kept alive for the duration of the process
-_checker: '_UpdateChecker | None' = None
+class _UpdateDialog(QtWidgets.QDialog):
+    def __init__(self, current, latest, download_url, parent=None):
+        super().__init__(parent)
+        self._download_url = download_url
+        self._zip_path = None
+        self._cancel = False
+        self._tmp_dir = None
+
+        is_nightly = globals.MiyamotoReleaseType == 'nightly'
+        kind = 'Nightly ' if is_nightly else ''
+        self.setWindowTitle(f'Pyamoto {kind}Update Available')
+        self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
+        self.setFixedWidth(440)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setSpacing(12)
+        root.setContentsMargins(24, 22, 24, 20)
+
+        headline = QtWidgets.QLabel(f'Update: v{current} \u2192 v{latest}')
+        hf = headline.font()
+        hf.setPointSize(hf.pointSize() + 3)
+        hf.setBold(True)
+        headline.setFont(hf)
+        root.addWidget(headline)
+
+        warn = QtWidgets.QLabel(
+            'Project data will be overwritten. '
+            '<b>User data</b> (patches, settings, downloads) stays untouched.'
+        )
+        warn.setWordWrap(True)
+        root.addWidget(warn)
+
+        self._progress = QtWidgets.QProgressBar()
+        self._progress.setVisible(False)
+        root.addWidget(self._progress)
+
+        self._status = QtWidgets.QLabel()
+        self._status.setVisible(False)
+        root.addWidget(self._status)
+
+        self._codesign_cb = None
+        if platform.system() == 'Darwin':
+            self._codesign_cb = QtWidgets.QCheckBox('Ad-hoc re-sign bundle')
+            self._codesign_cb.setChecked(True)
+            self._codesign_cb.setToolTip(
+                'Run codesign --force --deep --sign - on updated app. '
+                'Reduces Gatekeeper warnings.'
+            )
+            root.addWidget(self._codesign_cb)
+
+        btn_box = QtWidgets.QDialogButtonBox()
+        self._cancel_btn = btn_box.addButton('Cancel', QtWidgets.QDialogButtonBox.RejectRole)
+        self._cancel_btn.setAutoDefault(False)
+        self._dl_btn = btn_box.addButton('Download & Update', QtWidgets.QDialogButtonBox.AcceptRole)
+        self._dl_btn.setDefault(True)
+        btn_box.accepted.connect(self._on_download)
+        btn_box.rejected.connect(self.reject)
+        root.addWidget(btn_box)
+
+    def _on_download(self):
+        self._dl_btn.setEnabled(False)
+        self._cancel_btn.setText('Cancel')
+        self._cancel_btn.setEnabled(True)
+        self._progress.setVisible(True)
+        self._status.setVisible(True)
+        self._status.setText('Downloading update...')
+        try:
+            self._dl_btn.clicked.disconnect()
+        except TypeError:
+            pass
+        threading.Thread(target=self._download_update, daemon=True).start()
+
+    def _download_update(self):
+        import tempfile
+        try:
+            req = urllib.request.Request(self._download_url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                total = int(resp.headers.get('Content-Length', 0))
+                chunk = 8192
+                data = bytearray()
+                while not self._cancel:
+                    part = resp.read(chunk)
+                    if not part:
+                        break
+                    data.extend(part)
+                    if total:
+                        pct = int(len(data) / total * 100)
+                        self._progress.setValue(pct)
+
+            if self._cancel:
+                return
+
+            self._tmp_dir = tempfile.mkdtemp(prefix='pyamoto_update_')
+            self._zip_path = os.path.join(self._tmp_dir, 'update.zip')
+            with open(self._zip_path, 'wb') as f:
+                f.write(data)
+
+            self._status.setText('Download complete!')
+            self._progress.setValue(100)
+            self._dl_btn.setText('Restart & Update')
+            self._dl_btn.setEnabled(True)
+            self._cancel_btn.setText('Cancel')
+            self._dl_btn.clicked.connect(self._on_restart)
+        except Exception as e:
+            self._status.setText(f'Download failed: {e}')
+            self._dl_btn.setText('Retry')
+            self._dl_btn.setEnabled(True)
+            self._dl_btn.clicked.connect(self._on_download)
+
+    def _on_restart(self):
+        if not self._zip_path or not os.path.exists(self._zip_path):
+            return
+        codesign = self._codesign_cb.isChecked() if self._codesign_cb else False
+        self._spawn_helper(codesign)
+        QtWidgets.QApplication.quit()
+
+    def _spawn_helper(self, codesign):
+        install_dir = _install_dir()
+        exe_name = _executable_name()
+        args = [
+            sys.executable,
+            '--update-helper',
+            '--zip', self._zip_path,
+            '--install-dir', install_dir,
+            '--exe', exe_name,
+            '--platform', platform.system().lower(),
+            '--wait-pid', str(os.getpid()),
+        ]
+        if codesign:
+            args.append('--codesign')
+        subprocess.Popen(args)
+
+    def reject(self):
+        self._cancel = True
+        if self._tmp_dir and os.path.isdir(self._tmp_dir):
+            import shutil
+            shutil.rmtree(self._tmp_dir, ignore_errors=True)
+        super().reject()
+
+
+_checker = None
 
 
 def check_for_updates():
-    """Start a background update check if the user has it enabled."""
-    if not setting('CheckForUpdates', True):
+    channel = _current_channel()
+    if channel == CHANNEL_OFF:
         return
     global _checker
     _checker = _UpdateChecker()
@@ -82,82 +286,6 @@ def check_for_updates():
     _checker.start()
 
 
-class _UpdateDialog(QtWidgets.QDialog):
-    def __init__(self, current: str, latest: str, is_nightly: bool, parent=None):
-        super().__init__(parent)
-        kind = 'Nightly ' if is_nightly else ''
-        article = 'A' if is_nightly else 'An'
-        self.setWindowTitle(f'Pyamoto {kind}Update Available')
-        self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.setFixedWidth(380)
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Fixed,
-            QtWidgets.QSizePolicy.Minimum,
-        )
-
-        root = QtWidgets.QVBoxLayout(self)
-        root.setSpacing(14)
-        root.setContentsMargins(24, 22, 24, 20)
-
-        # ── Headline ────────────────────────────────────────────────────────
-        headline = QtWidgets.QLabel(f'{article} {kind.lower()}update is available')
-        headline_font = headline.font()
-        headline_font.setPointSize(headline_font.pointSize() + 3)
-        headline_font.setBold(True)
-        headline.setFont(headline_font)
-        root.addWidget(headline)
-
-        # ── Version pill ─────────────────────────────────────────────────────
-        pill = QtWidgets.QFrame()
-        pill.setObjectName('updatePill')
-        pill.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        # Object-name selector ensures the border only hits the pill frame,
-        # not any child labels that would otherwise inherit it.
-        pill.setStyleSheet(
-            '#updatePill {'
-            '  background: palette(base);'
-            '  border: 1px solid palette(mid);'
-            '  border-radius: 8px;'
-            '}'
-        )
-
-        bold_font = self.font()
-        bold_font.setBold(True)
-
-        cur_lbl = QtWidgets.QLabel(current)
-        cur_lbl.setFont(bold_font)
-        cur_lbl.setAlignment(QtCore.Qt.AlignCenter)
-
-        arrow_lbl = QtWidgets.QLabel('→')
-        arrow_lbl.setAlignment(QtCore.Qt.AlignCenter)
-
-        new_lbl = QtWidgets.QLabel(latest)
-        new_lbl.setFont(bold_font)
-        new_lbl.setAlignment(QtCore.Qt.AlignCenter)
-
-        pill_layout = QtWidgets.QHBoxLayout(pill)
-        pill_layout.setContentsMargins(16, 10, 16, 10)
-        pill_layout.setSpacing(6)
-        pill_layout.addStretch()
-        pill_layout.addWidget(cur_lbl)
-        pill_layout.addWidget(arrow_lbl)
-        pill_layout.addWidget(new_lbl)
-        pill_layout.addStretch()
-        root.addWidget(pill)
-
-        # ── Buttons ──────────────────────────────────────────────────────────
-        btn_box = QtWidgets.QDialogButtonBox()
-        cancel = btn_box.addButton('Cancel', QtWidgets.QDialogButtonBox.RejectRole)
-        cancel.setAutoDefault(False)
-        download = btn_box.addButton('Go to downloads', QtWidgets.QDialogButtonBox.AcceptRole)
-        download.setDefault(True)
-        btn_box.accepted.connect(self.accept)
-        btn_box.rejected.connect(self.reject)
-        root.addWidget(btn_box)
-
-
-def _show_dialog(current: str, latest: str):
-    is_nightly = globals.MiyamotoReleaseType == 'nightly'
-    dlg = _UpdateDialog(current, latest, is_nightly, globals.mainWindow)
-    if dlg.exec_() == QtWidgets.QDialog.Accepted:
-        webbrowser.open(DOWNLOADS_URL)
+def _show_dialog(current, latest, download_url):
+    dlg = _UpdateDialog(current, latest, download_url, globals.mainWindow)
+    dlg.exec_()
