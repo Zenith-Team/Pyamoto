@@ -70,6 +70,20 @@ def _executable_name():
     return 'Pyamoto'
 
 
+def _is_skipped(version):
+    skipped = setting('SkippedUpdates', [])
+    return isinstance(skipped, list) and version in skipped
+
+
+def _skip_version(version):
+    skipped = setting('SkippedUpdates', [])
+    if not isinstance(skipped, list):
+        skipped = []
+    if version not in skipped:
+        skipped.append(version)
+    setSetting('SkippedUpdates', skipped)
+
+
 def _asset_url(release_data):
     os_name = _OS_MAP.get(platform.system())
     if not os_name:
@@ -118,7 +132,7 @@ class _UpdateChecker(QtCore.QObject):
         data = self._fetch(_API_LATEST)
         latest_ver = data['tag_name'].lstrip('v')
         current_ver = globals.MiyamotoVersion.lstrip('v')
-        if latest_ver != current_ver:
+        if latest_ver != current_ver and not _is_skipped(latest_ver):
             url = _asset_url(data)
             if url:
                 self._found = True
@@ -136,7 +150,7 @@ class _UpdateChecker(QtCore.QObject):
         latest = nightlies[0]
         latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
         current_sha = globals.MiyamotoVersion
-        if latest_sha != current_sha:
+        if latest_sha != current_sha and not _is_skipped(latest_sha):
             url = _asset_url(latest)
             if url:
                 self._found = True
@@ -147,6 +161,7 @@ class _UpdateDialog(QtWidgets.QDialog):
     def __init__(self, current, latest, download_url, parent=None):
         super().__init__(parent)
         self._download_url = download_url
+        self._latest = latest
         self._zip_path = None
         self._cancel = False
         self._tmp_dir = None
@@ -170,7 +185,7 @@ class _UpdateDialog(QtWidgets.QDialog):
         root.addWidget(headline)
 
         warn = QtWidgets.QLabel(
-            'Any modified files in the pyamoto may be overwritten. '
+            'Modified files in the pyamoto directory may be overwritten. '
             'Your userdata folder (containing patches, settings, themes) stays untouched.'
         )
         warn.setWordWrap(True)
@@ -204,6 +219,9 @@ class _UpdateDialog(QtWidgets.QDialog):
             root.addLayout(codesign_row)
 
         btn_box = QtWidgets.QDialogButtonBox()
+        skip_btn = btn_box.addButton('Skip this version', QtWidgets.QDialogButtonBox.DestructiveRole)
+        skip_btn.setAutoDefault(False)
+        skip_btn.clicked.connect(self._on_skip)
         self._cancel_btn = btn_box.addButton('Cancel', QtWidgets.QDialogButtonBox.RejectRole)
         self._cancel_btn.setAutoDefault(False)
         self._dl_btn = btn_box.addButton('Download & Update', QtWidgets.QDialogButtonBox.AcceptRole)
@@ -211,6 +229,10 @@ class _UpdateDialog(QtWidgets.QDialog):
         btn_box.accepted.connect(self._on_download)
         btn_box.rejected.connect(self.reject)
         root.addWidget(btn_box)
+
+    def _on_skip(self):
+        _skip_version(self._latest)
+        self.reject()
 
     def _on_download(self):
         self._dl_btn.setEnabled(False)
