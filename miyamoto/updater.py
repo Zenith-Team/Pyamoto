@@ -105,6 +105,9 @@ class _UpdateChecker(QtCore.QObject):
             pass
         if not self._found:
             self.up_to_date.emit()
+        global _checker
+        if _checker is self:
+            _checker = None
 
     def _fetch(self, url):
         req = urllib.request.Request(url, headers=_HEADERS)
@@ -316,15 +319,11 @@ def _start_check(channel, manual=False):
 
 
 def _on_update_found(current, latest, download_url):
-    global _checker
-    _checker = None
     dlg = _UpdateDialog(current, latest, download_url, globals.mainWindow)
     dlg.exec_()
 
 
 def _on_up_to_date():
-    global _checker
-    _checker = None
     msg = QtWidgets.QMessageBox(globals.mainWindow)
     msg.setWindowTitle('Pyamoto')
     msg.setText('Software is up to date')
