@@ -125,7 +125,7 @@ class _UpdateChecker(QtCore.QObject):
         ]
         if not nightlies:
             return
-        nightlies.sort(key=lambda r: r['tag_name'], reverse=True)
+        nightlies.sort(key=lambda r: r.get('published_at', r['created_at']), reverse=True)
         latest = nightlies[0]
         latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
         current_sha = globals.MiyamotoVersion
