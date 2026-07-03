@@ -46,8 +46,6 @@ def _default_channel():
 
 
 def _current_channel():
-    if setting('CheckForUpdates', True) is False:
-        return CHANNEL_OFF
     val = setting('UpdateChannel', None)
     if val is not None:
         return val if val in _CHANNEL_VALUES else CHANNEL_STABLE
@@ -89,19 +87,24 @@ def _asset_url(release_data):
 
 class _UpdateChecker(QtCore.QObject):
     update_found = QtCore.pyqtSignal(str, str, str)
+    up_to_date = QtCore.pyqtSignal()
 
-    def start(self):
+    def start(self, channel=None):
+        self._channel_override = channel
+        self._found = False
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self):
         try:
-            channel = _current_channel()
+            channel = self._channel_override or _current_channel()
             if channel == CHANNEL_NIGHTLY:
                 self._check_nightly()
             elif channel == CHANNEL_STABLE:
                 self._check_release()
         except Exception:
             pass
+        if not self._found:
+            self.up_to_date.emit()
 
     def _fetch(self, url):
         req = urllib.request.Request(url, headers=_HEADERS)
@@ -115,6 +118,7 @@ class _UpdateChecker(QtCore.QObject):
         if latest_ver != current_ver:
             url = _asset_url(data)
             if url:
+                self._found = True
                 self.update_found.emit(current_ver, latest_ver, url)
 
     def _check_nightly(self):
@@ -132,6 +136,7 @@ class _UpdateChecker(QtCore.QObject):
         if latest_sha != current_sha:
             url = _asset_url(latest)
             if url:
+                self._found = True
                 self.update_found.emit(current_sha, latest_sha, url)
 
 
@@ -283,12 +288,37 @@ def check_for_updates():
     channel = _current_channel()
     if channel == CHANNEL_OFF:
         return
+    _start_check(channel)
+
+
+def check_for_updates_now(channel):
+    _start_check(channel, manual=True)
+
+
+def _start_check(channel, manual=False):
     global _checker
+    if _checker is not None:
+        return
     _checker = _UpdateChecker()
-    _checker.update_found.connect(_show_dialog)
-    _checker.start()
+    _checker.update_found.connect(_on_update_found)
+    if manual:
+        _checker.up_to_date.connect(_on_up_to_date)
+    _checker.start(channel)
 
 
-def _show_dialog(current, latest, download_url):
+def _on_update_found(current, latest, download_url):
+    global _checker
+    _checker = None
     dlg = _UpdateDialog(current, latest, download_url, globals.mainWindow)
     dlg.exec_()
+
+
+def _on_up_to_date():
+    global _checker
+    _checker = None
+    msg = QtWidgets.QMessageBox(globals.mainWindow)
+    msg.setWindowTitle('Pyamoto')
+    msg.setText('Software is up to date')
+    msg.setInformativeText(f'v{globals.MiyamotoVersion} {globals.MiyamotoReleaseType}')
+    msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+    msg.exec_()

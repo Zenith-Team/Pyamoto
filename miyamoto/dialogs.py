@@ -29,7 +29,7 @@ from .bytes import bytes_to_string, to_bytes
 from . import globals
 from .items import ZoneItem
 from .misc import HexSpinBox, BGName, setting, setSetting, hasLevelNameSources
-from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES, _default_channel
+from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES, _default_channel, check_for_updates_now
 from .ui import MiyamotoTheme, toQColor, GetIcon, createHorzLine
 from .widgets import LoadingTab, TilesetsTab
 from .verifications import SetDirty
@@ -1830,18 +1830,24 @@ class PreferencesDialog(QtWidgets.QDialog):
                 self.launchBehavior.addItems(["Show welcome page", "Open last level"])
                 self.launchBehavior.setCurrentIndex(setting('LaunchBehavior', 0))
 
-                self.checkForUpdates = QtWidgets.QCheckBox('Check for updates')
-                self.checkForUpdates.setChecked(setting('CheckForUpdates', True))
                 self.updateChannel = QtWidgets.QComboBox()
                 self.updateChannel.addItems(_CHANNEL_LABELS)
                 cur = setting('UpdateChannel', _default_channel())
                 idx = _CHANNEL_VALUES.index(cur) if cur in _CHANNEL_VALUES else 0
                 self.updateChannel.setCurrentIndex(idx)
 
+                self.checkNowBtn = QtWidgets.QPushButton('Check for updates')
+                self.checkNowBtn.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+                self.checkNowBtn.clicked.connect(
+                    lambda: check_for_updates_now(
+                        _CHANNEL_VALUES[self.updateChannel.currentIndex()]
+                    )
+                )
+
                 update_row = QtWidgets.QHBoxLayout()
                 update_row.setSpacing(8)
-                update_row.addWidget(self.checkForUpdates)
-                update_row.addWidget(self.updateChannel)
+                update_row.addWidget(self.updateChannel, 1)
+                update_row.addWidget(self.checkNowBtn)
 
                 self.useOuterSarcFormat = QtWidgets.QCheckBox('Use Outer SARC Format')
                 self.useOuterSarcFormat.setToolTip(
