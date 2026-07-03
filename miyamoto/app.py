@@ -3264,9 +3264,12 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         Launches a new instance of Miyamoto with the given file
         """
         python_exe = sys.executable
-        script_path = os.path.abspath(__file__)
+        script_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'pyamoto.py',
+        )
         try:
-            subprocess.Popen([python_exe, script_path, filepath])
+            subprocess.Popen([python_exe, script_path, '-level', filepath])
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Could not launch new window: {str(e)}")
         
