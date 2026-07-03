@@ -41,6 +41,10 @@ _CHANNEL_LABELS = ['Stable', 'Nightly', 'Off']
 _CHANNEL_VALUES = [CHANNEL_STABLE, CHANNEL_NIGHTLY, CHANNEL_OFF]
 
 
+def _default_channel():
+    return CHANNEL_NIGHTLY if globals.MiyamotoReleaseType == 'nightly' else CHANNEL_STABLE
+
+
 def _current_channel():
     val = setting('UpdateChannel', None)
     if val is not None:
@@ -48,7 +52,7 @@ def _current_channel():
     old = setting('CheckForUpdates', None)
     if old is False:
         return CHANNEL_OFF
-    return CHANNEL_STABLE
+    return _default_channel()
 
 
 def _install_dir():

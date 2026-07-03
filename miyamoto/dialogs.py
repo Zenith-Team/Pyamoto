@@ -29,7 +29,7 @@ from .bytes import bytes_to_string, to_bytes
 from . import globals
 from .items import ZoneItem
 from .misc import HexSpinBox, BGName, setting, setSetting, hasLevelNameSources
-from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES
+from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES, _default_channel
 from .ui import MiyamotoTheme, toQColor, GetIcon, createHorzLine
 from .widgets import LoadingTab, TilesetsTab
 from .verifications import SetDirty
@@ -1832,7 +1832,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                 self.updateChannel = QtWidgets.QComboBox()
                 self.updateChannel.addItems(_CHANNEL_LABELS)
-                cur = setting('UpdateChannel', 'stable')
+                cur = setting('UpdateChannel', _default_channel())
                 idx = _CHANNEL_VALUES.index(cur) if cur in _CHANNEL_VALUES else 0
                 self.updateChannel.setCurrentIndex(idx)
 
