@@ -14,8 +14,15 @@
 ############ Imports ############
 
 import os
+import re
+import json
+import shutil
+import zipfile
+
+import requests
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QThread, pyqtSignal
 Qt = QtCore.Qt
 
 from .bytes import bytes_to_string, to_bytes
@@ -1578,6 +1585,142 @@ class AreaChoiceDialog(QtWidgets.QDialog):
         self.setLayout(mainLayout)
 
 
+# ── Download/Update worker threads ──────────────────────────────────────────
+
+class _DownloadModWorker(QThread):
+    progress = pyqtSignal(int)      # 0-100; -1 = extracting
+    statusMsg = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)  # success, error_message
+
+    def __init__(self, url, tmp_path, extract_dir):
+        super().__init__()
+        self.url = url
+        self.tmp_path = tmp_path
+        self.extract_dir = extract_dir
+        self._cancel = False
+
+    def cancel(self):
+        self._cancel = True
+
+    def run(self):
+        try:
+            self.statusMsg.emit("Connecting\u2026")
+            with requests.get(self.url, stream=True, timeout=30) as resp:
+                resp.raise_for_status()
+                total = int(resp.headers.get('Content-Length', 0))
+                done = 0
+                self.statusMsg.emit("Downloading\u2026")
+                with open(self.tmp_path, 'wb') as f:
+                    for chunk in resp.iter_content(65536):
+                        if self._cancel:
+                            break
+                        f.write(chunk)
+                        done += len(chunk)
+                        if total:
+                            self.progress.emit(int(done * 100 / total))
+            if self._cancel:
+                _safe_remove(self.tmp_path)
+                self.finished.emit(False, "Cancelled")
+                return
+            self.statusMsg.emit("Extracting\u2026")
+            self.progress.emit(-1)
+            os.makedirs(self.extract_dir, exist_ok=True)
+            with zipfile.ZipFile(self.tmp_path, 'r') as zf:
+                zf.extractall(self.extract_dir)
+            _safe_remove(self.tmp_path)
+            self.finished.emit(True, "")
+        except Exception as e:
+            _safe_remove(self.tmp_path)
+            self.finished.emit(False, str(e))
+
+
+class _CheckUpdateWorker(QThread):
+    finished = pyqtSignal(object)  # dict or None
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+
+    def run(self):
+        try:
+            # Parse GitHub repo from URL
+            m = re.match(r'https?://github\.com/([^/]+)/([^/]+)', self.url)
+            if not m:
+                self.finished.emit(None)
+                return
+            owner, repo = m.group(1), m.group(2).rstrip('/').replace('.git', '')
+            api = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
+            resp = requests.get(api, timeout=10)
+            if resp.status_code != 200:
+                self.finished.emit(None)
+                return
+            data = resp.json()
+            tag = data.get('tag_name', '')
+            # Find patch.zip asset
+            download_url = None
+            for asset in data.get('assets', []):
+                if asset['name'] == 'patch.zip':
+                    download_url = asset['browser_download_url']
+                    break
+            self.finished.emit({
+                'version': tag.lstrip('v'),
+                'tag': tag,
+                'download_url': download_url,
+                'name': data.get('name', ''),
+            })
+        except Exception:
+            self.finished.emit(None)
+
+
+def _safe_remove(path):
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+# ── Helpers for GitHub URL resolution ───────────────────────────────────────
+
+def _resolve_github_url(url):
+    """Resolve a GitHub URL to (download_url, name, version) or None.
+    Tries releases first, then repo archive."""
+    m = re.match(r'https?://github\.com/([^/]+)/([^/]+)', url)
+    if not m:
+        return None
+    owner, repo = m.group(1), m.group(2).rstrip('/').replace('.git', '')
+    # Try latest release
+    try:
+        api = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
+        resp = requests.get(api, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            tag = data.get('tag_name', '').lstrip('v')
+            for asset in data.get('assets', []):
+                if asset['name'] == 'patch.zip':
+                    return {
+                        'download_url': asset['browser_download_url'],
+                        'name': data.get('name', repo),
+                        'version': tag,
+                    }
+    except Exception:
+        pass
+    # Fallback to repo archive (main branch)
+    return {
+        'download_url': f'https://github.com/{owner}/{repo}/archive/refs/heads/main.zip',
+        'name': repo,
+        'version': '0.0',
+    }
+
+
+def _find_main_xml_in_extracted(extract_dir):
+    """Walk extract_dir to find a main.xml, return (root_dir, main_xml_dir)."""
+    for root, dirs, files in os.walk(extract_dir):
+        if 'main.xml' in files:
+            return root
+    return None
+
+
 class PreferencesDialog(QtWidgets.QDialog):
     """
     Dialog which lets you customize Miyamoto
@@ -2043,6 +2186,10 @@ class PreferencesDialog(QtWidgets.QDialog):
                 _act_link = add_mod_menu.addAction(
                     GetIcon('folderpath'), 'Link Mod Folder…', lambda: _link_mod())
                 _act_link.setToolTip('Symlink an external folder. Any edits will affect the source folder.')
+                add_mod_menu.addSeparator()
+                _act_dl = add_mod_menu.addAction(
+                    GetIcon('download'), 'Download Patch from URL…', lambda: _download_mod_from_url())
+                _act_dl.setToolTip('Download a mod from a GitHub repo or direct .zip URL.')
 
                 new_mod_btn = QtWidgets.QToolButton()
                 new_mod_btn.setIcon(GetIcon('add'))
@@ -2190,6 +2337,8 @@ class PreferencesDialog(QtWidgets.QDialog):
                     item.setData(Qt.UserRole, folder)
                     item.setData(Qt.UserRole + 1, def_.description)
                     item.setData(Qt.UserRole + 2, def_.error if is_broken else None)
+                    item.setData(Qt.UserRole + 3, getattr(def_, 'patchReleaseUrl', None))
+                    item.setData(Qt.UserRole + 4, getattr(def_, 'version', None))
                     if is_broken:
                         item.setForeground(QtGui.QColor('#cc3333'))
                         item.setToolTip(f'⚠ {def_.error}')
@@ -2205,6 +2354,8 @@ class PreferencesDialog(QtWidgets.QDialog):
                         item = QtWidgets.QListWidgetItem(def_.name if hasattr(def_, 'name') else folder)
                         item.setData(Qt.UserRole, folder)
                         item.setData(Qt.UserRole + 1, getattr(def_, 'description', ''))
+                        item.setData(Qt.UserRole + 3, getattr(def_, 'patchReleaseUrl', None))
+                        item.setData(Qt.UserRole + 4, getattr(def_, 'version', None))
                         active_list.addItem(item)
 
                 # ── Signals ───────────────────────────────────────────────────
@@ -2312,12 +2463,18 @@ class PreferencesDialog(QtWidgets.QDialog):
                         root_x = _ET.parse(main_xml).getroot()
                         mod_name = root_x.get('name', slug)
                         mod_desc = root_x.get('description', '')
+                        mod_url = root_x.get('patchReleaseUrl', '')
+                        mod_ver = root_x.get('version', '')
                     except Exception:
                         mod_name = slug
                         mod_desc = ''
+                        mod_url = ''
+                        mod_ver = ''
                     item_n = QtWidgets.QListWidgetItem(mod_name)
                     item_n.setData(Qt.UserRole, slug)
                     item_n.setData(Qt.UserRole + 1, mod_desc)
+                    item_n.setData(Qt.UserRole + 3, mod_url or None)
+                    item_n.setData(Qt.UserRole + 4, mod_ver or None)
                     item_n.setToolTip(mod_desc)
                     avail_list.addItem(item_n)
                     avail_list.setCurrentItem(item_n)
@@ -2376,6 +2533,408 @@ class PreferencesDialog(QtWidgets.QDialog):
                         return
                     _add_folder_entry(slug, user_patches)
 
+                def _download_mod_from_url():
+                    """Show dialog to download a mod from URL and install to user patches."""
+                    dlg = QtWidgets.QDialog(self_inner)
+                    dlg.setWindowTitle('Download Patch from URL')
+                    dlg.setMinimumWidth(500)
+                    lay = QtWidgets.QVBoxLayout(dlg)
+
+                    form = QtWidgets.QFormLayout()
+                    form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    url_edit = QtWidgets.QLineEdit()
+                    url_edit.setPlaceholderText('https://github.com/user/repo')
+                    form.addRow('URL:', url_edit)
+                    lay.addLayout(form)
+
+                    info_label = QtWidgets.QLabel()
+                    info_label.setWordWrap(True)
+                    info_label.setStyleSheet('color: palette(mid); font-size: 11px;')
+                    info_label.hide()
+                    lay.addWidget(info_label)
+
+                    progress_bar = QtWidgets.QProgressBar()
+                    progress_bar.setVisible(False)
+                    lay.addWidget(progress_bar)
+
+                    status_lbl = QtWidgets.QLabel()
+                    status_lbl.setStyleSheet('font-size: 11px;')
+                    status_lbl.setVisible(False)
+                    lay.addWidget(status_lbl)
+
+                    btns = QtWidgets.QDialogButtonBox(
+                        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+                    btns.button(QtWidgets.QDialogButtonBox.Ok).setText('Download')
+                    btns.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+                    btns.accepted.connect(dlg.accept)
+                    btns.rejected.connect(dlg.reject)
+                    lay.addWidget(btns)
+
+                    resolved_info = {}
+
+                    def _resolve_url():
+                        url = url_edit.text().strip()
+                        if not url:
+                            btns.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+                            info_label.hide()
+                            return
+                        btns.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+                        info_label.setText('Resolving URL\u2026')
+                        info_label.show()
+                        QtWidgets.QApplication.processEvents()
+                        if 'github.com' in url:
+                            result = _resolve_github_url(url)
+                        else:
+                            result = {'download_url': url, 'name': 'Patch', 'version': '0.0'}
+                        if result:
+                            resolved_info.clear()
+                            resolved_info.update(result)
+                            patch_name = result.get('name', 'Unknown')
+                            patch_ver = result.get('version', '?')
+                            info_label.setText(
+                                f'<b>Name:</b> {patch_name}<br>'
+                                f'<b>Version:</b> {patch_ver}')
+                        else:
+                            info_label.setText('<span style="color:red;">Could not resolve URL. Check it and try again.</span>')
+
+                    url_edit.textChanged.connect(_resolve_url)
+
+                    if dlg.exec_() != QtWidgets.QDialog.Accepted:
+                        return
+                    url = url_edit.text().strip()
+                    if not url:
+                        return
+
+                    dl_url = resolved_info.get('download_url', url)
+                    patch_name = resolved_info.get('name', 'Unknown')
+                    patch_ver = resolved_info.get('version', '0.0')
+
+                    # Confirm with user
+                    confirm = QtWidgets.QMessageBox(self_inner)
+                    confirm.setWindowTitle('Confirm Download')
+                    confirm.setText(
+                        f'Download and install this mod?\n\n'
+                        f'Name: {patch_name}\n'
+                        f'Version: {patch_ver}\n'
+                        f'URL: {dl_url}')
+                    confirm.setInformativeText('The mod will be extracted to your user patches folder.')
+                    confirm.setStandardButtons(
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                    confirm.setDefaultButton(QtWidgets.QMessageBox.Yes)
+                    if confirm.exec_() != QtWidgets.QMessageBox.Yes:
+                        return
+
+                    # Start download
+                    user_patches = os.path.join(globals.user_data_path, 'patches')
+                    tmp_dir = os.path.join(globals.user_data_path, '.download_tmp')
+                    os.makedirs(tmp_dir, exist_ok=True)
+                    tmp_zip = os.path.join(tmp_dir, 'patch.zip')
+
+                    progress_bar.setVisible(True)
+                    progress_bar.setValue(0)
+                    status_lbl.setVisible(True)
+                    status_lbl.setText('Downloading\u2026')
+                    btns.setEnabled(False)
+
+                    worker = _DownloadModWorker(dl_url, tmp_zip, tmp_dir)
+
+                    def _on_progress(v):
+                        if v < 0:
+                            progress_bar.setRange(0, 0)
+                        else:
+                            progress_bar.setRange(0, 100)
+                            progress_bar.setValue(v)
+
+                    def _on_status(msg):
+                        status_lbl.setText(msg)
+
+                    def _on_finished(success, err):
+                        btns.setEnabled(True)
+                        if not success:
+                            progress_bar.setVisible(False)
+                            status_lbl.setVisible(False)
+                            if err != 'Cancelled':
+                                QtWidgets.QMessageBox.critical(
+                                    self_inner, 'Download Failed', f'Failed to download patch:\n{err}')
+                            shutil.rmtree(tmp_dir, ignore_errors=True)
+                            return
+
+                        # Find main.xml in extracted files
+                        main_xml_dir = _find_main_xml_in_extracted(tmp_dir)
+                        if not main_xml_dir:
+                            shutil.rmtree(tmp_dir, ignore_errors=True)
+                            QtWidgets.QMessageBox.warning(
+                                self_inner, 'Invalid Patch',
+                                'Downloaded file does not contain a main.xml.\n'
+                                'This is not a valid Pyamoto mod.')
+                            return
+
+                        # Determine slug from folder name or mod name
+                        import re as _re
+                        base_name = os.path.basename(main_xml_dir.rstrip(os.sep))
+                        slug = _re.sub(r'[^\w\-]', '_', base_name).strip('_') or 'mod'
+                        base_slug, ctr = slug, 1
+                        while os.path.exists(os.path.join(user_patches, slug)):
+                            slug = f'{base_slug}_{ctr}'
+                            ctr += 1
+
+                        target = os.path.join(user_patches, slug)
+                        try:
+                            shutil.copytree(main_xml_dir, target)
+                        except Exception as e:
+                            shutil.rmtree(tmp_dir, ignore_errors=True)
+                            QtWidgets.QMessageBox.critical(
+                                self_inner, 'Install Failed', f'Failed to install patch:\n{e}')
+                            return
+
+                        # Write patchReleaseUrl to main.xml if from GitHub
+                        if 'github.com' in url:
+                            from .patchxml import PatchXmlEditor
+                            PatchXmlEditor(target).set_patch_release_url(url)
+
+                        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+                        status_lbl.setText('Installed!')
+                        progress_bar.setVisible(False)
+
+                        _add_folder_entry(slug, user_patches)
+
+                    worker.progress.connect(_on_progress)
+                    worker.statusMsg.connect(_on_status)
+                    worker.finished.connect(_on_finished)
+                    worker.start()
+
+                def _do_update_mod(item):
+                    """Update a single mod from its patchReleaseUrl."""
+                    folder = item.data(Qt.UserRole)
+                    url = item.data(Qt.UserRole + 3)
+                    if not url:
+                        return
+                    _upd = os.path.join(globals.user_data_path, 'patches')
+                    mod_dir = os.path.join(_upd, folder)
+                    if not os.path.isdir(mod_dir):
+                        QtWidgets.QMessageBox.warning(
+                            self_inner, 'Update Failed', f'Mod folder not found:\n{mod_dir}')
+                        return
+
+                    # Confirm before update
+                    confirm = QtWidgets.QMessageBox(self_inner)
+                    confirm.setWindowTitle(f'Update {item.text()}?')
+                    confirm.setText(f'Check for updates for "{item.text()}"?')
+                    confirm.setInformativeText(f'Release URL: {url}')
+                    confirm.setStandardButtons(
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                    confirm.setDefaultButton(QtWidgets.QMessageBox.Yes)
+                    if confirm.exec_() != QtWidgets.QMessageBox.Yes:
+                        return
+
+                    # Start check
+                    dlg_prog = QtWidgets.QProgressDialog(
+                        'Checking for updates\u2026', 'Cancel', 0, 0, self_inner)
+                    dlg_prog.setWindowTitle('Update Check')
+                    dlg_prog.show()
+                    QtWidgets.QApplication.processEvents()
+
+                    worker = _CheckUpdateWorker(url)
+
+                    def _on_check_result(result):
+                        dlg_prog.close()
+                        if not result or not result.get('download_url'):
+                            QtWidgets.QMessageBox.information(
+                                self_inner, 'No Update',
+                                'Could not find a release with patch.zip for this mod.')
+                            return
+                        new_ver = result['version']
+                        current_ver = item.data(Qt.UserRole + 4) or '0.0'
+                        if new_ver == current_ver:
+                            QtWidgets.QMessageBox.information(
+                                self_inner, 'Up to Date',
+                                f'"{item.text()}" is already at version {current_ver}.')
+                            return
+                        # Download and install
+                        dlg_dl = QtWidgets.QProgressDialog(
+                            'Downloading update\u2026', 'Cancel', 0, 100, self_inner)
+                        dlg_dl.setWindowTitle('Updating')
+                        dlg_dl.show()
+                        tmp_dir = os.path.join(globals.user_data_path, '.update_tmp')
+                        os.makedirs(tmp_dir, exist_ok=True)
+                        tmp_zip = os.path.join(tmp_dir, 'patch.zip')
+                        dl_worker = _DownloadModWorker(
+                            result['download_url'], tmp_zip, tmp_dir)
+
+                        def _dl_progress(v):
+                            if v >= 0:
+                                dlg_dl.setValue(v)
+                        dl_worker.progress.connect(_dl_progress)
+
+                        def _dl_finished(success, err):
+                            dlg_dl.close()
+                            if not success:
+                                shutil.rmtree(tmp_dir, ignore_errors=True)
+                                if err != 'Cancelled':
+                                    QtWidgets.QMessageBox.critical(
+                                        self_inner, 'Update Failed',
+                                        f'Failed to download update:\n{err}')
+                                return
+                            main_xml_dir = _find_main_xml_in_extracted(tmp_dir)
+                            if not main_xml_dir:
+                                shutil.rmtree(tmp_dir, ignore_errors=True)
+                                QtWidgets.QMessageBox.warning(
+                                    self_inner, 'Invalid Update',
+                                    'Update archive does not contain a main.xml.')
+                                return
+                            # Backup current mod dir
+                            backup = mod_dir + '.bak'
+                            try:
+                                if os.path.exists(backup):
+                                    shutil.rmtree(backup, ignore_errors=True)
+                                os.rename(mod_dir, backup)
+                                shutil.copytree(main_xml_dir, mod_dir)
+                                shutil.rmtree(backup, ignore_errors=True)
+                            except Exception as e:
+                                # Restore from backup
+                                if os.path.exists(mod_dir):
+                                    shutil.rmtree(mod_dir, ignore_errors=True)
+                                if os.path.exists(backup):
+                                    os.rename(backup, mod_dir)
+                                shutil.rmtree(tmp_dir, ignore_errors=True)
+                                QtWidgets.QMessageBox.critical(
+                                    self_inner, 'Update Failed',
+                                    f'Failed to install update:\n{e}')
+                                return
+                            # Preserve patchReleaseUrl
+                            from .patchxml import PatchXmlEditor
+                            editor = PatchXmlEditor(mod_dir)
+                            editor.set_patch_release_url(url)
+                            editor.set_metadata(version=new_ver)
+                            shutil.rmtree(tmp_dir, ignore_errors=True)
+                            item.setData(Qt.UserRole + 4, new_ver)
+                            QtWidgets.QMessageBox.information(
+                                self_inner, 'Updated',
+                                f'"{item.text()}" updated to version {new_ver}.')
+
+                        dl_worker.finished.connect(_dl_finished)
+                        dl_worker.start()
+
+                    worker.finished.connect(_on_check_result)
+                    worker.start()
+
+                def _on_context_menu_avail(pos):
+                    item = avail_list.itemAt(pos)
+                    if not item:
+                        return
+                    url = item.data(Qt.UserRole + 3)
+                    menu = QtWidgets.QMenu()
+                    if url:
+                        act_update = menu.addAction('Update')
+                        act_update.triggered.connect(lambda: _do_update_mod(item))
+                    act_show_info = menu.addAction('Properties')
+                    act_show_info.triggered.connect(
+                        lambda: _show_inspector(item.text(), item.data(Qt.UserRole)))
+                    menu.exec_(avail_list.viewport().mapToGlobal(pos))
+
+                def _on_context_menu_active(pos):
+                    item = active_list.itemAt(pos)
+                    if not item:
+                        return
+                    url = item.data(Qt.UserRole + 3)
+                    menu = QtWidgets.QMenu()
+                    if url:
+                        act_update = menu.addAction('Update')
+                        act_update.triggered.connect(lambda: _do_update_mod(item))
+                    act_show_info = menu.addAction('Properties')
+                    act_show_info.triggered.connect(
+                        lambda: _show_inspector(item.text(), item.data(Qt.UserRole)))
+                    menu.exec_(active_list.viewport().mapToGlobal(pos))
+
+                def _check_for_updates():
+                    """Check all mods with patchReleaseUrl for available updates."""
+                    import re as _re
+                    updatable = []
+                    for lst in (avail_list, active_list):
+                        for i in range(lst.count()):
+                            item = lst.item(i)
+                            url = item.data(Qt.UserRole + 3)
+                            if not url:
+                                continue
+                            if not _re.match(r'https?://github\.com/', url):
+                                continue
+                            current_ver = item.data(Qt.UserRole + 4) or '0.0'
+                            updatable.append((item, url, current_ver))
+                    if not updatable:
+                        QtWidgets.QMessageBox.information(
+                            self_inner, 'Check for Updates',
+                            'No mods with GitHub release URLs found to check.')
+                        return
+                    # Simple progress dialog while checking
+                    dlg = QtWidgets.QProgressDialog(
+                        'Checking for updates\u2026', 'Cancel', 0, len(updatable), self_inner)
+                    dlg.setWindowTitle('Update Check')
+                    results = []
+                    for idx, (item, url, cur_ver) in enumerate(updatable):
+                        if dlg.wasCanceled():
+                            break
+                        dlg.setValue(idx)
+                        dlg.setLabelText(f'Checking {item.text()}\u2026')
+                        QtWidgets.QApplication.processEvents()
+                        try:
+                            m = _re.match(r'https?://github\.com/([^/]+)/([^/]+)', url)
+                            if m:
+                                owner, repo = m.group(1), m.group(2).rstrip('/').replace('.git', '')
+                                api = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
+                                resp = requests.get(api, timeout=10)
+                                if resp.status_code == 200:
+                                    data = resp.json()
+                                    tag = data.get('tag_name', '').lstrip('v')
+                                    if tag and tag != cur_ver:
+                                        results.append((item, cur_ver, tag))
+                        except Exception:
+                            pass
+                    dlg.setValue(len(updatable))
+                    if not results:
+                        QtWidgets.QMessageBox.information(
+                            self_inner, 'Check for Updates',
+                            'All mods are up to date.')
+                        return
+                    # Show summary dialog
+                    sum_dlg = QtWidgets.QDialog(self_inner)
+                    sum_dlg.setWindowTitle('Updates Available')
+                    sum_dlg.setMinimumWidth(420)
+                    sum_lay = QtWidgets.QVBoxLayout(sum_dlg)
+                    sum_lbl = QtWidgets.QLabel(
+                        f'<b>Updates available for {len(results)} mod(s):</b>')
+                    sum_lay.addWidget(sum_lbl)
+                    sum_list = QtWidgets.QListWidget()
+                    for item, cur, new in results:
+                        li = QtWidgets.QListWidgetItem(f'{item.text()}  ({cur} → {new})')
+                        li.setData(Qt.UserRole, item.data(Qt.UserRole))
+                        li.setData(Qt.UserRole + 1, new)
+                        li.setCheckState(Qt.Checked)
+                        sum_list.addItem(li)
+                    sum_lay.addWidget(sum_list)
+                    sum_btns = QtWidgets.QDialogButtonBox(
+                        QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+                    sum_btns.button(QtWidgets.QDialogButtonBox.Ok).setText('Update Selected')
+                    sum_btns.accepted.connect(sum_dlg.accept)
+                    sum_btns.rejected.connect(sum_dlg.reject)
+                    sum_lay.addWidget(sum_btns)
+                    if sum_dlg.exec_() != QtWidgets.QDialog.Accepted:
+                        return
+                    # Update selected mods
+                    for i in range(sum_list.count()):
+                        li = sum_list.item(i)
+                        if li.checkState() != Qt.Checked:
+                            continue
+                        folder = li.data(Qt.UserRole)
+                        new_ver = li.data(Qt.UserRole + 1)
+                        # Find the item in the lists
+                        for lst in (avail_list, active_list):
+                            for j in range(lst.count()):
+                                item = lst.item(j)
+                                if item.data(Qt.UserRole) == folder:
+                                    _do_update_mod(item)
+                                    break
+
                 def _open_configure():
                     """Show Configure modal for the currently selected mod."""
                     folder = self_inner._current_mod_folder
@@ -2388,9 +2947,14 @@ class PreferencesDialog(QtWidgets.QDialog):
                     cur_desc = (sel_c.data(Qt.UserRole + 1) if sel_c else '') or ''
                     cur_path = self_inner._mod_path_cache.get(
                         folder, setting('GamePath_mod_' + folder, '') or '')
+                    cur_url = sel_c.data(Qt.UserRole + 3) if sel_c else None
+                    if not cur_url:
+                        from .patchxml import PatchXmlEditor as _Pxe
+                        _pxe = _Pxe(os.path.join(_upd, folder) if is_user else '')
+                        cur_url = _pxe.patch_release_url() if is_user else None
                     dlg_cfg = QtWidgets.QDialog(self_inner)
                     dlg_cfg.setWindowTitle(f'Configure — {cur_name}')
-                    dlg_cfg.setMinimumWidth(420)
+                    dlg_cfg.setMinimumWidth(480)
                     form_cfg = QtWidgets.QFormLayout()
                     form_cfg.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     if not is_user:
@@ -2403,6 +2967,11 @@ class PreferencesDialog(QtWidgets.QDialog):
                     desc_edit_c = QtWidgets.QLineEdit(cur_desc)
                     desc_edit_c.setEnabled(is_user)
                     form_cfg.addRow('Description:', desc_edit_c)
+                    # Remote patch URL
+                    url_edit_c = QtWidgets.QLineEdit(cur_url or '')
+                    url_edit_c.setPlaceholderText('https://github.com/user/repo')
+                    url_edit_c.setEnabled(is_user)
+                    form_cfg.addRow('Patch URL:', url_edit_c)
                     # Game path row with Browse
                     path_w_c = QtWidgets.QWidget()
                     ph_c = QtWidgets.QHBoxLayout(path_w_c)
@@ -2447,14 +3016,22 @@ class PreferencesDialog(QtWidgets.QDialog):
                         return
                     new_name = name_edit_c.text().strip() or cur_name
                     new_desc = desc_edit_c.text().strip()
+                    new_url = url_edit_c.text().strip() or None
                     new_path = path_edit_c.text().strip()
                     self_inner._mod_path_cache[folder] = new_path
-                    if is_user and (new_name != cur_name or new_desc != cur_desc):
-                        from .patchxml import PatchXmlEditor
-                        PatchXmlEditor(os.path.join(_upd, folder)).set_metadata(new_name, new_desc)
+                    if is_user:
+                        from .patchxml import PatchXmlEditor as _Pxe2
+                        _editor = _Pxe2(os.path.join(_upd, folder))
+                        meta_dirty = new_name != cur_name or new_desc != cur_desc
+                        url_dirty = new_url != (cur_url or None)
+                        if meta_dirty or url_dirty:
+                            _editor.set_metadata(new_name, new_desc)
+                        if url_dirty:
+                            _editor.set_patch_release_url(new_url or '')
                     if sel_c:
                         sel_c.setText(new_name)
                         sel_c.setData(Qt.UserRole + 1, new_desc)
+                        sel_c.setData(Qt.UserRole + 3, new_url)
                     insp_name.setText(new_name)
                     insp_desc.setText(new_desc)
 
@@ -2501,6 +3078,8 @@ class PreferencesDialog(QtWidgets.QDialog):
                             item = QtWidgets.QListWidgetItem(def_.name if hasattr(def_, 'name') else folder)
                             item.setData(Qt.UserRole, folder)
                             item.setData(Qt.UserRole + 1, getattr(def_, 'description', ''))
+                            item.setData(Qt.UserRole + 3, getattr(def_, 'patchReleaseUrl', None))
+                            item.setData(Qt.UserRole + 4, getattr(def_, 'version', None))
                             active_list.addItem(item)
                     # Rebuild available list
                     for def_, folder in all_mods:
@@ -2511,6 +3090,8 @@ class PreferencesDialog(QtWidgets.QDialog):
                         item.setData(Qt.UserRole, folder)
                         item.setData(Qt.UserRole + 1, def_.description)
                         item.setData(Qt.UserRole + 2, def_.error if is_broken else None)
+                        item.setData(Qt.UserRole + 3, getattr(def_, 'patchReleaseUrl', None))
+                        item.setData(Qt.UserRole + 4, getattr(def_, 'version', None))
                         if is_broken:
                             item.setForeground(QtGui.QColor('#cc3333'))
                             item.setToolTip(f'⚠ {def_.error}')
@@ -2522,6 +3103,14 @@ class PreferencesDialog(QtWidgets.QDialog):
                     # Reset inspector state cleanly after the rebuild.
                     self_inner._current_mod_folder = None
                     inspector.setVisible(False)
+                    # After refresh, check for updates if any mod has patchReleaseUrl
+                    has_updatable = any(
+                        avail_list.item(i).data(Qt.UserRole + 3) for i in range(avail_list.count())
+                    ) or any(
+                        active_list.item(i).data(Qt.UserRole + 3) for i in range(active_list.count())
+                    )
+                    if has_updatable:
+                        _check_for_updates()
 
                 avail_list.currentItemChanged.connect(lambda *_: _on_avail_selection())
                 active_list.currentItemChanged.connect(lambda *_: _on_active_selection())
@@ -2531,6 +3120,12 @@ class PreferencesDialog(QtWidgets.QDialog):
                 open_mod_folder_btn.clicked.connect(_open_mod_folder)
                 open_folder_btn.clicked.connect(_open_mods_folder)
                 refresh_btn.clicked.connect(_refresh_mods)
+
+                # Right-click context menus
+                avail_list.setContextMenuPolicy(Qt.CustomContextMenu)
+                avail_list.customContextMenuRequested.connect(_on_context_menu_avail)
+                active_list.setContextMenuPolicy(Qt.CustomContextMenu)
+                active_list.customContextMenuRequested.connect(_on_context_menu_active)
 
             def getSelectedBaseGame(self_inner):
                 for folder, edit in self_inner._path_edits.items():

@@ -184,8 +184,33 @@ class PatchXmlEditor:
     def main_xml_path(self):
         return os.path.join(self.patch_dir, 'main.xml')
 
-    def set_metadata(self, name=None, description=None):
-        """Update name and/or description in this patch's main.xml, creating it if absent."""
+    def patch_release_url(self):
+        """Return patchReleaseUrl from main.xml, or None."""
+        mx_path = self.main_xml_path()
+        if not os.path.isfile(mx_path):
+            return None
+        try:
+            root = ET.parse(mx_path).getroot()
+            return root.attrib.get('patchReleaseUrl', None)
+        except Exception:
+            return None
+
+    def set_patch_release_url(self, url):
+        """Set patchReleaseUrl in main.xml."""
+        mx_path = self.main_xml_path()
+        if os.path.isfile(mx_path):
+            tree = ET.parse(mx_path)
+            root = tree.getroot()
+        else:
+            root = ET.Element('game')
+        if url:
+            root.set('patchReleaseUrl', url)
+        elif 'patchReleaseUrl' in root.attrib:
+            del root.attrib['patchReleaseUrl']
+        self._save(root, mx_path)
+
+    def set_metadata(self, name=None, description=None, version=None):
+        """Update name, description, and/or version in this patch's main.xml."""
         mx_path = self.main_xml_path()
         if os.path.isfile(mx_path):
             tree = ET.parse(mx_path)
@@ -196,12 +221,14 @@ class PatchXmlEditor:
             root.set('name', name)
         if description is not None:
             root.set('description', description)
+        if version is not None:
+            root.set('version', version)
         if 'version' not in root.attrib:
             root.set('version', '1.0')
         self._save(root, mx_path)
 
     @classmethod
-    def create_mod(cls, user_patches_dir, slug, name, description=''):
+    def create_mod(cls, user_patches_dir, slug, name, description='', patch_release_url=''):
         """Create a new userdata patch directory with a minimal main.xml."""
         patch_dir = os.path.join(user_patches_dir, slug)
         os.makedirs(patch_dir, exist_ok=True)
@@ -210,6 +237,8 @@ class PatchXmlEditor:
         root.set('version', '1.0')
         if description:
             root.set('description', description)
+        if patch_release_url:
+            root.set('patchReleaseUrl', patch_release_url)
         editor = cls(patch_dir)
         editor._save(root, os.path.join(patch_dir, 'main.xml'))
         return editor

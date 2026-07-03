@@ -79,6 +79,7 @@ class MiyamotoGameDefinition:
         self.name = 'New Super Mario Bros. U'
         self.description = 'A new adventure, and in HD!<br>Published by Nintendo in August 2012.'
         self.version = '1.0'
+        self.patchReleaseUrl = None
         self.error = None
 
         from . import sprites as _sprites_mod
@@ -129,6 +130,7 @@ class MiyamotoGameDefinition:
         if 'description' in root.attrib:
             self.description = root.attrib['description'].replace('[', '<').replace(']', '>')
         self.version = root.attrib.get('version', None)
+        self.patchReleaseUrl = root.attrib.get('patchReleaseUrl', None)
 
         if base_instance is not None:
             self.base = base_instance

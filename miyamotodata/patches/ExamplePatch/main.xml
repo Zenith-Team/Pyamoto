@@ -11,7 +11,8 @@
 -->
 <game name="Example Patch"
       version="1.0"
-      description="A minimal example showing every supported file type.">
+      description="A minimal example showing every supported file type."
+      patchReleaseUrl="https://github.com/YourUser/YourMod">
 
     <!--
         Each <file> maps a well-known key (name="…") to a path relative to

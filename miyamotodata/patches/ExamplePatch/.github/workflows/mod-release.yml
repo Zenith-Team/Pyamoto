@@ -1,0 +1,67 @@
+name: Mod Release
+
+# Pyamoto mod release workflow.
+# Push a version tag (e.g. v1.1) or use workflow_dispatch.
+# Produces patch.zip — Pyamoto fetches this for one-click updates.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.1)'
+        required: true
+
+jobs:
+  release:
+    name: Build patch.zip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build patch.zip
+        run: |
+          MOD_DIR=".mod-staging/ExamplePatch"
+          mkdir -p "$MOD_DIR"
+          cp main.xml        "$MOD_DIR/"
+          cp levelnames.xml  "$MOD_DIR/"
+          cp spritecategories.xml "$MOD_DIR/" 2>/dev/null || true
+          cp spritedata.xml       "$MOD_DIR/" 2>/dev/null || true
+          cp spriteresources.xml  "$MOD_DIR/" 2>/dev/null || true
+          # Update version in main.xml
+          sed -i 's/version="[^"]*"/version="${{ steps.ver.outputs.version }}"/' "$MOD_DIR/main.xml"
+          cd .mod-staging
+          zip -r ../patch.zip ./*
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: patch.zip
+          body: |
+            ## Version ${{ steps.ver.outputs.version }}
+
+            Install in Pyamoto: Preferences → Game Setup → + → Download Patch from URL.
+
+            Set `patchReleaseUrl="https://github.com/${{ github.repository }}"` in `main.xml` for one-click updates.
