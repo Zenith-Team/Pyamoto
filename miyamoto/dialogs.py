@@ -1830,15 +1830,18 @@ class PreferencesDialog(QtWidgets.QDialog):
                 self.launchBehavior.addItems(["Show welcome page", "Open last level"])
                 self.launchBehavior.setCurrentIndex(setting('LaunchBehavior', 0))
 
+                self.checkForUpdates = QtWidgets.QCheckBox('Check for updates')
+                self.checkForUpdates.setChecked(setting('CheckForUpdates', True))
                 self.updateChannel = QtWidgets.QComboBox()
                 self.updateChannel.addItems(_CHANNEL_LABELS)
                 cur = setting('UpdateChannel', _default_channel())
                 idx = _CHANNEL_VALUES.index(cur) if cur in _CHANNEL_VALUES else 0
                 self.updateChannel.setCurrentIndex(idx)
 
-                gen_form = QtWidgets.QFormLayout()
-                gen_form.addRow('File opening behavior:', self.openMethod)
-                gen_form.addRow('Launch behavior:', self.launchBehavior)
+                update_row = QtWidgets.QHBoxLayout()
+                update_row.setSpacing(8)
+                update_row.addWidget(self.checkForUpdates)
+                update_row.addWidget(self.updateChannel)
 
                 self.useOuterSarcFormat = QtWidgets.QCheckBox('Use Outer SARC Format')
                 self.useOuterSarcFormat.setToolTip(
@@ -1857,13 +1860,16 @@ class PreferencesDialog(QtWidgets.QDialog):
                     self.useOuterSarcFormat.toggled.connect(
                         lambda checked: self.modifyInnerName.setVisible(checked))
 
-                gen_form.addRow('Update channel:', self.updateChannel)
+                gen_form = QtWidgets.QFormLayout()
+                gen_form.addRow('File opening behavior:', self.openMethod)
+                gen_form.addRow('Launch behavior:', self.launchBehavior)
+                gen_form.addRow(self.useOuterSarcFormat)
+                if not globals.IsNSMBUDX:
+                    gen_form.addRow(self.modifyInnerName)
+                gen_form.addRow('Updates:', update_row)
 
                 gen_lay = QtWidgets.QVBoxLayout()
                 gen_lay.addLayout(gen_form)
-                gen_lay.addWidget(self.useOuterSarcFormat)
-                if not globals.IsNSMBUDX:
-                    gen_lay.addWidget(self.modifyInnerName)
                 gen_group = QtWidgets.QGroupBox('General')
                 gen_group.setLayout(gen_lay)
                 vbox.addWidget(gen_group)

@@ -3062,7 +3062,8 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         # Get the Launch Behavior setting
         setSetting('LaunchBehavior', dlg.generalTab.launchBehavior.currentIndex())
 
-        # Update channel
+        # Updates
+        setSetting('CheckForUpdates', dlg.generalTab.checkForUpdates.isChecked())
         from .updater import _CHANNEL_VALUES
         idx = dlg.generalTab.updateChannel.currentIndex()
         setSetting('UpdateChannel', _CHANNEL_VALUES[idx] if 0 <= idx < len(_CHANNEL_VALUES) else 'stable')

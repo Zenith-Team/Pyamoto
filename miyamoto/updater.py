@@ -46,12 +46,11 @@ def _default_channel():
 
 
 def _current_channel():
+    if setting('CheckForUpdates', True) is False:
+        return CHANNEL_OFF
     val = setting('UpdateChannel', None)
     if val is not None:
         return val if val in _CHANNEL_VALUES else CHANNEL_STABLE
-    old = setting('CheckForUpdates', None)
-    if old is False:
-        return CHANNEL_OFF
     return _default_channel()
 
 
