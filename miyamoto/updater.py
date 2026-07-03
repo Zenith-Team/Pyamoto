@@ -29,7 +29,7 @@ _HEADERS = {
 
 _OS_MAP = {
     'Darwin': 'macOS-x86_64',
-    'Windows': 'Windows-amd64',
+    'Windows': 'Windows-x64',
     'Linux': 'Linux-x86_64',
 }
 
@@ -88,13 +88,17 @@ def _asset_url(release_data):
     os_name = _OS_MAP.get(platform.system())
     if not os_name:
         return None
-    ver = release_data['tag_name'].lstrip('v')
-    expected = f'pyamoto_v{ver}_{os_name}.zip'
+    tag = release_data['tag_name']
+    if tag.startswith('nightly-'):
+        ver = tag.rsplit('-', 1)[-1]
+    else:
+        ver = tag.lstrip('v')
+    expected = f'Pyamoto-v{ver}-{os_name}.zip'
     for asset in release_data.get('assets', []):
         if asset['name'] == expected:
             return asset['browser_download_url']
     for asset in release_data.get('assets', []):
-        if asset['name'].endswith('.zip'):
+        if asset['name'].endswith('.zip') and os_name.replace('-', '') in asset['name']:
             return asset['browser_download_url']
     return None
 

@@ -230,11 +230,24 @@ jobs:
       - name: Create DMG
         run: python buildtools/create_dmg.py
 
+      - name: Get version
+        id: ver
+        run: |
+          echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
+            >> $GITHUB_OUTPUT
+
+      - name: Package updater zip
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          cd build && zip -r "../Pyamoto-v${V}-macOS-x86_64.zip" Pyamoto.app
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-universal-dmg
-          path: Pyamoto-*-macOS-universal.dmg
+          path: |
+            Pyamoto-*-macOS-universal.dmg
+            Pyamoto-*-macOS-x86_64.zip
           retention-days: 7
 
 
@@ -309,11 +322,18 @@ jobs:
             ./appimagetool --no-appstream AppDir \
             "Pyamoto-v${V}-Linux-x86_64.AppImage"
 
+      - name: Package updater zip
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          cd "distrib/miyamoto_v${V}" && zip -r "../../Pyamoto-v${V}-Linux-x86_64.zip" .
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-x86_64-appimage
-          path: Pyamoto-*.AppImage
+          path: |
+            Pyamoto-*.AppImage
+            Pyamoto-*-Linux-x86_64.zip
           retention-days: 7
 
 
