@@ -167,8 +167,8 @@ class _UpdateDialog(QtWidgets.QDialog):
         root.addWidget(headline)
 
         warn = QtWidgets.QLabel(
-            'Project data will be overwritten. '
-            '<b>User data</b> (patches, settings, downloads) stays untouched.'
+            'Any modified files in the pyamoto may be overwritten. '
+            'Your userdata folder (containing patches, settings, themes) stays untouched.'
         )
         warn.setWordWrap(True)
         root.addWidget(warn)
@@ -183,13 +183,22 @@ class _UpdateDialog(QtWidgets.QDialog):
 
         self._codesign_cb = None
         if platform.system() == 'Darwin':
+            codesign_row = QtWidgets.QHBoxLayout()
+            codesign_row.setSpacing(6)
+            macos_lbl = QtWidgets.QLabel('macOS:')
+            macos_lbl_font = macos_lbl.font()
+            macos_lbl_font.setBold(True)
+            macos_lbl.setFont(macos_lbl_font)
+            codesign_row.addWidget(macos_lbl)
             self._codesign_cb = QtWidgets.QCheckBox('Ad-hoc re-sign bundle')
             self._codesign_cb.setChecked(True)
             self._codesign_cb.setToolTip(
                 'Run codesign --force --deep --sign - on updated app. '
                 'Reduces Gatekeeper warnings.'
             )
-            root.addWidget(self._codesign_cb)
+            codesign_row.addWidget(self._codesign_cb)
+            codesign_row.addStretch()
+            root.addLayout(codesign_row)
 
         btn_box = QtWidgets.QDialogButtonBox()
         self._cancel_btn = btn_box.addButton('Cancel', QtWidgets.QDialogButtonBox.RejectRole)
