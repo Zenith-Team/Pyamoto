@@ -53,7 +53,10 @@ def LoadBGNames():
 
     paths = globals.gamedef.recursiveFiles('bg')
     for path in paths:
-        tree = etree.parse(path)
+        try:
+            tree = etree.parse(path)
+        except Exception:
+            continue
         root = tree.getroot()
         for bg_node in root:
             if bg_node.tag.lower() != 'bg':
