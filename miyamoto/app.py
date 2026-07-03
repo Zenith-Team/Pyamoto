@@ -183,7 +183,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         else:
             act = QtWidgets.QAction(text, self)
 
-        if shortcut is not None: act.setShortcut(shortcut)
+        if shortcut is not None:
+            if isinstance(shortcut, list):
+                act.setShortcuts(shortcut)
+            else:
+                act.setShortcut(shortcut)
         if statustext is not None: act.setStatusTip(statustext)
         if toggle: act.setCheckable(True)
         if function is not None: act.triggered.connect(function)
@@ -511,7 +515,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
             'redo', self.HandleRedo, GetIcon('redo'),
             'Redo',
             'Redo the last undone action',
-            QtGui.QKeySequence.Redo,
+            [QtGui.QKeySequence.Redo, QtGui.QKeySequence('Ctrl+Shift+Z')],
         )
 
         self.CreateAction(
@@ -1372,15 +1376,12 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         pathlabel = QtWidgets.QLabel('Path nodes currently in this area<br>(Double-click one to jump to it instantly)<br>To delete a path, remove all its nodes one by one.<br>To add new paths, hit the button below and right click.')
         pathlabel.setWordWrap(True)
-        deselectbtn = QtWidgets.QPushButton('Deselect (then right click for new path)')
-        deselectbtn.clicked.connect(self.DeselectPathSelection)
         self.pathList = ListWidgetWithToolTipSignal()
         self.pathList.itemActivated.connect(self.HandlePathSelectByList)
         self.pathList.toolTipAboutToShow.connect(self.HandlePathToolTipAboutToShow)
         self.pathList.setSortingEnabled(True)
 
         pathel.addWidget(pathlabel)
-        pathel.addWidget(deselectbtn)
         pathel.addWidget(self.pathList)
 
         # nabbit path tab
@@ -1469,13 +1470,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
 
         # Set the current tab to the Object tab
         self.CreationTabChanged(0)
-
-    def DeselectPathSelection(self, checked):
-        """
-        Deselects selected path nodes in the list
-        """
-        for selecteditem in self.pathList.selectedItems():
-            selecteditem.setSelected(False)
 
     def Autosave(self):
         """
