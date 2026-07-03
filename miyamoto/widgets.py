@@ -642,14 +642,15 @@ class ObjectPickerWidget(QtWidgets.QListView):
                         y += globals.TileWidth
                     p.end()
 
-                    pm = pm.scaledToWidth(round(pm.width() * 32 / globals.TileWidth), Qt.SmoothTransformation)
-                    if pm.width() > 256:
-                        pm = pm.scaledToWidth(256, Qt.SmoothTransformation)
-                    if pm.height() > 256:
-                        pm = pm.scaledToHeight(256, Qt.SmoothTransformation)
+                    dpr = globals.TileWidth / 32
+                    if pm.width() > 256 * dpr:
+                        pm = pm.scaledToWidth(round(256 * dpr), Qt.SmoothTransformation)
+                    if pm.height() > 256 * dpr:
+                        pm = pm.scaledToHeight(round(256 * dpr), Qt.SmoothTransformation)
+                    pm.setDevicePixelRatio(dpr)
 
                     self.ritems.append(pm)
-                    self.itemsize.append(QtCore.QSize(pm.width() + 4, pm.height() + 4))
+                    self.itemsize.append(QtCore.QSize(round(pm.width() / dpr) + 4, round(pm.height() / dpr) + 4))
                     if (idx == 0) and (i in globals.ObjDesc) and isAnim:
                         self.tooltips.append('<b>Tileset [tileset], object [id]:</b><br>[desc]<br><i>This object is animated</i>'.replace('[tileset]', str(idx + 1)).replace('[id]', str(i)).replace('[desc]', str(globals.ObjDesc[i])))
                     elif (idx == 0) and (i in globals.ObjDesc):
