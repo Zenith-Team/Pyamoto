@@ -29,7 +29,7 @@ from . import undomanager
 from .items import ObjectItem, ZoneItem, LocationItem, SpriteItem
 from .items import EntranceItem, PathItem, NabbitPathItem
 from .items import PathEditorLineItem, NabbitPathEditorLineItem
-from .items import CommentItem
+from .items import LevelEditorItem, CommentItem
 
 # from loading import LoadSpriteData, LoadSpriteListData
 # from loading import LoadSpriteCategories, LoadEntranceNames
@@ -5311,6 +5311,76 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     break
 
         else:
+            if eventButton == Qt.LeftButton:
+                pos = self.mapToScene(event.x(), event.y())
+                all_items = self.scene().items(pos)
+
+                # First, find the topmost selectable item under the cursor.
+                # If there are multiple items stacked here, use its scene
+                # bounding rect as the search area — items of different types
+                # (sprites, paths, tiles) use different sub-tile coordinate
+                # systems and may not all contain the exact same point.
+                top = None
+                for i in all_items:
+                    if isinstance(i, LevelEditorItem) and (int(i.flags()) & i.ItemIsSelectable):
+                        top = i
+                        break
+
+                if top is not None:
+                    # Search with the top item's full bounding rect so that
+                    # every item visually overlapping this location is found.
+                    r = top.sceneBoundingRect()
+                    all_at_pos = self.scene().items(r)
+                    selectable = [i for i in all_at_pos
+                                  if isinstance(i, LevelEditorItem) and (int(i.flags()) & i.ItemIsSelectable)]
+
+                    if len(selectable) > 1:
+                        # If the currently selected item is part of this stack,
+                        # advance to the next one below; otherwise start at top.
+                        current_sel = next((s for s in self.scene().selectedItems() if s in selectable), None)
+                        if current_sel is not None:
+                            try:
+                                target_idx = (selectable.index(current_sel) + 1) % len(selectable)
+                            except ValueError:
+                                target_idx = 0
+                        else:
+                            target_idx = 0
+
+                        target = selectable[target_idx]
+
+                        # Temporarily raise the target above all other items at this position
+                        # so Qt's built-in event routing (which picks the topmost item)
+                        # correctly selects it and sets it as the mouse grabber.
+                        saved_z = {}
+                        max_z = float('-inf')
+                        for item in selectable:
+                            saved_z[item] = item.zValue()
+                            if item.zValue() > max_z:
+                                max_z = item.zValue()
+                        target.setZValue(max_z + 100)
+
+                        QtWidgets.QGraphicsView.mousePressEvent(self, event)
+
+                        for item, z in saved_z.items():
+                            item.setZValue(z)
+
+                        # Snapshot state for undo
+                        self.drag_snapshot = {}
+                        items_to_snapshot = list(self.scene().selectedItems())
+                        grabber = self.scene().mouseGrabberItem()
+                        if grabber and grabber not in items_to_snapshot:
+                            items_to_snapshot.append(grabber)
+                        for item in items_to_snapshot:
+                            if hasattr(item, 'objx') and hasattr(item, 'objy'):
+                                if isinstance(item, (ObjectItem, ZoneItem, LocationItem)):
+                                    self.drag_snapshot[item] = (item.objx, item.objy, item.width, item.height)
+                                else:
+                                    self.drag_snapshot[item] = (item.objx, item.objy)
+
+                        globals.mainWindow.levelOverview.update()
+                        event.accept()
+                        return
+
             QtWidgets.QGraphicsView.mousePressEvent(self, event)
             
             # Snapshot state for undo
