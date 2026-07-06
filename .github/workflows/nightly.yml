@@ -171,77 +171,57 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # macOS Universal  (single arm64 runner; x86_64 PyQt5 merged via lipo)
-  #
-  # Strategy:
-  #   1. Build Cython extensions as universal2 (ARCHFLAGS both arches).
-  #   2. Run bdist_mac — cx_Freeze freezes the arm64 PyQt5 + universal
-  #      Cython extensions into an arm64 app bundle.
-  #   3. Download the x86_64 PyQt5 wheel from PyPI and extract it.
-  #   4. merge_pyqt5.py lipo-merges every PyQt5 Mach-O inside the bundle
-  #      with its x86_64 counterpart (no-op if the wheel is already
-  #      universal2, which PyQt5 5.15.x ships for macOS).
-  #   5. Ad-hoc sign the merged bundle once.
-  #   6. Package as zip for the updater and for direct download.
+  # macOS arm64 + x86_64
   # ──────────────────────────────────────────────────────────────
   build-macos:
     needs: preflight
-    name: macOS Universal
+    strategy:
+      matrix:
+        arch:
+          - { label: arm64,  setup: arm64, suffix: arm64 }
+          - { label: x86_64, setup: x64,   suffix: x86_64 }
+    name: macOS (${{ matrix.arch.label }})
     runs-on: macos-14
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+          architecture: ${{ matrix.arch.setup }}
 
-      - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject nightly metadata
+        id: metadata
         run: |
           SHA="${GITHUB_SHA:0:7}"
           python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
+          echo "version=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Build universal Cython extensions + arm64 app bundle
+      - name: Build app bundle
         env:
           ARCHFLAGS: "-arch x86_64 -arch arm64"
         run: python build.py build_ext --inplace bdist_mac
 
-      # PyQt5 5.15.x ships universal2 wheels (arm64 + x86_64 in one file).
-      # pip already installed that wheel above, so the .so files in the
-      # bundle are already universal.  merge_pyqt5.py detects this and
-      # reports "already universal" for every file (no-op).  If a future
-      # PyQt5 version ever ships arm64-only, the script will report the
-      # gap without crashing, keeping the build visible as a warning.
       - name: Verify / merge PyQt5 universality in bundle
         run: |
           PYQT5_PARENT=$(python3 -c \
             "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
           python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
 
-      - name: Ad-hoc sign merged bundle
+      - name: Ad-hoc sign bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
 
-      - name: Get version
-        id: ver
+      - name: Package macOS-${{ matrix.arch.suffix }}.zip
         run: |
-          echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
-            >> $GITHUB_OUTPUT
+          V="${{ steps.metadata.outputs.version }}"
+          cd build && zip -r "../Pyamoto-v${V}-macOS-${{ matrix.arch.suffix }}.zip" Pyamoto.app
 
-      - name: Package zip
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          ARCH=$(uname -m)
-          cd build && zip -r "../Pyamoto-v${V}-macOS-${ARCH}.zip" Pyamoto.app
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: macos
           path: Pyamoto-*-macOS-*.zip

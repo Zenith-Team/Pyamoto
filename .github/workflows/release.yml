@@ -159,33 +159,38 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # macOS Universal
+  # macOS arm64 + x86_64
   # ──────────────────────────────────────────────────────────────
   build-macos:
     needs: preflight
-    name: macOS Universal
+    strategy:
+      matrix:
+        arch:
+          - { label: arm64,  setup: arm64, suffix: arm64 }
+          - { label: x86_64, setup: x64,   suffix: x86_64 }
+    name: macOS (${{ matrix.arch.label }})
     runs-on: macos-14
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+          architecture: ${{ matrix.arch.setup }}
 
-      - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject release metadata
+        id: metadata
         run: |
-          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='release'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" \
-            "${{ needs.preflight.outputs.version }}"
+          VERSION="${{ needs.preflight.outputs.version }}"
+          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='release'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build universal Cython extensions + arm64 app bundle
+      - name: Build app bundle
         env:
           ARCHFLAGS: "-arch x86_64 -arch arm64"
         run: python build.py build_ext --inplace bdist_mac
@@ -196,17 +201,15 @@ jobs:
             "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
           python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
 
-      - name: Ad-hoc sign merged bundle
+      - name: Ad-hoc sign bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
 
-      - name: Package zip
+      - name: Package macOS-${{ matrix.arch.suffix }}.zip
         run: |
-          V="${{ needs.preflight.outputs.version }}"
-          ARCH=$(uname -m)
-          cd build && zip -r "../Pyamoto-v${V}-macOS-${ARCH}.zip" Pyamoto.app
+          V="${{ steps.metadata.outputs.version }}"
+          cd build && zip -r "../Pyamoto-v${V}-macOS-${{ matrix.arch.suffix }}.zip" Pyamoto.app
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: macos
           path: Pyamoto-*-macOS-*.zip
