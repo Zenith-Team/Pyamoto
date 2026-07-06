@@ -19,7 +19,6 @@ from .misc import setting, setSetting
 GITHUB_REPO = 'Zenith-Team/Pyamoto'
 _API_BASE = f'https://api.github.com/repos/{GITHUB_REPO}/releases'
 _API_LATEST = f'{_API_BASE}/latest'
-_API_RECENT = _API_BASE
 
 _HEADERS = {
     'Accept': 'application/vnd.github+json',
@@ -27,10 +26,22 @@ _HEADERS = {
     'User-Agent': 'Pyamoto-updater',
 }
 
+# Maps platform.system() → platform string used in release asset names.
+# Assets follow the naming convention:
+#   Pyamoto-v{version}-{platform_string}.zip
+# where {version} is a semver (stable) or 7-char commit SHA (nightly).
 _OS_MAP = {
     'Darwin': 'macOS-x86_64',
     'Windows': 'Windows-x64',
     'Linux': 'Linux-x86_64',
+}
+
+# For fallback matching we match on just the OS prefix (e.g. "macOS") so
+# a build that only has the platform prefix (without architecture suffix) can still be found.
+_OS_PREFIX = {
+    'Darwin': 'macOS',
+    'Windows': 'Windows',
+    'Linux': 'Linux',
 }
 
 CHANNEL_STABLE = 'stable'
@@ -84,25 +95,49 @@ def _skip_version(version):
     setSetting('SkippedUpdates', skipped)
 
 
+def _nightly_sha(tag):
+    """Extract the 7-char commit SHA from a nightly tag.
+    Tag format: nightly-{ISO8601-with-dashes}-{sha7}
+    Example: nightly-2026-07-06T03-45-16-b4d59a9
+    """
+    return tag.rsplit('-', 1)[-1]
+
+
 def _asset_url(release_data):
-    os_name = _OS_MAP.get(platform.system())
-    if not os_name:
+    """Find the best download URL for the current platform in a release.
+
+    Priority:
+      1. Exact match: Pyamoto-v{ver}-{platform}.zip
+      2. Fallback: any .zip whose name contains the OS prefix (macOS/Windows/Linux)
+      3. (macOS only) any .zip at all (some nightlies have no platform prefix in zip name)
+    """
+    system = platform.system()
+    os_name = _OS_MAP.get(system)
+    os_prefix = _OS_PREFIX.get(system)
+    if not os_name or not os_prefix:
         return None
+
     tag = release_data['tag_name']
-    candidates = []
-    if tag.startswith('nightly-'):
-        ver = tag.rsplit('-', 1)[-1]
-        candidates.append(f'Pyamoto-{tag}-{os_name}.zip')
-        candidates.append(f'Pyamoto-v{ver}-{os_name}.zip')
-    else:
-        ver = tag.lstrip('v')
-        candidates.append(f'Pyamoto-v{ver}-{os_name}.zip')
+    ver = _nightly_sha(tag) if tag.startswith('nightly-') else tag.lstrip('v')
+
+    # 1) Exact match against the platform-specific updater zip
+    expected = f'Pyamoto-v{ver}-{os_name}.zip'
     for asset in release_data.get('assets', []):
-        if asset['name'] in candidates:
+        if asset['name'] == expected:
             return asset['browser_download_url']
+
+    # 2) Any .zip whose name contains the OS prefix (macOS / Windows / Linux)
     for asset in release_data.get('assets', []):
-        if asset['name'].endswith('.zip') and os_name in asset['name']:
+        if asset['name'].endswith('.zip') and os_prefix in asset['name']:
             return asset['browser_download_url']
+
+    # 3) On macOS: some nightlies have no zip with "macOS" prefix.
+    #    Grab any .zip we can find — there is typically only one per release.
+    if system == 'Darwin':
+        for asset in release_data.get('assets', []):
+            if asset['name'].endswith('.zip'):
+                return asset['browser_download_url']
+
     return None
 
 
@@ -122,8 +157,8 @@ class _UpdateChecker(QtCore.QObject):
                 self._check_nightly()
             elif channel == CHANNEL_STABLE:
                 self._check_release()
-        except Exception as exc:
-            print(f'Update check failed: {exc}', file=sys.stderr)
+        except Exception:
+            pass
         if not self._found:
             self.up_to_date.emit()
         global _checker
@@ -137,8 +172,9 @@ class _UpdateChecker(QtCore.QObject):
 
     def _check_release(self):
         data = self._fetch(_API_LATEST)
-        latest_ver = data['tag_name'].lstrip('v')
-        current_ver = globals.MiyamotoVersion.lstrip('v')
+        tag = data['tag_name']
+        latest_ver = tag.lstrip('v')
+        current_ver = globals.MiyamotoVersion
         if latest_ver != current_ver and not _is_skipped(latest_ver):
             url = _asset_url(data)
             if url:
@@ -146,30 +182,23 @@ class _UpdateChecker(QtCore.QObject):
                 self.update_found.emit(current_ver, latest_ver, url)
 
     def _check_nightly(self):
-        releases = self._fetch(_API_RECENT)
+        releases = self._fetch(_API_BASE)
         nightlies = [
             r for r in releases
             if r['tag_name'].startswith('nightly-')
         ]
         if not nightlies:
-            print('No nightly releases found', file=sys.stderr)
             return
         nightlies.sort(key=lambda r: r.get('published_at', r['created_at']), reverse=True)
         latest = nightlies[0]
-        latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
+        latest_sha = _nightly_sha(latest['tag_name'])
         current_sha = globals.MiyamotoVersion
-        if not current_sha or current_sha == latest_sha or _is_skipped(latest_sha):
+        if current_sha == latest_sha or _is_skipped(latest_sha):
             return
         url = _asset_url(latest)
         if url:
             self._found = True
-            self.update_found.emit(
-                current_sha[:7] if len(current_sha) > 7 else current_sha,
-                latest_sha[:7],
-                url,
-            )
-        else:
-            print(f'No asset URL found for nightly {latest["tag_name"]}', file=sys.stderr)
+            self.update_found.emit(current_sha, latest_sha, url)
 
 
 class _UpdateDialog(QtWidgets.QDialog):
@@ -359,7 +388,13 @@ class _UpdateDialog(QtWidgets.QDialog):
 _checker = None
 
 
+def _frozen():
+    return getattr(sys, 'frozen', False)
+
+
 def check_for_updates():
+    if not _frozen():
+        return
     channel = _current_channel()
     if channel == CHANNEL_OFF:
         return
@@ -367,6 +402,8 @@ def check_for_updates():
 
 
 def check_for_updates_now(channel):
+    if not _frozen():
+        return
     _start_check(channel, manual=True)
 
 

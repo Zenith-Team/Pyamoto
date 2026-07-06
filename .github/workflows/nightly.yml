@@ -181,11 +181,12 @@ jobs:
   #   4. merge_pyqt5.py lipo-merges every PyQt5 Mach-O inside the bundle
   #      with its x86_64 counterpart (no-op if the wheel is already
   #      universal2, which PyQt5 5.15.x ships for macOS).
-  #   5. Ad-hoc sign the merged bundle once, then package as DMG.
+  #   5. Ad-hoc sign the merged bundle once.
+  #   6. Package as zip for the updater and for direct download.
   # ──────────────────────────────────────────────────────────────
   build-macos:
     needs: preflight
-    name: macOS Universal DMG
+    name: macOS Universal
     runs-on: macos-14
 
     steps:
@@ -200,7 +201,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1" "dmgbuild==1.6.5"
+        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject nightly metadata
         run: |
@@ -227,16 +228,13 @@ jobs:
       - name: Ad-hoc sign merged bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
 
-      - name: Create DMG
-        run: python buildtools/create_dmg.py
-
       - name: Get version
         id: ver
         run: |
           echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
             >> $GITHUB_OUTPUT
 
-      - name: Package updater zip
+      - name: Package zip
         run: |
           V="${{ steps.ver.outputs.version }}"
           cd build && zip -r "../Pyamoto-v${V}-macOS-x86_64.zip" Pyamoto.app
@@ -244,10 +242,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-universal-dmg
-          path: |
-            Pyamoto-*-macOS-universal.dmg
-            Pyamoto-*-macOS-x86_64.zip
+          name: macos
+          path: Pyamoto-*-macOS-x86_64.zip
           retention-days: 7
 
 
@@ -467,7 +463,7 @@ jobs:
       - name: Collect release files
         run: |
           mkdir release_files
-          find _artifacts -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.AppImage" \) \
+          find _artifacts -type f \( -name "*.zip" -o -name "*.AppImage" \) \
             -exec cp {} release_files/ \;
           echo "--- Release files ---"
           ls -lh release_files/
@@ -482,8 +478,8 @@ jobs:
             echo ""
             echo "| Platform | File |"
             echo "|---|---|"
-            for f in release_files/*-macOS-*.dmg; do
-              [ -f "$f" ] && echo "| macOS Universal | \`$(basename "$f")\` |"
+            for f in release_files/*-macOS-*.zip; do
+              [ -f "$f" ] && echo "| macOS | \`$(basename "$f")\` |"
             done
             for f in release_files/*-Windows-*.zip; do
               [ -f "$f" ] && echo "| Windows x64 | \`$(basename "$f")\` |"

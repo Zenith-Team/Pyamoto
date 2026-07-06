@@ -32,11 +32,12 @@ echo "==> project.json patched: version=${VERSION}, release_type=release"
 
 # ── Build ────────────────────────────────────────────────────────────────────
 if [[ "$(uname)" == "Darwin" ]]; then
-    echo "==> macOS: building universal app bundle + DMG"
+    echo "==> macOS: building universal app bundle + updater zip"
     export ARCHFLAGS="${ARCHFLAGS:--arch x86_64 -arch arm64}"
     .venv/bin/python3 build.py build_ext --inplace bdist_mac
-    .venv/bin/python3 buildtools/create_dmg.py
-    echo "==> Done. DMG: Pyamoto-v${VERSION}-macOS-universal.dmg"
+    echo "==> Packaging app bundle as zip..."
+    cd build && zip -r "../Pyamoto-v${VERSION}-macOS-x86_64.zip" Pyamoto.app && cd ..
+    echo "==> Done. Zip: Pyamoto-v${VERSION}-macOS-x86_64.zip"
 else
     echo "==> Linux/Windows: building frozen executable"
     .venv/bin/python3 build.py build_ext --inplace build_exe

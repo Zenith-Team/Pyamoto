@@ -26,10 +26,10 @@ bash setup_venv.sh
 Install the extra build dependencies, then run the release script:
 
 ```bash
-.venv/bin/pip install "cx_Freeze==8.4.1" "dmgbuild==1.6.5"  # macOS; omit dmgbuild on Windows/Linux
+.venv/bin/pip install "cx_Freeze==8.4.1"  # omit on Windows/Linux if not building
 bash build_release.sh          # uses the version in project.json
 bash build_release.sh 1.1      # override the version
 ```
 
-- **macOS** — produces `Pyamoto-v<version>-macOS-universal.dmg` in the repo root.
+- **macOS** — produces `Pyamoto-v<version>-macOS-x86_64.zip` in the repo root.
 - **Windows / Linux** — produces `distrib/miyamoto_v<version>/` ready to zip.

@@ -159,11 +159,11 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # macOS Universal DMG
+  # macOS Universal
   # ──────────────────────────────────────────────────────────────
   build-macos:
     needs: preflight
-    name: macOS Universal DMG
+    name: macOS Universal
     runs-on: macos-14
 
     steps:
@@ -178,7 +178,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1" "dmgbuild==1.6.5"
+        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject release metadata
         run: |
@@ -199,10 +199,7 @@ jobs:
       - name: Ad-hoc sign merged bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
 
-      - name: Create DMG
-        run: python buildtools/create_dmg.py
-
-      - name: Package updater zip
+      - name: Package zip
         run: |
           V="${{ needs.preflight.outputs.version }}"
           cd build && zip -r "../Pyamoto-v${V}-macOS-x86_64.zip" Pyamoto.app
@@ -210,10 +207,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-universal-dmg
-          path: |
-            Pyamoto-*-macOS-universal.dmg
-            Pyamoto-*-macOS-x86_64.zip
+          name: macos
+          path: Pyamoto-*-macOS-x86_64.zip
           retention-days: 7
 
 
@@ -328,7 +323,7 @@ jobs:
       - name: Collect release files
         run: |
           mkdir release_files
-          find _artifacts -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.AppImage" \) \
+          find _artifacts -type f \( -name "*.zip" -o -name "*.AppImage" \) \
             -exec cp {} release_files/ \;
           echo "--- Release files ---"
           ls -lh release_files/
@@ -339,8 +334,8 @@ jobs:
           {
             echo "| Platform | File |"
             echo "|---|---|"
-            for f in release_files/*-macOS-*.dmg; do
-              [ -f "$f" ] && echo "| macOS Universal | \`$(basename "$f")\` |"
+            for f in release_files/*-macOS-*.zip; do
+              [ -f "$f" ] && echo "| macOS | \`$(basename "$f")\` |"
             done
             for f in release_files/*-Windows-*.zip; do
               [ -f "$f" ] && echo "| Windows x64 | \`$(basename "$f")\` |"
