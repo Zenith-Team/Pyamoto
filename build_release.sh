@@ -36,8 +36,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     export ARCHFLAGS="${ARCHFLAGS:--arch x86_64 -arch arm64}"
     .venv/bin/python3 build.py build_ext --inplace bdist_mac
     echo "==> Packaging app bundle as zip..."
-    cd build && zip -r "../Pyamoto-v${VERSION}-macOS-x86_64.zip" Pyamoto.app && cd ..
-    echo "==> Done. Zip: Pyamoto-v${VERSION}-macOS-x86_64.zip"
+    ARCH=$(uname -m)
+    cd build && zip -r "../Pyamoto-v${VERSION}-macOS-${ARCH}.zip" Pyamoto.app && cd ..
+    echo "==> Done. Zip: Pyamoto-v${VERSION}-macOS-${ARCH}.zip"
 else
     echo "==> Linux/Windows: building frozen executable"
     .venv/bin/python3 build.py build_ext --inplace build_exe

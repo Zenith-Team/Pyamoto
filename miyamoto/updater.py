@@ -26,23 +26,28 @@ _HEADERS = {
     'User-Agent': 'Pyamoto-updater',
 }
 
-# Maps platform.system() → platform string used in release asset names.
-# Assets follow the naming convention:
-#   Pyamoto-v{version}-{platform_string}.zip
+# Asset naming convention:
+#   Pyamoto-v{version}-{platform}.zip
 # where {version} is a semver (stable) or 7-char commit SHA (nightly).
-_OS_MAP = {
-    'Darwin': 'macOS-x86_64',
-    'Windows': 'Windows-x64',
-    'Linux': 'Linux-x86_64',
-}
+# macOS uses arch suffix (arm64 / x86_64) so updater matches native arch.
 
-# For fallback matching we match on just the OS prefix (e.g. "macOS") so
-# a build that only has the platform prefix (without architecture suffix) can still be found.
-_OS_PREFIX = {
-    'Darwin': 'macOS',
-    'Windows': 'Windows',
-    'Linux': 'Linux',
-}
+
+def _os_name():
+    sys_name = platform.system()
+    if sys_name == 'Darwin':
+        return f'macOS-{platform.machine()}'
+    return {
+        'Windows': 'Windows-x64',
+        'Linux': 'Linux-x86_64',
+    }.get(sys_name)
+
+
+def _os_prefix():
+    return {
+        'Darwin': 'macOS',
+        'Windows': 'Windows',
+        'Linux': 'Linux',
+    }.get(platform.system())
 
 CHANNEL_STABLE = 'stable'
 CHANNEL_NIGHTLY = 'nightly'
@@ -111,9 +116,8 @@ def _asset_url(release_data):
       2. Fallback: any .zip whose name contains the OS prefix (macOS/Windows/Linux)
       3. (macOS only) any .zip at all (some nightlies have no platform prefix in zip name)
     """
-    system = platform.system()
-    os_name = _OS_MAP.get(system)
-    os_prefix = _OS_PREFIX.get(system)
+    os_name = _os_name()
+    os_prefix = _os_prefix()
     if not os_name or not os_prefix:
         return None
 
@@ -133,7 +137,7 @@ def _asset_url(release_data):
 
     # 3) On macOS: some nightlies have no zip with "macOS" prefix.
     #    Grab any .zip we can find — there is typically only one per release.
-    if system == 'Darwin':
+    if platform.system() == 'Darwin':
         for asset in release_data.get('assets', []):
             if asset['name'].endswith('.zip'):
                 return asset['browser_download_url']
