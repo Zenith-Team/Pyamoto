@@ -1188,10 +1188,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.objUseLayer1.setToolTip('<b>Layer 1:</b><br>All or most of your normal level objects should be placed on this layer. This is the only layer where tile interactions (solids, slopes, etc) will work.<br><b>Note:</b> To switch objects on other layers to this layer, select them and then click this button while holding down the <i>Alt</i> key.')
         self.objUseLayer2 = QtWidgets.QRadioButton('2')
         self.objUseLayer2.setToolTip('<b>Layer 2:</b><br>Background/wall tiles (such as those in the hidden caves) should be placed on this layer. Tiles on layer 2 have no effect on collisions.<br><b>Note:</b> To switch objects on other layers to this layer, select them and then click this button while holding down the <i>Alt</i> key.')
-        editTilesetsBtn = QtWidgets.QPushButton('Edit Tilesets')
-        editTilesetsBtn.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
-        editTilesetsBtn.clicked.connect(self.actions['edittilesets'].trigger)
-
         setLayerBtn = QtWidgets.QPushButton('Set to Layer')
         setLayerBtn.setToolTip('Move all selected objects to the current paint layer.')
         setLayerBtn.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
@@ -1205,9 +1201,13 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         topRow.addWidget(self.objUseLayer2)
         topRow.addStretch(1)
         topRow.addWidget(setLayerBtn)
-        topRow.addWidget(editTilesetsBtn)
         tilesLayout.addLayout(topRow)
         tilesLayout.addWidget(self.objAllTab)
+
+        _btn_w = 140
+        self.editTilesetsBtn = QtWidgets.QPushButton('Edit Tilesets')
+        self.editTilesetsBtn.setFixedWidth(_btn_w)
+        self.editTilesetsBtn.clicked.connect(self.actions['edittilesets'].trigger)
 
         tabs.addTab(tilesContainer, tsicon, '')
         tabs.setTabToolTip(0, 'Objects')
@@ -1231,6 +1231,12 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.objPicker.ObjChanged.connect(self.ObjectChoiceChanged)
         self.objPicker.ObjReplace.connect(self.ObjectReplace)
         oel.addWidget(self.objPicker, 1)
+
+        objBtnRow = QtWidgets.QHBoxLayout()
+        objBtnRow.addStretch(1)
+        objBtnRow.addWidget(self.editTilesetsBtn)
+        objBtnRow.addStretch(1)
+        oel.addLayout(objBtnRow)
 
         # sprite tab
         self.sprAllTab = QtWidgets.QTabWidget()
