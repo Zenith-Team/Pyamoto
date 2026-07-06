@@ -188,6 +188,13 @@ jobs:
         with:
           submodules: true
 
+      - name: Install gettext (x64 Python dependency)
+        if: matrix.arch.setup == 'x64'
+        run: |
+          brew install gettext
+          sudo mkdir -p /usr/local/opt
+          sudo ln -s /opt/homebrew/opt/gettext /usr/local/opt/gettext
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
