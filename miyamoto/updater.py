@@ -19,7 +19,7 @@ from .misc import setting, setSetting
 GITHUB_REPO = 'Zenith-Team/Pyamoto'
 _API_BASE = f'https://api.github.com/repos/{GITHUB_REPO}/releases'
 _API_LATEST = f'{_API_BASE}/latest'
-_API_RECENT = f'{_API_BASE}?per_page=10'
+_API_RECENT = _API_BASE
 
 _HEADERS = {
     'Accept': 'application/vnd.github+json',
@@ -149,9 +149,10 @@ class _UpdateChecker(QtCore.QObject):
         releases = self._fetch(_API_RECENT)
         nightlies = [
             r for r in releases
-            if r.get('prerelease') and r['tag_name'].startswith('nightly-')
+            if r['tag_name'].startswith('nightly-')
         ]
         if not nightlies:
+            print('No nightly releases found', file=sys.stderr)
             return
         nightlies.sort(key=lambda r: r.get('published_at', r['created_at']), reverse=True)
         latest = nightlies[0]
@@ -167,6 +168,8 @@ class _UpdateChecker(QtCore.QObject):
                 latest_sha[:7],
                 url,
             )
+        else:
+            print(f'No asset URL found for nightly {latest["tag_name"]}', file=sys.stderr)
 
 
 class _UpdateDialog(QtWidgets.QDialog):
