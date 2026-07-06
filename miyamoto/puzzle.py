@@ -4981,7 +4981,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         objMenu = menubar.addMenu("&Objects")
         objMenu.addAction("Import object from file...", self.importObjFromFile, '')
-        objMenu.addAction("Add downloaded objects...", self.importObjectsFromFolder, '')
+        objMenu.addAction("Import Objects...", self.importObjectsFromFolder, '')
         objMenu.addSeparator()
         objMenu.addAction("Export object...", self.saveObject, '')
         objMenu.addAction("Export all objects...", self.saveAllObjects, '')
@@ -5044,7 +5044,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def importObjectsFromFolder(self):
         """Open the folder-import dialog and import selected objects into the chosen slot(s)."""
-        top = misc.setting('ObjPath')
+        top = misc.setting('ObjPath', '') or os.path.join(globals.user_data_path, 'Objects')
         if not top or not os.path.isdir(top):
             QtWidgets.QMessageBox.warning(
                 self, "Import Objects",
@@ -5122,7 +5122,7 @@ class ImportObjectsDialog(QtWidgets.QDialog):
     def __init__(self, editors, parent=None):
         super().__init__(parent)
         self.editors = editors  # list of TilesetEditor, one per slot (index == slot)
-        self.setWindowTitle("Add downloaded objects")
+        self.setWindowTitle("Import Objects")
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setMinimumWidth(520)
         self.setMinimumHeight(600)
@@ -5191,7 +5191,7 @@ class ImportObjectsDialog(QtWidgets.QDialog):
     def _loadFolders(self):
         self.folderCombo.blockSignals(True)
         self.folderCombo.clear()
-        top = misc.setting('ObjPath')
+        top = misc.setting('ObjPath', '') or os.path.join(globals.user_data_path, 'Objects')
         if not top or not os.path.isdir(top):
             self.folderCombo.setEnabled(False)
             self.folderCombo.blockSignals(False)
@@ -5208,7 +5208,7 @@ class ImportObjectsDialog(QtWidgets.QDialog):
         self._objectModel.clear()
         self._objectData.clear()
 
-        top = misc.setting('ObjPath')
+        top = misc.setting('ObjPath', '') or os.path.join(globals.user_data_path, 'Objects')
         folder = self.folderCombo.currentText()
         if not top or not folder:
             self._updateOkButton()

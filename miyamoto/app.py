@@ -1232,9 +1232,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.objPicker.ObjReplace.connect(self.ObjectReplace)
         oel.addWidget(self.objPicker, 1)
 
+        self.importObjectsBtn = QtWidgets.QPushButton('Import Objects')
+        self.importObjectsBtn.setFixedWidth(_btn_w)
+        self.importObjectsBtn.clicked.connect(self.HandleImportObjects)
+
         objBtnRow = QtWidgets.QHBoxLayout()
         objBtnRow.addStretch(1)
         objBtnRow.addWidget(self.editTilesetsBtn)
+        objBtnRow.addWidget(self.importObjectsBtn)
         objBtnRow.addStretch(1)
         oel.addLayout(objBtnRow)
 
@@ -6036,6 +6041,25 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 slots_data.append((f'Pa{slot}_MIYAMOTO_TEMP', None, True))
 
         self.showPuzzleWindow(slots_data, initial_slot)
+
+    def HandleImportObjects(self):
+        """Open tileset editor and trigger Import Objects — user can save/discard."""
+        slots_data = []
+        for slot in range(4):
+            ts_name = getattr(globals.Area, f'tileset{slot}')
+            if ts_name and ts_name in globals.szsData:
+                slots_data.append((ts_name, globals.szsData[ts_name], False))
+            else:
+                slots_data.append((f'Pa{slot}_MIYAMOTO_TEMP', None, True))
+
+        pw = PuzzleWindow(slots_data, Qt.Dialog)
+        if pw.forceClose:
+            del pw
+            return
+        pw.setWindowModality(Qt.ApplicationModal)
+        pw.setAttribute(Qt.WA_DeleteOnClose)
+        pw.show()
+        pw.importObjectsFromFolder()
 
     def showPuzzleWindow(self, slots_data, initial_slot=0):
         pw = PuzzleWindow(slots_data, Qt.Dialog)
