@@ -89,16 +89,19 @@ def _asset_url(release_data):
     if not os_name:
         return None
     tag = release_data['tag_name']
+    candidates = []
     if tag.startswith('nightly-'):
         ver = tag.rsplit('-', 1)[-1]
+        candidates.append(f'Pyamoto-{tag}-{os_name}.zip')
+        candidates.append(f'Pyamoto-v{ver}-{os_name}.zip')
     else:
         ver = tag.lstrip('v')
-    expected = f'Pyamoto-v{ver}-{os_name}.zip'
+        candidates.append(f'Pyamoto-v{ver}-{os_name}.zip')
     for asset in release_data.get('assets', []):
-        if asset['name'] == expected:
+        if asset['name'] in candidates:
             return asset['browser_download_url']
     for asset in release_data.get('assets', []):
-        if asset['name'].endswith('.zip') and os_name.replace('-', '') in asset['name']:
+        if asset['name'].endswith('.zip') and os_name in asset['name']:
             return asset['browser_download_url']
     return None
 
@@ -119,8 +122,8 @@ class _UpdateChecker(QtCore.QObject):
                 self._check_nightly()
             elif channel == CHANNEL_STABLE:
                 self._check_release()
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f'Update check failed: {exc}', file=sys.stderr)
         if not self._found:
             self.up_to_date.emit()
         global _checker
@@ -154,14 +157,23 @@ class _UpdateChecker(QtCore.QObject):
         latest = nightlies[0]
         latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
         current_sha = globals.MiyamotoVersion
-        if latest_sha != current_sha and not _is_skipped(latest_sha):
-            url = _asset_url(latest)
-            if url:
-                self._found = True
-                self.update_found.emit(current_sha, latest_sha, url)
+        if not current_sha or current_sha == latest_sha or _is_skipped(latest_sha):
+            return
+        url = _asset_url(latest)
+        if url:
+            self._found = True
+            self.update_found.emit(
+                current_sha[:7] if len(current_sha) > 7 else current_sha,
+                latest_sha[:7],
+                url,
+            )
 
 
 class _UpdateDialog(QtWidgets.QDialog):
+    download_progress = QtCore.pyqtSignal(int)
+    download_status = QtCore.pyqtSignal(str)
+    download_finished = QtCore.pyqtSignal(bool, str)
+
     def __init__(self, current, latest, download_url, parent=None):
         super().__init__(parent)
         self._download_url = download_url
@@ -169,6 +181,7 @@ class _UpdateDialog(QtWidgets.QDialog):
         self._zip_path = None
         self._cancel = False
         self._tmp_dir = None
+        self._btn_box = None
 
         is_nightly = globals.MiyamotoReleaseType == 'nightly'
         kind = 'Nightly ' if is_nightly else ''
@@ -223,6 +236,7 @@ class _UpdateDialog(QtWidgets.QDialog):
             root.addLayout(codesign_row)
 
         btn_box = QtWidgets.QDialogButtonBox()
+        self._btn_box = btn_box
         skip_btn = btn_box.addButton('Skip this version', QtWidgets.QDialogButtonBox.DestructiveRole)
         skip_btn.setAutoDefault(False)
         skip_btn.clicked.connect(self._on_skip)
@@ -234,6 +248,10 @@ class _UpdateDialog(QtWidgets.QDialog):
         btn_box.rejected.connect(self.reject)
         root.addWidget(btn_box)
 
+        self.download_progress.connect(self._progress.setValue)
+        self.download_status.connect(self._status.setText)
+        self.download_finished.connect(self._on_download_finished)
+
     def _on_skip(self):
         _skip_version(self._latest)
         self.reject()
@@ -243,8 +261,14 @@ class _UpdateDialog(QtWidgets.QDialog):
         self._cancel_btn.setText('Cancel')
         self._cancel_btn.setEnabled(True)
         self._progress.setVisible(True)
+        self._progress.setValue(0)
         self._status.setVisible(True)
-        self._status.setText('Downloading update...')
+        self.download_status.emit('Downloading update...')
+        if self._btn_box:
+            try:
+                self._btn_box.accepted.disconnect()
+            except TypeError:
+                pass
         try:
             self._dl_btn.clicked.disconnect()
         except TypeError:
@@ -266,7 +290,7 @@ class _UpdateDialog(QtWidgets.QDialog):
                     data.extend(part)
                     if total:
                         pct = int(len(data) / total * 100)
-                        self._progress.setValue(pct)
+                        self.download_progress.emit(pct)
 
             if self._cancel:
                 return
@@ -276,14 +300,24 @@ class _UpdateDialog(QtWidgets.QDialog):
             with open(self._zip_path, 'wb') as f:
                 f.write(data)
 
-            self._status.setText('Download complete!')
-            self._progress.setValue(100)
+            self.download_status.emit('Download complete!')
+            self.download_progress.emit(100)
+            self.download_finished.emit(True, '')
+        except Exception as e:
+            self.download_finished.emit(False, str(e))
+
+    def _on_download_finished(self, success, error):
+        try:
+            self._dl_btn.clicked.disconnect()
+        except TypeError:
+            pass
+        if success:
             self._dl_btn.setText('Restart & Update')
             self._dl_btn.setEnabled(True)
             self._cancel_btn.setText('Cancel')
             self._dl_btn.clicked.connect(self._on_restart)
-        except Exception as e:
-            self._status.setText(f'Download failed: {e}')
+        else:
+            self.download_status.emit(f'Download failed: {error}')
             self._dl_btn.setText('Retry')
             self._dl_btn.setEnabled(True)
             self._dl_btn.clicked.connect(self._on_download)
