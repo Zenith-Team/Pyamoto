@@ -1985,6 +1985,31 @@ class PreferencesDialog(QtWidgets.QDialog):
         Returns the Toolbar Tab
         """
 
+        # Action key → icon name mapping (matches app.py CreateAction calls)
+        _action_icons = {
+            'newlevel': 'new', 'openfromname': 'open', 'openfromfile': 'openfromfile',
+            'openrecent': 'recent', 'save': 'save', 'saveas': 'saveas',
+            'metainfo': 'info', 'screenshot': 'screenshot', 'preferences': 'settings',
+            'exit': 'delete',
+            'undo': 'undo', 'redo': 'redo', 'selectall': 'select', 'deselect': 'deselect',
+            'cut': 'cut', 'copy': 'copy', 'paste': 'paste', 'duplicate': 'copy',
+            'raise': 'raise', 'lower': 'lower', 'shiftitems': 'move',
+            'mergelocations': 'merge',
+            'freezeobjects': 'objectsfreeze', 'freezesprites': 'spritesfreeze',
+            'freezeentrances': 'entrancesfreeze', 'freezelocations': 'locationsfreeze',
+            'freezepaths': 'pathsfreeze',
+            'showlay0': 'layer0', 'showlay1': 'layer1', 'showlay2': 'layer2',
+            'showsprites': 'sprites', 'showspriteimages': 'sprites',
+            'showrotation': 'rotation', 'showlocations': 'locations',
+            'showpaths': 'paths', 'grid': 'grid',
+            'zoommax': 'zoommax', 'zoomin': 'zoomin', 'zoomactual': 'zoomactual',
+            'zoomout': 'zoomout', 'zoommin': 'zoommin',
+            'areaoptions': 'area', 'zones': 'zones',
+            'addarea': 'add', 'importarea': 'import', 'deletearea': 'delete',
+            'reloaddata': 'reload', 'viewspritemap': 'folderpath',
+            'infobox': 'help', 'wiki': 'contents', 'aboutqt': 'qt',
+        }
+
         class ToolbarTab(QtWidgets.QWidget):
             """
             Toolbar Tab
@@ -2047,6 +2072,9 @@ class PreferencesDialog(QtWidgets.QDialog):
                 for defaults, boxes, layout, group in menuItems:
                     for L, C, I in defaults:
                         box = QtWidgets.QCheckBox(L)
+                        icon_name = _action_icons.get(I)
+                        if icon_name:
+                            box.setIcon(GetIcon(icon_name))
                         boxes.append(box)
                         layout.addWidget(box)
                         try:
