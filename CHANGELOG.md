@@ -14,7 +14,7 @@
 - Added the option to open levels in a new window or the same window
 - Puzzle: added visual tile properties seletion, enhance objects view and mode selection, clean and improve menubar actions, update tileset canvas view with right-click actions, unsaved changes warning on close
 - Improved icons for Main tileset objects
-- Addd improved search algorithm for the actor list
+- Add improved search algorithm for the actor list
 - Replaced Stamps with Clips which is a new system based on the existing MiyamotoClip format
 - Added an option to place objects at their full size
 - The app now uses a global userdata folder rather than the project path for preferences (survives updates) and you can open that path using `File`->`Show Pyamoto Userdata Folder`
