@@ -169,45 +169,16 @@ jobs:
           python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='release'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # ── Build arm64 .app (native) ──
-      - name: Build arm64 Cython extensions + .app
+      - name: Build universal Cython extensions + .app
         env:
-          ARCHFLAGS: "-arch arm64"
+          ARCHFLAGS: "-arch x86_64 -arch arm64"
         run: python build.py build_ext --inplace bdist_mac
 
-      - name: Save arm64 .app aside
-        run: mv build/Pyamoto.app build/Pyamoto-arm64.app
-
-      # ── Build x86_64 .app (via Rosetta x86_64 Python) ──
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-          architecture: x64
-
-      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-
-      - name: Build x86_64 Cython extensions + .app
-        id: build-x86
-        continue-on-error: true
-        env:
-          ARCHFLAGS: "-arch x86_64"
-        run: python build.py build_ext --inplace bdist_mac
-
-      # ── Merge into universal or fall back to arm64-only ──
-      - name: Save x86_64 .app aside
-        if: steps.build-x86.outcome == 'success'
-        run: mv build/Pyamoto.app build/Pyamoto-x86_64.app
-
-      - name: Restore arm64 .app
-        run: mv build/Pyamoto-arm64.app build/Pyamoto.app
-
-      - name: Merge x86_64 into arm64 via lipo
-        if: steps.build-x86.outcome == 'success'
+      - name: Verify / merge PyQt5 universality in bundle
         run: |
-          python buildtools/merge_ci.py build/Pyamoto.app build/Pyamoto-x86_64.app build/Pyamoto-universal.app
-          rm -rf build/Pyamoto.app build/Pyamoto-x86_64.app
-          mv build/Pyamoto-universal.app build/Pyamoto.app
-          file build/Pyamoto.app/Contents/MacOS/Pyamoto
+          PYQT5_PARENT=$(python3 -c \
+            "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
+          python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
 
       - name: Ad-hoc sign bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
@@ -219,7 +190,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-universal
+          name: macos
           path: Pyamoto-*-macOS-universal.zip
           retention-days: 7
 
