@@ -176,28 +176,6 @@ if 'bdist_mac' in sys.argv:
         if os.path.isfile(settings_path):
             os.remove(settings_path)
             print('>> Removed local settings.ini from bundle.')
-        macos_dir = os.path.join(app_path, 'Contents/MacOS')
-        res_dir = os.path.join(app_path, 'Contents/Resources')
-        if os.path.isdir(res_dir):
-            for name in os.listdir(res_dir):
-                res_item = os.path.join(res_dir, name)
-                macos_item = os.path.join(macos_dir, name)
-                # flatten broken generated symlinks
-                if os.path.isdir(res_item) and not os.path.islink(res_item):
-                    if os.path.islink(macos_item):
-                        os.unlink(macos_item)
-                        shutil.move(res_item, macos_item)
-                        print(f'>> Fixed symlink to physical folder and transferred: {name}')
-        print('>> Pruning CI/CD and OS metadata junk to fix codesign...')
-        for root, dirs, files in os.walk(app_path):
-            for d in list(dirs):
-                if d in ('.github', '.git'):
-                    shutil.rmtree(os.path.join(root, d))
-                    dirs.remove(d)
-                    print(f'   Removed junk directory: {os.path.join(root, d)}')
-            for f in files:
-                if f == '.DS_Store':
-                    os.remove(os.path.join(root, f))
 elif platform.system() == 'Windows':
     try: os.unlink(dir_ + '/w9xpopen.exe')
     except: pass
