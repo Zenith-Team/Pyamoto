@@ -188,6 +188,16 @@ if 'bdist_mac' in sys.argv:
                         os.unlink(macos_item)
                         shutil.move(res_item, macos_item)
                         print(f'>> Fixed symlink to physical folder and transferred: {name}')
+        print('>> Pruning CI/CD and OS metadata junk to fix codesign...')
+        for root, dirs, files in os.walk(app_path):
+            for d in list(dirs):
+                if d in ('.github', '.git'):
+                    shutil.rmtree(os.path.join(root, d))
+                    dirs.remove(d)
+                    print(f'   Removed junk directory: {os.path.join(root, d)}')
+            for f in files:
+                if f == '.DS_Store':
+                    os.remove(os.path.join(root, f))
 elif platform.system() == 'Windows':
     try: os.unlink(dir_ + '/w9xpopen.exe')
     except: pass
