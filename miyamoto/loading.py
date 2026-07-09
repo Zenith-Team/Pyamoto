@@ -456,7 +456,9 @@ def _LoadTileset(idx, name):
     """
 
     # if this file's not found, return
-    if name not in globals.szsData: return
+    if name not in globals.szsData:
+        print(f'[DEBUG _LoadTileset] FAIL: name={name!r} not found in szsData')
+        return
 
     sarcdata = globals.szsData[name]
     sarc = SarcLib.SARC_Archive()
@@ -591,6 +593,7 @@ def _LoadTileset(idx, name):
         defs[i] = obj
 
     globals.ObjectDefinitions[idx] = defs
+    obj_count = sum(1 for d in defs if d is not None)
 
     ProcessOverrides(name)
 

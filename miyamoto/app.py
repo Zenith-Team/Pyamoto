@@ -4300,18 +4300,19 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         return True
 
     def newLevel(self):
-        # Create the new level object
         globals.Level = Level_NSMBU()
 
-        # Load it
         globals.Level.new()
 
         self.objUseLayer1.setChecked(True)
 
         self.ReloadTilesets()
 
+        self.objTS0Tab.setLayout(self.createObjectLayout)
         self.objAllTab.setCurrentIndex(0)
         self.objAllTab.setTabEnabled(0, True)
+
+        self.objPicker.LoadFromTilesets()
 
         if globals.UndoManager:
             globals.UndoManager.clear()
@@ -4420,9 +4421,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 self.LoadDefaultTileset(tileset_name, True)
 
     def ReloadTilesets(self, soft=False):
-        """
-        Reloads all the tilesets. If soft is True, they will not be reloaded if the filepaths have not changed.
-        """
         tilesets = [globals.Area.tileset0, globals.Area.tileset1, globals.Area.tileset2, globals.Area.tileset3]
         for idx, name in enumerate(tilesets):
             if (name is not None) and (name != ''):
@@ -4758,10 +4756,10 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         Tab indices: 0=Main, 1=Embedded
         """
         if hasattr(self, 'objPicker'):
-            if nt == 0:  # Main (Pa0)
+            if nt == 0:
                 self.objPicker.ShowTileset(0)
                 self.objTS0Tab.setLayout(self.createObjectLayout)
-            elif nt == 1:  # Embedded (sub-tabs: All/2/3/4)
+            elif nt == 1:
                 self.objPicker.ShowTileset(2)
                 self.objTS123Tab.setLayout(self.createObjectLayout)
             self.defaultPropDock.setVisible(False)

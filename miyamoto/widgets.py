@@ -264,10 +264,11 @@ class ObjectPickerWidget(QtWidgets.QListView):
         self.menu.popup(QtGui.QCursor.pos())
 
     def LoadFromTilesets(self):
-        """
-        Renders all the object previews
-        """
-        self.m0.LoadFromTileset(0)
+        """Renders all the object previews"""
+        new_m0 = self.ObjectListModel()
+        new_m0.LoadFromTileset(0)
+        self.m0 = new_m0
+        self.setModel(self.m0)
         self.objTS123Tab.LoadFromTilesets()
 
     def ShowTileset(self, id):
@@ -575,15 +576,15 @@ class ObjectPickerWidget(QtWidgets.QListView):
         """
 
         def paint(self, painter, option, index):
-            """
-            Paints an object
-            """
             painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
             if option.state & QtWidgets.QStyle.State_Selected:
                 painter.fillRect(option.rect, option.palette.highlight())
 
             p = index.model().data(index, Qt.DecorationRole)
-            painter.drawPixmap(option.rect.x() + 2, option.rect.y() + 2, p)
+            if p is None or p.isNull():
+                painter.drawText(option.rect, str(index.row()))
+            else:
+                painter.drawPixmap(option.rect.x() + 2, option.rect.y() + 2, p)
             # painter.drawText(option.rect, str(index.row()))
 
         def sizeHint(self, option, index):
@@ -721,6 +722,7 @@ class ObjectPickerWidget(QtWidgets.QListView):
                 globals.numObj.append(z)
 
             self.endResetModel()
+
 
         def LoadFromFolder(self):
             """
@@ -6387,8 +6389,8 @@ class EmbeddedTab(QtWidgets.QTabWidget):
         return self.getModels()[self.currentIndex()]
 
     def LoadFromTilesets(self):
-        self.mAll.LoadFromTileset(4)  # combined Pa1+Pa2+Pa3
-        self._allBoundaries = list(globals.numObj)  # capture before individual loads overwrite it
+        self.mAll.LoadFromTileset(4)
+        self._allBoundaries = list(globals.numObj)
         self.m1.LoadFromTileset(1)
         self.m2.LoadFromTileset(2)
         self.m3.LoadFromTileset(3)
