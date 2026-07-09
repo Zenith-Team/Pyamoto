@@ -182,7 +182,7 @@ if 'bdist_mac' in sys.argv:
             for name in os.listdir(res_dir):
                 res_item = os.path.join(res_dir, name)
                 macos_item = os.path.join(macos_dir, name)
-                if os.path.isdir(res_item) and os.path.isdir(macos_item):
+                if os.path.isdir(res_item) and os.path.isdir(macos_item) and not os.path.islink(macos_item):
                     shutil.rmtree(res_item)
                     print(f'>> Removed duplicated {name} from Resources/.')
 elif platform.system() == 'Windows':
