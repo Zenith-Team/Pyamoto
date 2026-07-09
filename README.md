@@ -13,10 +13,17 @@
 Pyamoto is an advanced fork of the original Miyamoto editor with the purpose of improving functionality and usability.
 
 ## Installation
-Download the latest release from the [releases page](https://github.com/Zenith-Team/Pyamoto/releases/latest).
+Download the latest automated release from the [releases page](https://github.com/Zenith-Team/Pyamoto/releases/latest).
 
 ## Usage
 Follow the guide on the [wiki](https://zenith.nsmbu.net/wiki/Miyamoto_Level_Editor).
+
+## Interested in contributing?
+Dev discussions are in the `#nsmbu` channel in the [Zenith Discord](https://go.nsmbu.net/discord). 
+External contributions and fixes are welcome through Pull Requests and the Issues tab. Check [Running From Source](#running-from-source) to setup a local development env.
+
+## Changelog
+Read the [changelog](./CHANGELOG.md) for a full list of changes and additions.
 
 ## Running from Source
 
@@ -26,20 +33,10 @@ Follow the guide on the [wiki](https://zenith.nsmbu.net/wiki/Miyamoto_Level_Edit
 git clone https://github.com/Zenith-Team/Pyamoto
 cd Pyamoto
 bash setup_venv.sh
-.venv/bin/python3 pyamoto.py   # macOS/Linux
+
+# macOS/Linux
+.venv/bin/python3 pyamoto.py
+
 # or on Windows:
-# .venv\Scripts\python pyamoto.py
+.venv\Scripts\python pyamoto.py
 ```
-
-## Building from Source
-
-Install the extra build dependencies, then run the release script:
-
-```bash
-.venv/bin/pip install "cx_Freeze==8.4.1"  # omit on Windows/Linux if not building
-bash build_release.sh          # uses the version in project.json
-bash build_release.sh 1.1      # override the version
-```
-
-- **macOS** — produces `Pyamoto-v<version>-macOS-x86_64.zip` in the repo root.
-- **Windows / Linux** — produces `distrib/miyamoto_v<version>/` ready to zip.
