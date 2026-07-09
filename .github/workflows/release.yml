@@ -178,11 +178,7 @@ jobs:
       - name: Save arm64 .app aside
         run: mv build/Pyamoto.app build/Pyamoto-arm64.app
 
-      # ── Build x86_64 .app (via Rosetta x86_64 Homebrew) ──
-      - name: Install gettext for x86_64 (via x86_64 Homebrew)
-        run: |
-          arch -x86_64 /usr/local/bin/brew install gettext
-
+      # ── Build x86_64 .app (via Rosetta x86_64 Python) ──
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
