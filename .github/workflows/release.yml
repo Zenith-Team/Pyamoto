@@ -131,10 +131,7 @@ jobs:
         shell: pwsh
         run: |
           $v = "${{ needs.preflight.outputs.version }}"
-          Compress-Archive `
-            -Path "distrib\miyamoto_v$v\*" `
-            -DestinationPath "Pyamoto-v$v-Windows-x64.zip" `
-            -CompressionLevel Optimal
+          7z a -mx=9 -tzip "Pyamoto-v$v-Windows-x64.zip" ".\distrib\miyamoto_v$v\*"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -186,7 +183,7 @@ jobs:
       - name: Package macOS-universal.zip
         run: |
           V="${{ steps.metadata.outputs.version }}"
-          cd build && zip -r "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
+          cd build && zip -r -9 -X "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
 
       - uses: actions/upload-artifact@v4
         with:
@@ -259,7 +256,7 @@ jobs:
       - name: Package updater zip
         run: |
           V="${{ needs.preflight.outputs.version }}"
-          cd "distrib/miyamoto_v${V}" && zip -r "../../Pyamoto-v${V}-Linux-x86_64.zip" .
+          cd "distrib/miyamoto_v${V}" && zip -r -9 -X "../../Pyamoto-v${V}-Linux-x86_64.zip" .
 
       - uses: actions/upload-artifact@v4
         with:
