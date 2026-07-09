@@ -189,6 +189,25 @@ jobs:
 
       - name: Package macOS-universal.zip
         run: |
+          python - <<'EOF'
+          import sys, os, os.path, shutil
+          print('>> Performing macOS specific prepacking...')
+          app_path = 'build/Pyamoto.app'
+          if os.path.isdir(app_path):
+              macos_dir = os.path.join(app_path, 'Contents/MacOS')
+              res_dir = os.path.join(app_path, 'Contents/Resources')
+              if os.path.isdir(res_dir):
+                for name in os.listdir(res_dir):
+                    res_item = os.path.join(res_dir, name)
+                    macos_item = os.path.join(macos_dir, name)
+                    # flatten broken generated symlinks
+                    if os.path.isdir(res_item) and not os.path.islink(res_item):
+                        if os.path.islink(macos_item):
+                            os.unlink(macos_item)
+                            shutil.move(res_item, macos_item)
+                            print(f'>> Fixed symlink to physical folder and transferred: {name}')
+          print("\nPre-package script successful.")
+          EOF
           V="${{ steps.metadata.outputs.version }}"
           cd build && zip -r -9 -X "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
 
