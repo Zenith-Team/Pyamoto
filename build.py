@@ -182,9 +182,12 @@ if 'bdist_mac' in sys.argv:
             for name in os.listdir(res_dir):
                 res_item = os.path.join(res_dir, name)
                 macos_item = os.path.join(macos_dir, name)
-                if os.path.isdir(res_item) and os.path.isdir(macos_item) and not os.path.islink(macos_item):
-                    shutil.rmtree(res_item)
-                    print(f'>> Removed duplicated {name} from Resources/.')
+                # flatten broken generated symlinks
+                if os.path.isdir(res_item) and not os.path.islink(res_item):
+                    if os.path.islink(macos_item):
+                        os.unlink(macos_item)
+                        shutil.move(res_item, macos_item)
+                        print(f'>> Fixed symlink to physical folder and transferred: {name}')
 elif platform.system() == 'Windows':
     try: os.unlink(dir_ + '/w9xpopen.exe')
     except: pass
