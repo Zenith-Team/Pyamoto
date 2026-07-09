@@ -1,5 +1,15 @@
-# Pyamoto
-## The New Super Mario Bros. U level editor
+<img alt="banner" src="https://github.com/user-attachments/assets/ab7c7183-2f5c-4e8b-8f54-1283ba3ddfb3" />
+<div align="center">
+    <img alt="wiiu" height="56" src="https://github.com/user-attachments/assets/c22393cf-f619-4a1c-bc99-de68d5d903fa">
+    <a href="https://go.nsmbu.net/discord">
+        <img alt="discord" height="56" src="https://github.com/user-attachments/assets/f43b9deb-376a-48cd-bc09-8117cde071bb">
+    </a>
+    <a href="https://zenith.nsmbu.net/wiki/Miyamoto_Level_Editor">
+        <img alt="docs" height="56" src="https://github.com/user-attachments/assets/f492ac70-08e4-4894-a4f8-a8a829d9e4e4">
+    </a>
+</div>
+
+## Overview
 Pyamoto is an advanced fork of the original Miyamoto editor with the purpose of improving functionality and usability.
 
 ## Installation
