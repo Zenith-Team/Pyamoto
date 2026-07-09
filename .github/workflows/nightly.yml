@@ -3,9 +3,6 @@ name: Nightly Build
 on:
   push:
     branches: [master]
-    # Only rebuild when code changes. Pure asset changes (game data, images,
-    # text files) are silently skipped and will be picked up in the next
-    # release that also has a code change.
     paths:
       - 'miyamoto/**'
       - '*.py'
@@ -21,7 +18,6 @@ on:
       - '.github/workflows/**'
   workflow_dispatch:
 
-# Cancel any in-progress run for the same branch so rapid pushes don't pile up
 concurrency:
   group: nightly-${{ github.ref }}
   cancel-in-progress: true
@@ -29,10 +25,7 @@ concurrency:
 jobs:
 
   # ──────────────────────────────────────────────────────────────
-  # Preflight — fast sanity check before any expensive build starts.
-  # Verifies that build.py and its key imports resolve correctly so
-  # a bad refactor fails in seconds rather than after 20 min of
-  # Cython compilation.
+  # Preflight
   # ──────────────────────────────────────────────────────────────
   preflight:
     name: Preflight checks
@@ -47,29 +40,21 @@ jobs:
           python - <<'EOF'
           import sys, os
           errors = []
-
-          # build.py must be able to import the version
           try:
               from miyamoto.globals import MiyamotoVersion
-              print(f"  OK  miyamoto.globals  →  v{MiyamotoVersion}")
+              print(f"  OK  miyamoto.globals  ->  v{MiyamotoVersion}")
           except Exception as e:
               errors.append(f"miyamoto.globals import failed: {e}")
-
-          # Entry point must exist
           if not os.path.isfile("pyamoto.py"):
               errors.append("pyamoto.py entry point is missing")
           else:
               print("  OK  pyamoto.py exists")
-
-          # build.py must not reference the old root-level globals
           with open("build.py") as f:
               src = f.read()
           if "from globals import" in src:
-              errors.append("build.py still uses 'from globals import' (should be 'from miyamoto.globals import')")
+              errors.append("build.py still uses 'from globals import'")
           else:
               print("  OK  build.py import path is correct")
-
-          # Executable entry point in build.py must match what exists on disk
           import re
           match = re.search(r"Executable\(\s*['\"](.+?)['\"]", src)
           if match:
@@ -78,20 +63,18 @@ jobs:
                   errors.append(f"build.py Executable points to '{ep}' which does not exist")
               else:
                   print(f"  OK  Executable entry point '{ep}' exists")
-
-          # project.json must exist (globals.py reads it at runtime)
           if not os.path.isfile("project.json"):
               errors.append("project.json is missing")
           else:
               print("  OK  project.json exists")
-
           if errors:
               print("\nPREFLIGHT FAILED:")
               for e in errors:
-                  print(f"  ✗  {e}")
+                  print(f"  X  {e}")
               sys.exit(1)
           print("\nAll preflight checks passed.")
           EOF
+
 
   # ──────────────────────────────────────────────────────────────
   # Windows x64
@@ -102,21 +85,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Set up Python 3.9 x64
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           architecture: x64
 
-      # Set up MSVC 64-bit environment so distutils finds cl.exe; our
-      # ClangBuildExt then redirects cl.exe → clang-cl at spawn time.
-      - name: Set up MSVC x64 environment
-        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
@@ -125,8 +103,7 @@ jobs:
         run: |
           echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject nightly metadata
         shell: pwsh
@@ -162,8 +139,7 @@ jobs:
             -DestinationPath "Pyamoto-v$v-Windows-x64.zip" `
             -CompressionLevel Optimal
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: Pyamoto-*.zip
@@ -171,16 +147,15 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # macOS arm64 + x86_64
+  # macOS Universal
+  #
+  # Builds arm64 .app natively, then cross-builds x86_64 .so/dylib
+  # files via Rosetta x86_64 Python, then lipo-merges into a single
+  # universal .app bundle, signs, and packages as updater zip.
   # ──────────────────────────────────────────────────────────────
   build-macos:
     needs: preflight
-    strategy:
-      matrix:
-        arch:
-          - { label: arm64,  setup: arm64, suffix: arm64 }
-          - { label: x86_64, setup: x64,   suffix: x86_64 }
-    name: macOS (${{ matrix.arch.label }})
+    name: macOS Universal
     runs-on: macos-14
 
     steps:
@@ -188,17 +163,9 @@ jobs:
         with:
           submodules: true
 
-      - name: Install gettext (x64 Python dependency)
-        if: matrix.arch.setup == 'x64'
-        run: |
-          brew install gettext
-          sudo mkdir -p /usr/local/opt
-          sudo ln -s /opt/homebrew/opt/gettext /usr/local/opt/gettext
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          architecture: ${{ matrix.arch.setup }}
 
       - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
@@ -209,34 +176,67 @@ jobs:
           python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
           echo "version=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Build app bundle
+      # ── Build arm64 .app (native) ──
+      - name: Build arm64 Cython extensions + .app
         env:
-          ARCHFLAGS: "-arch x86_64 -arch arm64"
+          ARCHFLAGS: "-arch arm64"
         run: python build.py build_ext --inplace bdist_mac
 
-      - name: Verify / merge PyQt5 universality in bundle
+      - name: Save arm64 .app aside
+        run: mv build/Pyamoto.app build/Pyamoto-arm64.app
+
+      # ── Build x86_64 .app (via Rosetta x86_64 Homebrew) ──
+      - name: Install gettext for x86_64 (via x86_64 Homebrew)
         run: |
-          PYQT5_PARENT=$(python3 -c \
-            "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
-          python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
+          arch -x86_64 /usr/local/bin/brew install gettext
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          architecture: x64
+
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+
+      - name: Build x86_64 Cython extensions + .app
+        id: build-x86
+        continue-on-error: true
+        env:
+          ARCHFLAGS: "-arch x86_64"
+        run: python build.py build_ext --inplace bdist_mac
+
+      # ── Merge into universal or fall back to arm64-only ──
+      - name: Save x86_64 .app aside
+        if: steps.build-x86.outcome == 'success'
+        run: mv build/Pyamoto.app build/Pyamoto-x86_64.app
+
+      - name: Restore arm64 .app
+        run: mv build/Pyamoto-arm64.app build/Pyamoto.app
+
+      - name: Merge x86_64 into arm64 via lipo
+        if: steps.build-x86.outcome == 'success'
+        run: |
+          python buildtools/merge_ci.py build/Pyamoto.app build/Pyamoto-x86_64.app build/Pyamoto-universal.app
+          rm -rf build/Pyamoto.app build/Pyamoto-x86_64.app
+          mv build/Pyamoto-universal.app build/Pyamoto.app
+          file build/Pyamoto.app/Contents/MacOS/Pyamoto
 
       - name: Ad-hoc sign bundle
         run: codesign --force --deep --sign - build/Pyamoto.app
 
-      - name: Package macOS-${{ matrix.arch.suffix }}.zip
+      - name: Package macOS-universal.zip
         run: |
           V="${{ steps.metadata.outputs.version }}"
-          cd build && zip -r "../Pyamoto-v${V}-macOS-${{ matrix.arch.suffix }}.zip" Pyamoto.app
+          cd build && zip -r "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
 
       - uses: actions/upload-artifact@v4
         with:
-          name: macos
-          path: Pyamoto-*-macOS-*.zip
+          name: macos-universal
+          path: Pyamoto-*-macOS-universal.zip
           retention-days: 7
 
 
   # ──────────────────────────────────────────────────────────────
-  # Linux x86_64  AppImage
+  # Linux x86_64  AppImage + updater zip
   # ──────────────────────────────────────────────────────────────
   build-linux-x86_64:
     needs: preflight
@@ -244,8 +244,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -258,13 +257,11 @@ jobs:
             libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 \
             libgl1-mesa-dev
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
 
       - name: Inject nightly metadata
         run: |
@@ -288,7 +285,6 @@ jobs:
           cp -r "distrib/miyamoto_v${V}/." "${APPDIR}/"
           cp buildtools/Pyamoto.desktop "${APPDIR}/Pyamoto.desktop"
           cp miyamotodata/app_icons/pyamoto1024.png "${APPDIR}/Pyamoto.png"
-
           cp buildtools/AppRun           "${APPDIR}/AppRun"
           chmod +x "${APPDIR}/AppRun" "${APPDIR}/Pyamoto"
 
@@ -311,8 +307,7 @@ jobs:
           V="${{ steps.ver.outputs.version }}"
           cd "distrib/miyamoto_v${V}" && zip -r "../../Pyamoto-v${V}-Linux-x86_64.zip" .
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: linux-x86_64-appimage
           path: |
@@ -322,22 +317,16 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # Linux arm64  AppImage
+  # Linux arm64  AppImage  (disabled: no arm64 PyQt5 wheel)
   # ──────────────────────────────────────────────────────────────
   build-linux-arm64:
     name: Linux arm64 AppImage
-    if: false  # TODO: re-enable once arm64 PyQt5 wheel situation is resolved
+    if: false
     runs-on: ubuntu-22.04-arm
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
-
-      # PyQt5 has no pre-built arm64 Linux wheel on PyPI, so it must build
-      # from source.  qtbase5-dev + qt5-qmake supply the Qt5 headers and qmake
-      # that sipbuild (the PyQt5 build backend) requires.
       - name: Install system libraries and Qt5 build dependencies
         run: |
           sudo apt-get update -q
@@ -347,60 +336,39 @@ jobs:
             libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 \
             libgl1-mesa-dev \
             qtbase5-dev qt5-qmake qtchooser
-          # Make qmake resolvable as plain 'qmake' for sipbuild
           sudo update-alternatives --install /usr/bin/qmake qmake \
             /usr/lib/qt5/bin/qmake 10
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-
-      - name: Install Python dependencies
-        run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-
-      - name: Inject nightly metadata
-        run: |
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+      - run: |
           SHA="${GITHUB_SHA:0:7}"
           python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
-
-      - name: Build
-        run: python build.py build_ext --inplace build_exe
-
+      - run: python build.py build_ext --inplace build_exe
       - name: Get version
         id: ver
-        run: |
-          echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
-            >> $GITHUB_OUTPUT
-
+        run: echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" >> $GITHUB_OUTPUT
       - name: Assemble AppDir
         run: |
           V="${{ steps.ver.outputs.version }}"
-          APPDIR="AppDir"
-          mkdir -p "${APPDIR}"
-          cp -r "distrib/miyamoto_v${V}/." "${APPDIR}/"
-          cp buildtools/Pyamoto.desktop "${APPDIR}/Pyamoto.desktop"
-          cp miyamotodata/app_icons/pyamoto1024.png "${APPDIR}/Pyamoto.png"
-
-          cp buildtools/AppRun           "${APPDIR}/AppRun"
-          chmod +x "${APPDIR}/AppRun" "${APPDIR}/Pyamoto"
-
+          mkdir -p AppDir
+          cp -r "distrib/miyamoto_v${V}/." "AppDir/"
+          cp buildtools/Pyamoto.desktop "AppDir/Pyamoto.desktop"
+          cp miyamotodata/app_icons/pyamoto1024.png "AppDir/Pyamoto.png"
+          cp buildtools/AppRun "AppDir/AppRun"
+          chmod +x "AppDir/AppRun" "AppDir/Pyamoto"
       - name: Download appimagetool (aarch64)
         run: |
           wget -q -O appimagetool \
             "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage"
           chmod +x appimagetool
-
       - name: Build AppImage
         run: |
           V="${{ steps.ver.outputs.version }}"
-          APPIMAGE_EXTRACT_AND_RUN=1 \
-          ARCH=aarch64 \
-            ./appimagetool --no-appstream AppDir \
-            "Pyamoto-v${V}-Linux-arm64.AppImage"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=aarch64 \
+            ./appimagetool --no-appstream AppDir "Pyamoto-v${V}-Linux-arm64.AppImage"
+      - uses: actions/upload-artifact@v4
         with:
           name: linux-arm64-appimage
           path: Pyamoto-*.AppImage
@@ -408,13 +376,11 @@ jobs:
 
 
   # ──────────────────────────────────────────────────────────────
-  # Release  (create / update the nightly GitHub Release)
+  # Release  (publish nightly GitHub Release)
   # ──────────────────────────────────────────────────────────────
   release:
     name: Publish Nightly Release
     runs-on: ubuntu-latest
-    # Run even if some build jobs failed — publish whatever succeeded.
-    # Skip only when the whole workflow was cancelled or every build failed.
     if: >-
       always() && !cancelled() &&
       (needs.build-windows.result == 'success' ||
@@ -428,23 +394,18 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Get version and commit datetime
         id: meta
         run: |
           echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
             >> $GITHUB_OUTPUT
-          # Use the commit timestamp (not build time) so tags sort in commit order
-          # even when builds from older commits finish after newer ones.
-          # %cI gives ISO 8601; we reformat to YYYY-MM-DDTHH-MM-SS for a sortable tag.
           COMMIT_DT=$(git log -1 --format=%cI | cut -c1-19 | sed 's/:/-/g')
           echo "datetime=$COMMIT_DT" >> $GITHUB_OUTPUT
           echo "sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: _artifacts
 
@@ -456,9 +417,6 @@ jobs:
           echo "--- Release files ---"
           ls -lh release_files/
 
-      # Build the release body dynamically from whatever artifacts are present.
-      # This ensures the table only lists files that actually exist, even when
-      # one or more build jobs failed and produced no artifact.
       - name: Build release body
         run: |
           {
@@ -467,7 +425,7 @@ jobs:
             echo "| Platform | File |"
             echo "|---|---|"
             for f in release_files/*-macOS-*.zip; do
-              [ -f "$f" ] && echo "| macOS | \`$(basename "$f")\` |"
+              [ -f "$f" ] && echo "| macOS Universal | \`$(basename "$f")\` |"
             done
             for f in release_files/*-Windows-*.zip; do
               [ -f "$f" ] && echo "| Windows x64 | \`$(basename "$f")\` |"
@@ -475,17 +433,13 @@ jobs:
             for f in release_files/*-Linux-x86_64*.AppImage; do
               [ -f "$f" ] && echo "| Linux x86_64 | \`$(basename "$f")\` |"
             done
-            for f in release_files/*-Linux-arm64*.AppImage; do
-              [ -f "$f" ] && echo "| Linux arm64 | \`$(basename "$f")\` |"
+            for f in release_files/*-Linux-x86_64*.zip; do
+              [ -f "$f" ] && echo "| Linux x86_64 (zip) | \`$(basename "$f")\` |"
             done
           } > release_body.md
           cat release_body.md
 
-      # Create as a draft first — drafts are mutable so all assets upload
-      # without hitting the "immutable release" restriction.  A second step
-      # then flips draft→false to publish the prerelease.
-      - name: Create nightly release (draft)
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly-${{ steps.meta.outputs.datetime }}-${{ steps.meta.outputs.sha }}
           name: "Nightly ${{ steps.meta.outputs.datetime }}  [${{ steps.meta.outputs.sha }}]"

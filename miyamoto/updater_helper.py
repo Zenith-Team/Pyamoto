@@ -16,6 +16,29 @@ import time
 import zipfile
 
 
+_LOG = []
+
+
+def _log(msg):
+    _LOG.append(f'[{time.strftime("%H:%M:%S")}] {msg}')
+    print(msg, flush=True)
+
+
+def _rename_with_retry(src, dst, max_attempts=5):
+    for attempt in range(max_attempts):
+        try:
+            os.rename(src, dst)
+            return
+        except OSError:
+            if attempt < max_attempts - 1:
+                delay = 0.5 * (attempt + 1)
+                _log(f'Rename {src} -> {dst} failed, retry in {delay:.1f}s')
+                time.sleep(delay)
+                continue
+            _log(f'Rename failed after {max_attempts} attempts, using shutil.move')
+            shutil.move(src, dst)
+
+
 def run_helper():
     parser = argparse.ArgumentParser()
     parser.add_argument('--zip', required=True)
@@ -31,36 +54,58 @@ def run_helper():
     exe_name = args.exe
     platform_name = args.platform
 
+    _log(f'Updater helper started: install_dir={install_dir} exe={exe_name}')
+
     if args.wait_pid:
         _wait_for_exit(args.wait_pid)
 
     old_dir = install_dir + '.old'
+    had_old = os.path.exists(old_dir)
 
-    if os.path.exists(old_dir):
+    if had_old:
+        _log(f'Removing stale backup {old_dir}')
         shutil.rmtree(old_dir, ignore_errors=True)
 
     if os.path.exists(install_dir):
-        os.rename(install_dir, old_dir)
+        _log(f'Renaming {install_dir} -> {old_dir}')
+        _rename_with_retry(install_dir, old_dir)
+    else:
+        _log(f'Install dir {install_dir} does not exist, will create')
 
     try:
         _extract_zip(zip_path, install_dir)
+        _log('Extraction complete')
 
         if args.codesign and platform_name == 'darwin':
+            _log('Ad-hoc signing bundle')
             _ad_hoc_sign(install_dir, exe_name)
 
         if os.path.exists(old_dir):
+            _log(f'Removing old install backup {old_dir}')
             shutil.rmtree(old_dir, ignore_errors=True)
 
+        _log('Launching updated app')
         _launch_app(install_dir, exe_name, platform_name)
+        _log('Update completed successfully')
     except Exception:
+        _log(f'Update failed, rolling back')
         if os.path.exists(old_dir):
             if os.path.exists(install_dir):
                 shutil.rmtree(install_dir, ignore_errors=True)
-            os.rename(old_dir, install_dir)
+            _log(f'Restoring {old_dir} -> {install_dir}')
+            _rename_with_retry(old_dir, install_dir)
         raise
+    finally:
+        err_path = os.path.join(os.path.dirname(install_dir), 'update_log.txt')
+        try:
+            with open(err_path, 'w') as f:
+                f.write('\n'.join(_LOG))
+        except Exception:
+            pass
 
 
 def _wait_for_exit(pid):
+    _log(f'Waiting for parent PID {pid} to exit')
     if platform.system() == 'Windows':
         import ctypes
         kernel32 = ctypes.windll.kernel32
@@ -69,13 +114,33 @@ def _wait_for_exit(pid):
         if handle:
             kernel32.WaitForSingleObject(handle, 0xFFFFFFFF)
             kernel32.CloseHandle(handle)
+        else:
+            _log('OpenProcess failed, polling instead')
+            for _ in range(30):
+                if not _pid_alive(pid):
+                    break
+                time.sleep(0.5)
     else:
-        while True:
+        for _ in range(60):
             try:
                 os.kill(pid, 0)
                 time.sleep(0.5)
             except (OSError, ProcessLookupError):
                 break
+    _log('Parent exited')
+
+
+def _pid_alive(pid):
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    PROCESS_QUERY_INFORMATION = 0x0400
+    handle = kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, False, pid)
+    if not handle:
+        return False
+    exit_code = ctypes.c_ulong()
+    kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
+    kernel32.CloseHandle(handle)
+    return exit_code.value == 259  # STILL_ACTIVE
 
 
 def _extract_zip(zip_path, install_dir):
@@ -86,7 +151,6 @@ def _extract_zip(zip_path, install_dir):
                   and not n.split('/')[0].startswith('__MACOSX')
                   and n.split('/')[0] != '.DS_Store')
 
-        # Single wrapping dir (Pyamoto.app/ or miyamoto_v1.0/)
         if len(top) == 1:
             wrap = list(top)[0]
             zf.extractall(parent)
@@ -94,7 +158,7 @@ def _extract_zip(zip_path, install_dir):
             if extracted != install_dir:
                 if os.path.exists(install_dir):
                     shutil.rmtree(install_dir, ignore_errors=True)
-                os.rename(extracted, install_dir)
+                _rename_with_retry(extracted, install_dir)
             return
 
         # Flat contents — extract into install_dir
