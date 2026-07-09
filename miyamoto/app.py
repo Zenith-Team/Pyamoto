@@ -1209,6 +1209,18 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.editTilesetsBtn.setFixedWidth(_btn_w)
         self.editTilesetsBtn.clicked.connect(self.actions['edittilesets'].trigger)
 
+        self.importObjectsBtn = QtWidgets.QPushButton('Import Objects')
+        self.importObjectsBtn.setFixedWidth(_btn_w)
+        self.importObjectsBtn.clicked.connect(self.HandleImportObjects)
+
+        objBtnRow = QtWidgets.QHBoxLayout()
+        objBtnRow.setContentsMargins(6, 2, 6, 4)
+        objBtnRow.addStretch(1)
+        objBtnRow.addWidget(self.editTilesetsBtn)
+        objBtnRow.addWidget(self.importObjectsBtn)
+        objBtnRow.addStretch(1)
+        tilesLayout.addLayout(objBtnRow)
+
         tabs.addTab(tilesContainer, tsicon, '')
         tabs.setTabToolTip(0, 'Objects')
 
@@ -1231,17 +1243,6 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.objPicker.ObjChanged.connect(self.ObjectChoiceChanged)
         self.objPicker.ObjReplace.connect(self.ObjectReplace)
         oel.addWidget(self.objPicker, 1)
-
-        self.importObjectsBtn = QtWidgets.QPushButton('Import Objects')
-        self.importObjectsBtn.setFixedWidth(_btn_w)
-        self.importObjectsBtn.clicked.connect(self.HandleImportObjects)
-
-        objBtnRow = QtWidgets.QHBoxLayout()
-        objBtnRow.addStretch(1)
-        objBtnRow.addWidget(self.editTilesetsBtn)
-        objBtnRow.addWidget(self.importObjectsBtn)
-        objBtnRow.addStretch(1)
-        oel.addLayout(objBtnRow)
 
         # sprite tab
         self.sprAllTab = QtWidgets.QTabWidget()
