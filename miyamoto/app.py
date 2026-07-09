@@ -1386,7 +1386,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         pathel = QtWidgets.QVBoxLayout(self.pathEditorTab)
         self.pathEditorLayout = pathel
 
-        pathlabel = QtWidgets.QLabel('Path nodes currently in this area<br>(Double-click one to jump to it instantly)<br>To delete a path, remove all its nodes one by one.<br>To add new paths, hit the button below and right click.')
+        pathlabel = QtWidgets.QLabel('Path nodes currently in this area<br>(Double-click one to jump to it instantly)<br>To delete a path, remove all its nodes one by one.')
         pathlabel.setWordWrap(True)
         self.pathList = ListWidgetWithToolTipSignal()
         self.pathList.itemActivated.connect(self.HandlePathSelectByList)
