@@ -176,6 +176,15 @@ if 'bdist_mac' in sys.argv:
         if os.path.isfile(settings_path):
             os.remove(settings_path)
             print('>> Removed local settings.ini from bundle.')
+        macos_dir = os.path.join(app_path, 'Contents/MacOS')
+        res_dir = os.path.join(app_path, 'Contents/Resources')
+        if os.path.isdir(res_dir):
+            for name in os.listdir(res_dir):
+                res_item = os.path.join(res_dir, name)
+                macos_item = os.path.join(macos_dir, name)
+                if os.path.isdir(res_item) and os.path.isdir(macos_item):
+                    shutil.rmtree(res_item)
+                    print(f'>> Removed duplicated {name} from Resources/.')
 elif platform.system() == 'Windows':
     try: os.unlink(dir_ + '/w9xpopen.exe')
     except: pass
