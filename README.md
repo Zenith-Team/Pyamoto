@@ -18,12 +18,13 @@ Download the latest automated release from the [releases page](https://github.co
 ## Usage
 Follow the guide on the [wiki](https://zenith.nsmbu.net/wiki/Miyamoto_Level_Editor).
 
-## Interested in contributing?
-Dev discussions are in the `#nsmbu` channel in the [Zenith Discord](https://go.nsmbu.net/discord). 
-External contributions and fixes are welcome through Pull Requests and the Issues tab. Check [Running From Source](#running-from-source) to setup a local development env.
-
 ## Changelog
 Read the [changelog](./CHANGELOG.md) for a full list of changes and additions.
+
+## Interested in contributing?
+Dev discussions are in the `#nsmbu` channel in the [Zenith Discord](https://go.nsmbu.net/discord). 
+
+External contributions and fixes are welcome through Pull Requests and the Issues tab. Check [Running From Source](#running-from-source) to setup a local development env.
 
 ## Running from Source
 
