@@ -4,7 +4,6 @@
 """GitHub release checker and self-updater for packaged Pyamoto builds."""
 
 import hashlib
-import json
 import os
 import platform
 import re
@@ -15,12 +14,11 @@ import subprocess
 import sys
 import tempfile
 import threading
-import urllib.error
-import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+import requests
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import globals
@@ -101,20 +99,23 @@ def _skip_release(tag):
 
 
 def _fetch_json(url):
-    request = urllib.request.Request(url, headers=_HEADERS)
     try:
-        with urllib.request.urlopen(request, timeout=15) as response:
-            payload = response.read()
-    except urllib.error.HTTPError as exc:
-        if exc.code == 403:
-            raise UpdateError('GitHub refused the update check. Please try again later.') from exc
-        raise UpdateError(f'GitHub update check failed (HTTP {exc.code}).') from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        response = requests.get(url, headers=_HEADERS, timeout=15)
+        if response.status_code == 403:
+            raise UpdateError('GitHub refused the update check. Please try again later.')
+        if response.status_code == 404 and url == _API_LATEST:
+            raise UpdateError('No GitHub Latest release has been published yet.')
+        if not response.ok:
+            raise UpdateError(f'GitHub update check failed (HTTP {response.status_code}).')
+        response.raise_for_status()
+    except UpdateError:
+        raise
+    except requests.RequestException as exc:
         raise UpdateError(f'Could not connect to GitHub: {exc}') from exc
 
     try:
-        return json.loads(payload.decode('utf-8'))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return response.json()
+    except ValueError as exc:
         raise UpdateError('GitHub returned an invalid update response.') from exc
 
 
@@ -281,7 +282,6 @@ def _safe_extract(zip_path, destination):
 
 
 def _download_asset(asset, output_path, progress=None):
-    request = urllib.request.Request(asset['browser_download_url'], headers=_HEADERS)
     expected = asset.get('size')
     try:
         expected = int(expected) if expected is not None else None
@@ -292,18 +292,21 @@ def _download_asset(asset, output_path, progress=None):
     hasher = hashlib.sha256() if isinstance(digest, str) and digest.startswith('sha256:') else None
     received = 0
     try:
-        with urllib.request.urlopen(request, timeout=30) as response, open(output_path, 'wb') as output:
-            while True:
-                chunk = response.read(1024 * 1024)
-                if not chunk:
-                    break
-                output.write(chunk)
-                received += len(chunk)
-                if hasher:
-                    hasher.update(chunk)
-                if progress:
-                    progress(received, expected or 0)
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        with requests.get(
+                asset['browser_download_url'], headers=_HEADERS,
+                stream=True, timeout=30) as response:
+            response.raise_for_status()
+            with open(output_path, 'wb') as output:
+                for chunk in response.iter_content(1024 * 1024):
+                    if not chunk:
+                        continue
+                    output.write(chunk)
+                    received += len(chunk)
+                    if hasher:
+                        hasher.update(chunk)
+                    if progress:
+                        progress(received, expected or 0)
+    except (requests.RequestException, OSError) as exc:
         raise UpdateError(f'Could not download the update: {exc}') from exc
 
     if expected is not None and received != expected:
