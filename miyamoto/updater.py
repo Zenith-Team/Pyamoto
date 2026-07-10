@@ -1,203 +1,646 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Pyamoto update notifier — checks GitHub for new versions and opens
-# the release page for manual download.  No automatic installation.
+"""GitHub release checker and self-updater for packaged Pyamoto builds."""
 
+import hashlib
 import json
+import os
+import platform
+import re
+import shlex
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
 import threading
+import urllib.error
 import urllib.request
+import zipfile
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import globals
 from .misc import setting, setSetting
 
+
 GITHUB_REPO = 'Zenith-Team/Pyamoto'
 _API_BASE = f'https://api.github.com/repos/{GITHUB_REPO}/releases'
 _API_LATEST = f'{_API_BASE}/latest'
-_API_RECENT = f'{_API_BASE}?per_page=10'
+_API_RECENT = f'{_API_BASE}?per_page=30'
+_RELEASES_URL = f'https://github.com/{GITHUB_REPO}/releases'
+_MAX_EXTRACTED_SIZE = 4 * 1024 * 1024 * 1024
 
 _HEADERS = {
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'Pyamoto-updater',
+    'User-Agent': f'Pyamoto/{globals.MiyamotoVersion} updater',
 }
 
-CHANNEL_STABLE = 'stable'
+CHANNEL_RELEASE = 'release'
 CHANNEL_NIGHTLY = 'nightly'
 CHANNEL_OFF = 'off'
 
-_CHANNEL_LABELS = ['Stable', 'Nightly', 'Off']
-_CHANNEL_VALUES = [CHANNEL_STABLE, CHANNEL_NIGHTLY, CHANNEL_OFF]
+# Kept as an alias so existing callers and old settings continue to work.
+CHANNEL_STABLE = CHANNEL_RELEASE
+
+_CHANNEL_LABELS = ['Release (Latest)', 'Nightly (Pre-release)', 'Off']
+_CHANNEL_VALUES = [CHANNEL_RELEASE, CHANNEL_NIGHTLY, CHANNEL_OFF]
+
+
+class UpdateError(RuntimeError):
+    """An expected update failure suitable for display to the user."""
+
+
+@dataclass(frozen=True)
+class ReleaseInfo:
+    channel: str
+    tag: str
+    version: str
+    title: str
+    page_url: str
+    body: str
+    assets: tuple
+
+
+@dataclass(frozen=True)
+class InstallLocation:
+    kind: str
+    target: Path
+    executable: Path
 
 
 def _default_channel():
-    return CHANNEL_NIGHTLY if globals.MiyamotoReleaseType == 'nightly' else CHANNEL_STABLE
+    return CHANNEL_RELEASE
 
 
 def _current_channel():
-    val = setting('UpdateChannel', None)
-    if val is not None:
-        return val if val in _CHANNEL_VALUES else CHANNEL_STABLE
+    value = setting('UpdateChannel', None)
+    if value == 'stable':
+        return CHANNEL_RELEASE
+    if value in _CHANNEL_VALUES:
+        return value
     return _default_channel()
 
 
-def _is_skipped(version):
+def _is_skipped(tag):
     skipped = setting('SkippedUpdates', [])
-    return isinstance(skipped, list) and version in skipped
+    return isinstance(skipped, list) and tag in skipped
 
 
-def _skip_version(version):
+def _skip_release(tag):
     skipped = setting('SkippedUpdates', [])
     if not isinstance(skipped, list):
         skipped = []
-    if version not in skipped:
-        skipped.append(version)
-    setSetting('SkippedUpdates', skipped)
+    if tag not in skipped:
+        skipped.append(tag)
+        setSetting('SkippedUpdates', skipped[-20:])
+
+
+def _fetch_json(url):
+    request = urllib.request.Request(url, headers=_HEADERS)
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as exc:
+        if exc.code == 403:
+            raise UpdateError('GitHub refused the update check. Please try again later.') from exc
+        raise UpdateError(f'GitHub update check failed (HTTP {exc.code}).') from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise UpdateError(f'Could not connect to GitHub: {exc}') from exc
+
+    try:
+        return json.loads(payload.decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise UpdateError('GitHub returned an invalid update response.') from exc
+
+
+def _release_from_json(data, channel):
+    if not isinstance(data, dict):
+        raise UpdateError('GitHub returned an invalid release record.')
+
+    tag = data.get('tag_name')
+    assets = data.get('assets')
+    if not isinstance(tag, str) or not tag or not isinstance(assets, list):
+        raise UpdateError('GitHub release metadata is incomplete.')
+
+    valid_assets = tuple(asset for asset in assets if (
+        isinstance(asset, dict)
+        and isinstance(asset.get('name'), str)
+        and isinstance(asset.get('browser_download_url'), str)
+    ))
+    version = tag[1:] if channel == CHANNEL_RELEASE and tag.lower().startswith('v') else tag
+    if channel == CHANNEL_NIGHTLY:
+        match = re.search(r'-([0-9a-fA-F]{7,40})$', tag)
+        if match:
+            version = match.group(1)
+
+    return ReleaseInfo(
+        channel=channel,
+        tag=tag,
+        version=version,
+        title=str(data.get('name') or tag),
+        page_url=str(data.get('html_url') or f'{_RELEASES_URL}/tag/{tag}'),
+        body=str(data.get('body') or ''),
+        assets=valid_assets,
+    )
+
+
+def _latest_release(channel):
+    if channel == CHANNEL_RELEASE:
+        data = _fetch_json(_API_LATEST)
+        if data.get('draft') or data.get('prerelease'):
+            raise UpdateError('GitHub Latest does not point to a release build.')
+        return _release_from_json(data, channel)
+
+    if channel == CHANNEL_NIGHTLY:
+        releases = _fetch_json(_API_RECENT)
+        if not isinstance(releases, list):
+            raise UpdateError('GitHub returned an invalid releases list.')
+        prereleases = [release for release in releases if (
+            isinstance(release, dict)
+            and release.get('prerelease') is True
+            and not release.get('draft')
+        )]
+        if not prereleases:
+            return None
+        prereleases.sort(
+            key=lambda release: release.get('published_at') or release.get('created_at') or '',
+            reverse=True,
+        )
+        return _release_from_json(prereleases[0], channel)
+
+    return None
+
+
+def _numeric_version(value):
+    if not isinstance(value, str) or not re.fullmatch(r'v?\d+(?:\.\d+)*', value.strip()):
+        return None
+    return tuple(int(part) for part in value.strip().lstrip('vV').split('.'))
+
+
+def _is_newer(release):
+    current = str(globals.MiyamotoVersion)
+    if release.channel == CHANNEL_NIGHTLY:
+        return release.version.lower() != current.lower() and release.tag.lower() != current.lower()
+
+    if globals.MiyamotoReleaseType == 'nightly':
+        return True
+    latest_version = _numeric_version(release.version)
+    current_version = _numeric_version(current)
+    if latest_version is not None and current_version is not None:
+        length = max(len(latest_version), len(current_version))
+        latest_version += (0,) * (length - len(latest_version))
+        current_version += (0,) * (length - len(current_version))
+        return latest_version > current_version
+    return release.version.lstrip('vV') != current.lstrip('vV')
+
+
+def _machine():
+    value = platform.machine().lower()
+    if value in ('amd64', 'x64'):
+        return 'x86_64'
+    if value == 'aarch64':
+        return 'arm64'
+    return value
+
+
+def _asset_for_platform(release, system=None, machine=None, appimage=None):
+    system = system or platform.system()
+    machine = machine or _machine()
+    appimage = bool(os.environ.get('APPIMAGE')) if appimage is None else appimage
+
+    if system == 'Windows' and machine == 'x86_64':
+        suffix = '-Windows-x64.zip'
+    elif system == 'Darwin' and machine in ('x86_64', 'arm64'):
+        suffix = '-macOS-universal.zip'
+    elif system == 'Linux' and machine == 'x86_64':
+        suffix = '-Linux-x86_64.AppImage' if appimage else '-Linux-x86_64.zip'
+    else:
+        return None
+
+    matches = [asset for asset in release.assets if asset['name'].endswith(suffix)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _install_location():
+    appimage = os.environ.get('APPIMAGE')
+    if sys.platform.startswith('linux') and appimage:
+        target = Path(appimage).expanduser().resolve()
+        return InstallLocation('appimage', target, target)
+
+    if not getattr(sys, 'frozen', False):
+        return None
+
+    executable = Path(sys.executable).resolve()
+    if sys.platform == 'darwin':
+        app = next((parent for parent in (executable, *executable.parents)
+                    if parent.name.endswith('.app')), None)
+        if app is None:
+            raise UpdateError('Could not locate the installed Pyamoto app bundle.')
+        return InstallLocation('bundle', app, app / 'Contents' / 'MacOS' / 'Pyamoto')
+
+    return InstallLocation('directory', executable.parent, executable)
+
+
+def _safe_extract(zip_path, destination):
+    destination = Path(destination).resolve()
+    total = 0
+    try:
+        archive = zipfile.ZipFile(zip_path)
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise UpdateError('Downloaded update is not a valid ZIP file.') from exc
+
+    with archive:
+        for info in archive.infolist():
+            name = info.filename.replace('\\', '/')
+            parts = PurePosixPath(name).parts
+            mode = info.external_attr >> 16
+            if (not name or name.startswith('/') or '..' in parts
+                    or (parts and ':' in parts[0]) or stat.S_ISLNK(mode)):
+                raise UpdateError('Downloaded update contains an unsafe file path.')
+            total += info.file_size
+            if total > _MAX_EXTRACTED_SIZE:
+                raise UpdateError('Downloaded update is unexpectedly large.')
+
+        for info in archive.infolist():
+            name = info.filename.replace('\\', '/')
+            target = destination.joinpath(*PurePosixPath(name).parts)
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(info) as source, open(target, 'wb') as output:
+                shutil.copyfileobj(source, output)
+            mode = (info.external_attr >> 16) & 0o777
+            if mode and os.name != 'nt':
+                target.chmod(mode)
+
+
+def _download_asset(asset, output_path, progress=None):
+    request = urllib.request.Request(asset['browser_download_url'], headers=_HEADERS)
+    expected = asset.get('size')
+    try:
+        expected = int(expected) if expected is not None else None
+    except (TypeError, ValueError):
+        expected = None
+
+    digest = asset.get('digest')
+    hasher = hashlib.sha256() if isinstance(digest, str) and digest.startswith('sha256:') else None
+    received = 0
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response, open(output_path, 'wb') as output:
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                output.write(chunk)
+                received += len(chunk)
+                if hasher:
+                    hasher.update(chunk)
+                if progress:
+                    progress(received, expected or 0)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise UpdateError(f'Could not download the update: {exc}') from exc
+
+    if expected is not None and received != expected:
+        raise UpdateError('Downloaded update has the wrong file size.')
+    if hasher and hasher.hexdigest().lower() != digest.split(':', 1)[1].lower():
+        raise UpdateError('Downloaded update failed its SHA-256 check.')
+
+
+def _prepare_update(release, progress=None):
+    location = _install_location()
+    if location is None:
+        raise UpdateError('Automatic updates are available only in packaged Pyamoto builds.')
+    if not location.target.exists():
+        raise UpdateError('Current Pyamoto installation could not be found.')
+    if not os.access(str(location.target.parent), os.W_OK):
+        raise UpdateError('Pyamoto does not have permission to update this installation.')
+
+    asset = _asset_for_platform(release, appimage=location.kind == 'appimage')
+    if asset is None:
+        raise UpdateError('This release has no update package for the current platform.')
+
+    work = Path(tempfile.mkdtemp(prefix='pyamoto-update-'))
+    download = work / asset['name']
+    try:
+        _download_asset(asset, download, progress)
+        if location.kind == 'appimage':
+            staged = work / 'Pyamoto.AppImage'
+            download.replace(staged)
+            staged.chmod(staged.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        else:
+            extracted = work / 'extracted'
+            extracted.mkdir()
+            _safe_extract(download, extracted)
+            download.unlink()
+            if location.kind == 'bundle':
+                staged = extracted / 'Pyamoto.app'
+                if not staged.is_dir():
+                    raise UpdateError('macOS update does not contain Pyamoto.app.')
+                if not (staged / 'Contents' / 'MacOS' / 'Pyamoto').is_file():
+                    raise UpdateError('macOS update does not contain the Pyamoto executable.')
+            else:
+                staged = extracted
+                expected_name = 'Pyamoto.exe' if sys.platform == 'win32' else 'Pyamoto'
+                if not (staged / expected_name).is_file():
+                    raise UpdateError(f'Update does not contain {expected_name}.')
+        return location, staged, work
+    except Exception:
+        shutil.rmtree(work, ignore_errors=True)
+        raise
+
+
+def _ps_quote(value):
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _write_windows_helper(location, staged, work):
+    script = work / 'install-update.ps1'
+    backup = location.target.with_name(location.target.name + '.update-backup')
+    new_executable = location.target / location.executable.name
+    content = f"""$ErrorActionPreference = 'Stop'
+$target = {_ps_quote(location.target)}
+$staged = {_ps_quote(staged)}
+$backup = {_ps_quote(backup)}
+$executable = {_ps_quote(new_executable)}
+Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue
+try {{
+    if (Test-Path $backup) {{ Remove-Item -Recurse -Force $backup }}
+    Move-Item -LiteralPath $target -Destination $backup
+    try {{
+        Move-Item -LiteralPath $staged -Destination $target
+    }} catch {{
+        Move-Item -LiteralPath $backup -Destination $target
+        throw
+    }}
+    Start-Process -FilePath $executable -WorkingDirectory $target
+    Remove-Item -Recurse -Force $backup
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue {_ps_quote(work)}
+}} catch {{
+    $_ | Out-String | Set-Content -Path (Join-Path {_ps_quote(work)} 'update-error.txt')
+}}
+"""
+    script.write_text(content, encoding='utf-8')
+    return script
+
+
+def _write_posix_helper(location, staged, work):
+    script = work / 'install-update.sh'
+    backup = location.target.with_name(location.target.name + '.update-backup')
+    target = shlex.quote(str(location.target))
+    staged_path = shlex.quote(str(staged))
+    backup_path = shlex.quote(str(backup))
+    if location.kind == 'bundle':
+        launch = f'open {target}'
+    else:
+        launch = shlex.quote(str(location.target))
+    content = f"""#!/bin/sh
+while kill -0 {os.getpid()} 2>/dev/null; do sleep 0.2; done
+rm -rf {backup_path}
+if mv {target} {backup_path}; then
+    if mv {staged_path} {target}; then
+        chmod +x {shlex.quote(str(location.executable))} 2>/dev/null || true
+        ({launch} >/dev/null 2>&1 &)
+        rm -rf {backup_path}
+        rm -rf {shlex.quote(str(work))}
+        exit 0
+    fi
+    mv {backup_path} {target}
+fi
+exit 1
+"""
+    script.write_text(content, encoding='utf-8')
+    script.chmod(0o700)
+    return script
+
+
+def _launch_helper(location, staged, work):
+    if sys.platform == 'win32':
+        script = _write_windows_helper(location, staged, work)
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0) | getattr(subprocess, 'DETACHED_PROCESS', 0)
+        subprocess.Popen(
+            ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(script)],
+            creationflags=flags,
+            close_fds=True,
+            cwd=str(work),
+        )
+    else:
+        script = _write_posix_helper(location, staged, work)
+        subprocess.Popen(
+            ['/bin/sh', str(script)],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            cwd=str(work),
+        )
 
 
 class _UpdateChecker(QtCore.QObject):
-    update_found = QtCore.pyqtSignal(str, str, str)
+    update_found = QtCore.pyqtSignal(object)
     up_to_date = QtCore.pyqtSignal()
+    failed = QtCore.pyqtSignal(str)
+    finished = QtCore.pyqtSignal()
 
-    def start(self, channel=None):
-        self._channel_override = channel
-        self._found = False
-        threading.Thread(target=self._run, daemon=True).start()
+    def start(self, channel):
+        self._channel = channel
+        threading.Thread(target=self._run, name='Pyamoto update check', daemon=True).start()
 
     def _run(self):
         try:
-            channel = self._channel_override or _current_channel()
-            if channel == CHANNEL_NIGHTLY:
-                self._check_nightly()
-            elif channel == CHANNEL_STABLE:
-                self._check_release()
+            release = _latest_release(self._channel)
+            if release is not None and _is_newer(release) and not _is_skipped(release.tag):
+                self.update_found.emit(release)
+            else:
+                self.up_to_date.emit()
+        except UpdateError as exc:
+            self.failed.emit(str(exc))
         except Exception:
-            pass
-        if not self._found:
-            self.up_to_date.emit()
-        global _checker
-        if _checker is self:
-            _checker = None
+            self.failed.emit('Unexpected error while checking for updates.')
+        finally:
+            self.finished.emit()
 
-    def _fetch(self, url):
-        req = urllib.request.Request(url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
 
-    def _check_release(self):
-        data = self._fetch(_API_LATEST)
-        latest_ver = data['tag_name'].lstrip('v')
-        current_ver = globals.MiyamotoVersion.lstrip('v')
-        if latest_ver != current_ver and not _is_skipped(latest_ver):
-            self._found = True
-            self.update_found.emit(current_ver, latest_ver, data['tag_name'])
+class _UpdateWorker(QtCore.QObject):
+    progress = QtCore.pyqtSignal(int)
+    ready = QtCore.pyqtSignal(object, object, object)
+    failed = QtCore.pyqtSignal(str)
 
-    def _check_nightly(self):
-        releases = self._fetch(_API_RECENT)
-        nightlies = [
-            r for r in releases
-            if r.get('prerelease') and r['tag_name'].startswith('nightly-')
-        ]
-        if not nightlies:
-            return
-        nightlies.sort(key=lambda r: r.get('published_at', r['created_at']), reverse=True)
-        latest = nightlies[0]
-        latest_sha = latest['tag_name'].rsplit('-', 1)[-1]
-        current_sha = globals.MiyamotoVersion
-        if latest_sha != current_sha and not _is_skipped(latest_sha):
-            self._found = True
-            self.update_found.emit(current_sha, latest_sha, latest['tag_name'])
+    def start(self, release):
+        self._release = release
+        threading.Thread(target=self._run, name='Pyamoto update download', daemon=True).start()
+
+    def _run(self):
+        try:
+            def report(received, total):
+                self.progress.emit(min(99, int(received * 100 / total)) if total else 0)
+
+            location, staged, work = _prepare_update(self._release, report)
+            self.progress.emit(100)
+            self.ready.emit(location, staged, work)
+        except UpdateError as exc:
+            self.failed.emit(str(exc))
+        except Exception:
+            self.failed.emit('Unexpected error while preparing the update.')
 
 
 class _UpdateDialog(QtWidgets.QDialog):
-    def __init__(self, current, latest, tag_name, parent=None):
+    def __init__(self, release, parent=None):
         super().__init__(parent)
-        self._latest = latest
-        self._tag_name = tag_name
-
-        is_nightly = globals.MiyamotoReleaseType == 'nightly'
-        kind = 'Nightly ' if is_nightly else ''
-        self.setWindowTitle(f'Pyamoto {kind}Update Available')
+        self._release = release
+        channel = 'Nightly' if release.channel == CHANNEL_NIGHTLY else 'Release'
+        self.setWindowTitle(f'Pyamoto {channel} Update Available')
         self.setWindowFlag(QtCore.Qt.WindowContextHelpButtonHint, False)
-        self.setFixedWidth(440)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+        self.setMinimumWidth(480)
 
-        root = QtWidgets.QVBoxLayout(self)
-        root.setSpacing(12)
-        root.setContentsMargins(24, 22, 24, 20)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setSpacing(12)
+        layout.setContentsMargins(24, 22, 24, 20)
 
-        headline = QtWidgets.QLabel(f'Update: v{current} \u2192 v{latest}')
-        hf = headline.font()
-        hf.setPointSize(hf.pointSize() + 3)
-        hf.setBold(True)
-        headline.setFont(hf)
-        root.addWidget(headline)
+        headline = QtWidgets.QLabel(f'{release.title} is available')
+        font = headline.font()
+        font.setPointSize(font.pointSize() + 3)
+        font.setBold(True)
+        headline.setFont(font)
+        layout.addWidget(headline)
 
-        info = QtWidgets.QLabel(
-            'A new version is available. Visit the release page to download it, '
-            'then install manually over your current installation.'
+        current = QtWidgets.QLabel(
+            f'Installed: {globals.MiyamotoVersion} ({globals.MiyamotoReleaseType})\n'
+            f'Available: {release.version} ({channel.lower()})'
         )
-        info.setWordWrap(True)
-        root.addWidget(info)
+        layout.addWidget(current)
 
-        btn_box = QtWidgets.QDialogButtonBox()
-        skip_btn = btn_box.addButton('Skip this version', QtWidgets.QDialogButtonBox.DestructiveRole)
-        skip_btn.setAutoDefault(False)
-        skip_btn.clicked.connect(self._on_skip)
-        cancel_btn = btn_box.addButton('Cancel', QtWidgets.QDialogButtonBox.RejectRole)
-        cancel_btn.setAutoDefault(False)
-        dl_btn = btn_box.addButton('Download', QtWidgets.QDialogButtonBox.AcceptRole)
-        dl_btn.setDefault(True)
-        dl_btn.clicked.connect(self._on_download)
-        btn_box.rejected.connect(self.reject)
-        root.addWidget(btn_box)
+        if release.body.strip():
+            notes = QtWidgets.QPlainTextEdit(release.body.strip())
+            notes.setReadOnly(True)
+            notes.setMaximumHeight(150)
+            layout.addWidget(notes)
 
-    def _on_skip(self):
-        _skip_version(self._latest)
+        buttons = QtWidgets.QDialogButtonBox()
+        skip = buttons.addButton('Skip this version', QtWidgets.QDialogButtonBox.DestructiveRole)
+        skip.clicked.connect(self._skip)
+        page = buttons.addButton('View release', QtWidgets.QDialogButtonBox.ActionRole)
+        page.clicked.connect(self._open_page)
+        later = buttons.addButton('Later', QtWidgets.QDialogButtonBox.RejectRole)
+        later.clicked.connect(self.reject)
+        install = buttons.addButton('Install update', QtWidgets.QDialogButtonBox.AcceptRole)
+        install.setDefault(True)
+        install.clicked.connect(self._install)
+        layout.addWidget(buttons)
+
+    def _skip(self):
+        _skip_release(self._release.tag)
         self.reject()
 
-    def _on_download(self):
-        url = f'https://github.com/{GITHUB_REPO}/releases/tag/{self._tag_name}'
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
+    def _open_page(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(self._release.page_url))
+
+    def _install(self):
         self.accept()
+        _start_install(self._release)
 
 
 _checker = None
+_worker = None
+_progress = None
 
 
 def check_for_updates():
     channel = _current_channel()
-    if channel == CHANNEL_OFF:
-        return
-    _start_check(channel)
+    if channel != CHANNEL_OFF:
+        _start_check(channel, manual=False)
 
 
 def check_for_updates_now(channel):
+    if channel == 'stable':
+        channel = CHANNEL_RELEASE
+    if channel == CHANNEL_OFF:
+        _show_info('Update checks are disabled.')
+        return
     _start_check(channel, manual=True)
 
 
 def _start_check(channel, manual=False):
     global _checker
     if _checker is not None:
+        if manual:
+            _show_info('An update check is already running.')
         return
     _checker = _UpdateChecker()
     _checker.update_found.connect(_on_update_found)
     if manual:
-        _checker.up_to_date.connect(_on_up_to_date)
+        _checker.up_to_date.connect(lambda: _show_info('Pyamoto is up to date.'))
+        _checker.failed.connect(_show_error)
+    _checker.finished.connect(_check_finished)
     _checker.start(channel)
 
 
-def _on_update_found(current, latest, tag_name):
-    dlg = _UpdateDialog(current, latest, tag_name, globals.mainWindow)
-    dlg.exec_()
+def _check_finished():
+    global _checker
+    _checker = None
 
 
-def _on_up_to_date():
-    msg = QtWidgets.QMessageBox(globals.mainWindow)
-    msg.setWindowTitle('Pyamoto')
-    msg.setText('Software is up to date')
-    msg.setInformativeText(f'v{globals.MiyamotoVersion} {globals.MiyamotoReleaseType}')
-    msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-    msg.exec_()
+def _on_update_found(release):
+    _UpdateDialog(release, globals.mainWindow).exec_()
+
+
+def _start_install(release):
+    global _worker, _progress
+    if _worker is not None:
+        return
+    _progress = QtWidgets.QProgressDialog(
+        'Downloading and verifying update...', '', 0, 100, globals.mainWindow
+    )
+    _progress.setWindowTitle('Pyamoto Update')
+    _progress.setWindowModality(QtCore.Qt.WindowModal)
+    _progress.setCancelButton(None)
+    _progress.setMinimumDuration(0)
+    _progress.setValue(0)
+
+    _worker = _UpdateWorker()
+    _worker.progress.connect(_progress.setValue)
+    _worker.failed.connect(_install_failed)
+    _worker.ready.connect(_install_ready)
+    _worker.start(release)
+
+
+def _install_failed(message):
+    global _worker, _progress
+    if _progress is not None:
+        _progress.close()
+    _worker = None
+    _progress = None
+    _show_error(message)
+
+
+def _install_ready(location, staged, work):
+    global _worker, _progress
+    if _progress is not None:
+        _progress.close()
+    _worker = None
+    _progress = None
+
+    window = globals.mainWindow
+    if window is not None and not window.close():
+        shutil.rmtree(work, ignore_errors=True)
+        return
+    try:
+        _launch_helper(location, staged, work)
+    except (OSError, subprocess.SubprocessError) as exc:
+        shutil.rmtree(work, ignore_errors=True)
+        if window is not None:
+            window.show()
+        _show_error(f'Could not start the update installer: {exc}')
+
+
+def _show_info(text):
+    QtWidgets.QMessageBox.information(globals.mainWindow, 'Pyamoto Update', text)
+
+
+def _show_error(text):
+    QtWidgets.QMessageBox.warning(globals.mainWindow, 'Pyamoto Update', text)

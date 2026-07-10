@@ -3071,7 +3071,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         # Updates
         from .updater import _CHANNEL_VALUES
         idx = dlg.generalTab.updateChannel.currentIndex()
-        setSetting('UpdateChannel', _CHANNEL_VALUES[idx] if 0 <= idx < len(_CHANNEL_VALUES) else 'stable')
+        setSetting('UpdateChannel', _CHANNEL_VALUES[idx] if 0 <= idx < len(_CHANNEL_VALUES) else 'release')
 
         # Get the Editor preferences
         setSetting('ShowActorNotes', dlg.editorTab.showActorNotes.isChecked())
