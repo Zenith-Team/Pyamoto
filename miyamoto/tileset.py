@@ -16,7 +16,9 @@
 import json
 import os
 import platform
+import subprocess
 import struct
+import tempfile
 import zlib
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -1197,7 +1199,7 @@ def DeleteObject(idx, objNum, soft=False):
             globals.mainWindow.clipboard = globals.mainWindow.encodeObjects(objects, sprites, entrances, locations, paths, nabbitPaths, comments)
 
 
-def _compressBC3_nvcompress(tex, tile_path, nml):
+def _compressBC3_nvcompress(tex, tool_path, tile_path, nml):
     """
     RGBA8 QPixmap -> BC3 DDS
     Uses `nvcompress`
@@ -1205,24 +1207,22 @@ def _compressBC3_nvcompress(tex, tile_path, nml):
     if platform.system() == 'Darwin':
         raise NotImplementedError("MacOSX is not supported yet!")
 
-    tex.save(tile_path + '/tmp.png')
-
-    os.chdir(tile_path)
+    png_path = os.path.join(tile_path, 'tmp.png')
+    dds_path = os.path.join(tile_path, 'tmp.dds')
+    tex.save(png_path)
 
     if platform.system() == 'Windows':
+        command = [os.path.join(tool_path, 'nvcompress.exe')]
         if nml:
-            os.system('nvcompress.exe -normal -alpha -mipfilter box -bc3 tmp.png tmp.dds')
+            command.extend(['-normal', '-alpha', '-mipfilter', 'box', '-bc3'])
 
         else:
-            os.system('nvcompress.exe -color -alpha -mipfilter box -bc3 tmp.png tmp.dds')
+            command.extend(['-color', '-alpha', '-mipfilter', 'box', '-bc3'])
 
     else:
-        os.system('chmod +x nvcompress.elf')
-        os.system('./nvcompress.elf -bc3 tmp.png tmp.dds')
+        command = [os.path.join(tool_path, 'nvcompress.elf'), '-bc3']
 
-    os.chdir(globals.miyamoto_path)
-
-    os.remove(tile_path + '/tmp.png')
+    subprocess.run(command + [png_path, dds_path], cwd=tool_path, check=True)
 
 
 def _compressBC3_libtxc_dxtn(tex, tile_path):
@@ -1260,42 +1260,39 @@ def writeGTX(tex, idx, nml=False):
     Generates a GTX file from a QImage
     """
     if platform.system() == 'Windows':
-        tile_path = os.path.join(globals.miyamoto_path, 'tools', 'win')
+        tool_path = os.path.join(globals.miyamoto_path, 'tools', 'win')
     elif platform.system() == 'Linux':
-        tile_path = os.path.join(globals.miyamoto_path, 'tools', 'linux')
+        tool_path = os.path.join(globals.miyamoto_path, 'tools', 'linux')
     else:
-        tile_path = os.path.join(globals.miyamoto_path, 'tools', 'mac')
+        tool_path = os.path.join(globals.miyamoto_path, 'tools', 'mac')
 
-    if idx != 0 and not globals.UseRGBA8:  # Save as DXT5/BC3
-        if platform.system() == 'Darwin':
-            _compressBC3_libtxc_dxtn(tex, tile_path)
+    with tempfile.TemporaryDirectory(prefix='pyamoto-tileset-') as tile_path:
+        dds_path = os.path.join(tile_path, 'tmp.dds')
 
-        else:
-            try:
-                _compressBC3_nvcompress(tex, tile_path, nml)
-
-            except:
-                pass
-
-            if not os.path.isfile(tile_path + '/tmp.dds'):
+        if idx != 0 and not globals.UseRGBA8:  # Save as DXT5/BC3
+            if platform.system() == 'Darwin':
                 _compressBC3_libtxc_dxtn(tex, tile_path)
 
-    else:  # Save as RGBA8
-        data = tex.bits()
-        data.setsize(tex.byteCount())
-        data = data.asstring()
+            else:
+                try:
+                    _compressBC3_nvcompress(tex, tool_path, tile_path, nml)
+                except (OSError, subprocess.SubprocessError):
+                    pass
 
-        os.makedirs(tile_path, exist_ok=True)
-        with open(tile_path + '/tmp.dds', 'wb+') as out:
-            hdr = dds.generateHeader(2048, 512, 0x1a)
-            out.write(hdr)
-            out.write(data)
+                if not os.path.isfile(dds_path):
+                    _compressBC3_libtxc_dxtn(tex, tile_path)
 
-    gtxdata = gtx.DDStoGTX(tile_path + '/tmp.dds')
+        else:  # Save as RGBA8
+            data = tex.bits()
+            data.setsize(tex.byteCount())
+            data = data.asstring()
 
-    os.remove(tile_path + '/tmp.dds')
+            with open(dds_path, 'wb+') as out:
+                hdr = dds.generateHeader(2048, 512, 0x1a)
+                out.write(hdr)
+                out.write(data)
 
-    return gtxdata
+        return gtx.DDStoGTX(dds_path)
 
 
 def PackTexture(idx, nml=False):
