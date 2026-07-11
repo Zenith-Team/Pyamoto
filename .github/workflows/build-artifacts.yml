@@ -1,0 +1,217 @@
+name: Build Artifacts
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      release_type:
+        required: true
+        type: string
+    secrets:
+      inherit
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────────
+  # Windows x64
+  # ──────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          architecture: x64
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Add LLVM to PATH
+        shell: pwsh
+        run: |
+          echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+
+      - name: Inject metadata
+        shell: pwsh
+        run: |
+          $v = "${{ inputs.version }}"
+          $d = Get-Content project.json | ConvertFrom-Json
+          $d | Add-Member -NotePropertyName release_type -NotePropertyValue ${{ inputs.release_type }} -Force
+          $d | Add-Member -NotePropertyName version -NotePropertyValue $v -Force
+          $d | ConvertTo-Json | Set-Content project.json
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        run: python build.py build_ext --inplace build_exe
+
+      - name: Retry build (cx_Freeze winversioninfo is inconsistent)
+        if: steps.build.outcome == 'failure'
+        run: python build.py build_ext --inplace build_exe
+
+      - name: Package as zip
+        shell: pwsh
+        run: |
+          $v = "${{ inputs.version }}"
+          7z a -mx=9 -tzip "Pyamoto-v$v-Windows-x64.zip" ".\distrib\miyamoto_v$v\*"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: Pyamoto-*.zip
+          retention-days: 7
+
+
+  # ──────────────────────────────────────────────────────────────
+  # macOS Universal
+  # ──────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS Universal
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+
+      - name: Inject metadata
+        run: |
+          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']=sys.argv[1]; d['version']=sys.argv[2]; open('project.json','w').write(json.dumps(d,indent=4))" \
+            "${{ inputs.release_type }}" "${{ inputs.version }}"
+
+      - name: Build universal Cython extensions + .app
+        env:
+          ARCHFLAGS: "-arch x86_64 -arch arm64"
+        run: python build.py build_ext --inplace bdist_mac
+
+      - name: Verify / merge PyQt5 universality in bundle
+        run: |
+          PYQT5_PARENT=$(python3 -c \
+            "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
+          python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
+
+      - name: Ad-hoc sign bundle
+        run: codesign --force --deep --sign - build/Pyamoto.app
+
+      - name: Pre-package cleanup (flatten broken symlinks)
+        run: |
+          python - <<'EOF'
+          import sys, os, os.path, shutil
+          print('>> Performing macOS specific prepacking...')
+          app_path = 'build/Pyamoto.app'
+          if os.path.isdir(app_path):
+              macos_dir = os.path.join(app_path, 'Contents/MacOS')
+              res_dir = os.path.join(app_path, 'Contents/Resources')
+              if os.path.isdir(res_dir):
+                for name in os.listdir(res_dir):
+                    res_item = os.path.join(res_dir, name)
+                    macos_item = os.path.join(macos_dir, name)
+                    if os.path.isdir(res_item) and not os.path.islink(res_item):
+                        if os.path.islink(macos_item):
+                            os.unlink(macos_item)
+                            shutil.move(res_item, macos_item)
+                            print(f'>> Fixed symlink to physical folder and transferred: {name}')
+          print("\nPre-package script successful.")
+          EOF
+
+      - name: Package macOS-universal.zip
+        run: |
+          V="${{ inputs.version }}"
+          cd build && zip -r -9 -X "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: Pyamoto-*-macOS-universal.zip
+          retention-days: 7
+
+
+  # ──────────────────────────────────────────────────────────────
+  # Linux x86_64 AppImage + updater zip
+  # ──────────────────────────────────────────────────────────────
+  build-linux-x86_64:
+    name: Linux x86_64 AppImage
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-0 libxcb1 libxkbcommon-x11-0 libdbus-1-3 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 \
+            libgl1-mesa-dev
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
+
+      - name: Inject metadata
+        run: |
+          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']=sys.argv[1]; d['version']=sys.argv[2]; open('project.json','w').write(json.dumps(d,indent=4))" \
+            "${{ inputs.release_type }}" "${{ inputs.version }}"
+
+      - name: Build
+        run: python build.py build_ext --inplace build_exe
+
+      - name: Assemble AppDir
+        run: |
+          V="${{ inputs.version }}"
+          APPDIR="AppDir"
+          mkdir -p "${APPDIR}"
+          cp -r "distrib/miyamoto_v${V}/." "${APPDIR}/"
+          cp buildtools/Pyamoto.desktop "${APPDIR}/Pyamoto.desktop"
+          cp miyamotodata/app_icons/pyamoto1024.png "${APPDIR}/Pyamoto.png"
+          cp buildtools/AppRun           "${APPDIR}/AppRun"
+          chmod +x "${APPDIR}/AppRun" "${APPDIR}/Pyamoto"
+
+      - name: Download appimagetool
+        run: |
+          wget -q -O appimagetool \
+            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+
+      - name: Build AppImage
+        run: |
+          V="${{ inputs.version }}"
+          APPIMAGE_EXTRACT_AND_RUN=1 \
+          ARCH=x86_64 \
+            ./appimagetool --no-appstream AppDir \
+            "Pyamoto-v${V}-Linux-x86_64.AppImage"
+
+      - name: Package updater zip
+        run: |
+          V="${{ inputs.version }}"
+          cd "distrib/miyamoto_v${V}" && zip -r -9 -X "../../Pyamoto-v${V}-Linux-x86_64.zip" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-appimage
+          path: |
+            Pyamoto-*.AppImage
+            Pyamoto-*-Linux-x86_64.zip
+          retention-days: 7

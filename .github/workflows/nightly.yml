@@ -75,318 +75,58 @@ jobs:
           print("\nAll preflight checks passed.")
           EOF
 
-
   # ──────────────────────────────────────────────────────────────
-  # Windows x64
+  # Prepare build metadata
   # ──────────────────────────────────────────────────────────────
-  build-windows:
-    needs: preflight
-    name: Windows x64
-    runs-on: windows-latest
-
+  prepare:
+    name: Prepare build metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      datetime: ${{ steps.meta.outputs.datetime }}
+      sha: ${{ steps.meta.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-          architecture: x64
-
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Add LLVM to PATH
-        shell: pwsh
-        run: |
-          echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-
-      - name: Inject nightly metadata
-        shell: pwsh
-        run: |
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $d = Get-Content project.json | ConvertFrom-Json
-          $d | Add-Member -NotePropertyName release_type -NotePropertyValue nightly -Force
-          $d | Add-Member -NotePropertyName version -NotePropertyValue $sha -Force
-          $d | ConvertTo-Json | Set-Content project.json
-
-      - name: Build
-        id: build
-        continue-on-error: true
-        run: python build.py build_ext --inplace build_exe
-
-      - name: Retry build (cx_Freeze winversioninfo is inconsistent)
-        if: steps.build.outcome == 'failure'
-        run: python build.py build_ext --inplace build_exe
-
-      - name: Get version
+      - name: Resolve version
         id: ver
-        shell: pwsh
+        run: echo "version=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+
+      - name: Get commit metadata
+        id: meta
         run: |
-          $v = python -c "import json; print(json.load(open('project.json'))['version'])"
-          echo "version=$v" >> $env:GITHUB_OUTPUT
-
-      - name: Package as zip
-        shell: pwsh
-        run: |
-          $v = "${{ steps.ver.outputs.version }}"
-          7z a -mx=9 -tzip "Pyamoto-v$v-Windows-x64.zip" ".\distrib\miyamoto_v$v\*"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-x64
-          path: Pyamoto-*.zip
-          retention-days: 7
-
+          COMMIT_DT=$(git log -1 --format=%cI | cut -c1-19 | sed 's/:/-/g')
+          echo "datetime=$COMMIT_DT" >> $GITHUB_OUTPUT
+          echo "sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
   # ──────────────────────────────────────────────────────────────
-  # macOS Universal
-  #
-  # Builds arm64 .app natively, then cross-builds x86_64 .so/dylib
-  # files via Rosetta x86_64 Python, then lipo-merges into a single
-  # universal .app bundle, signs, and packages as updater zip.
+  # Build all platform artifacts (reusable workflow)
   # ──────────────────────────────────────────────────────────────
-  build-macos:
-    needs: preflight
-    name: macOS Universal
-    runs-on: macos-14
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-
-      - name: Inject nightly metadata
-        id: metadata
-        run: |
-          SHA="${GITHUB_SHA:0:7}"
-          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
-          echo "version=$SHA" >> $GITHUB_OUTPUT
-
-      - name: Build universal Cython extensions + .app
-        env:
-          ARCHFLAGS: "-arch x86_64 -arch arm64"
-        run: python build.py build_ext --inplace bdist_mac
-
-      - name: Verify / merge PyQt5 universality in bundle
-        run: |
-          PYQT5_PARENT=$(python3 -c \
-            "import os, PyQt5; print(os.path.dirname(os.path.dirname(PyQt5.__file__)))")
-          python buildtools/merge_pyqt5.py build/Pyamoto.app "$PYQT5_PARENT"
-
-      - name: Ad-hoc sign bundle
-        run: codesign --force --deep --sign - build/Pyamoto.app
-
-      - name: Package macOS-universal.zip
-        run: |
-          python - <<'EOF'
-          import sys, os, os.path, shutil
-          print('>> Performing macOS specific prepacking...')
-          app_path = 'build/Pyamoto.app'
-          if os.path.isdir(app_path):
-              macos_dir = os.path.join(app_path, 'Contents/MacOS')
-              res_dir = os.path.join(app_path, 'Contents/Resources')
-              if os.path.isdir(res_dir):
-                for name in os.listdir(res_dir):
-                    res_item = os.path.join(res_dir, name)
-                    macos_item = os.path.join(macos_dir, name)
-                    # flatten broken generated symlinks
-                    if os.path.isdir(res_item) and not os.path.islink(res_item):
-                        if os.path.islink(macos_item):
-                            os.unlink(macos_item)
-                            shutil.move(res_item, macos_item)
-                            print(f'>> Fixed symlink to physical folder and transferred: {name}')
-          print("\nPre-package script successful.")
-          EOF
-          V="${{ steps.metadata.outputs.version }}"
-          cd build && zip -r -9 -X "../Pyamoto-v${V}-macOS-universal.zip" Pyamoto.app
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos
-          path: Pyamoto-*-macOS-universal.zip
-          retention-days: 7
-
+  build:
+    needs: [preflight, prepare]
+    uses: ./.github/workflows/build-artifacts.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      release_type: nightly
+    secrets: inherit
 
   # ──────────────────────────────────────────────────────────────
-  # Linux x86_64  AppImage + updater zip
-  # ──────────────────────────────────────────────────────────────
-  build-linux-x86_64:
-    needs: preflight
-    name: Linux x86_64 AppImage
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Install system libraries
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends \
-            libglib2.0-0 libxcb1 libxkbcommon-x11-0 libdbus-1-3 \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
-            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 \
-            libgl1-mesa-dev
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-
-      - name: Inject nightly metadata
-        run: |
-          SHA="${GITHUB_SHA:0:7}"
-          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
-
-      - name: Build
-        run: python build.py build_ext --inplace build_exe
-
-      - name: Get version
-        id: ver
-        run: |
-          echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
-            >> $GITHUB_OUTPUT
-
-      - name: Assemble AppDir
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          APPDIR="AppDir"
-          mkdir -p "${APPDIR}"
-          cp -r "distrib/miyamoto_v${V}/." "${APPDIR}/"
-          cp buildtools/Pyamoto.desktop "${APPDIR}/Pyamoto.desktop"
-          cp miyamotodata/app_icons/pyamoto1024.png "${APPDIR}/Pyamoto.png"
-          cp buildtools/AppRun           "${APPDIR}/AppRun"
-          chmod +x "${APPDIR}/AppRun" "${APPDIR}/Pyamoto"
-
-      - name: Download appimagetool
-        run: |
-          wget -q -O appimagetool \
-            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-          chmod +x appimagetool
-
-      - name: Build AppImage
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          APPIMAGE_EXTRACT_AND_RUN=1 \
-          ARCH=x86_64 \
-            ./appimagetool --no-appstream AppDir \
-            "Pyamoto-v${V}-Linux-x86_64.AppImage"
-
-      - name: Package updater zip
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          cd "distrib/miyamoto_v${V}" && zip -r -9 -X "../../Pyamoto-v${V}-Linux-x86_64.zip" .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-x86_64-appimage
-          path: |
-            Pyamoto-*.AppImage
-            Pyamoto-*-Linux-x86_64.zip
-          retention-days: 7
-
-
-  # ──────────────────────────────────────────────────────────────
-  # Linux arm64  AppImage  (disabled: no arm64 PyQt5 wheel)
-  # ──────────────────────────────────────────────────────────────
-  build-linux-arm64:
-    name: Linux arm64 AppImage
-    if: false
-    runs-on: ubuntu-22.04-arm
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install system libraries and Qt5 build dependencies
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends \
-            libglib2.0-0 libxcb1 libxkbcommon-x11-0 libdbus-1-3 \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
-            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xfixes0 \
-            libgl1-mesa-dev \
-            qtbase5-dev qt5-qmake qtchooser
-          sudo update-alternatives --install /usr/bin/qmake qmake \
-            /usr/lib/qt5/bin/qmake 10
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-      - run: pip install Cython==3.2.4 "PyQt5==5.15.11" "requests==2.32.3" SarcLib==0.3 "cx_Freeze==8.4.1"
-      - run: |
-          SHA="${GITHUB_SHA:0:7}"
-          python3 -c "import json,sys; d=json.load(open('project.json')); d['release_type']='nightly'; d['version']=sys.argv[1]; open('project.json','w').write(json.dumps(d,indent=4))" "$SHA"
-      - run: python build.py build_ext --inplace build_exe
-      - name: Get version
-        id: ver
-        run: echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" >> $GITHUB_OUTPUT
-      - name: Assemble AppDir
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          mkdir -p AppDir
-          cp -r "distrib/miyamoto_v${V}/." "AppDir/"
-          cp buildtools/Pyamoto.desktop "AppDir/Pyamoto.desktop"
-          cp miyamotodata/app_icons/pyamoto1024.png "AppDir/Pyamoto.png"
-          cp buildtools/AppRun "AppDir/AppRun"
-          chmod +x "AppDir/AppRun" "AppDir/Pyamoto"
-      - name: Download appimagetool (aarch64)
-        run: |
-          wget -q -O appimagetool \
-            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage"
-          chmod +x appimagetool
-      - name: Build AppImage
-        run: |
-          V="${{ steps.ver.outputs.version }}"
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=aarch64 \
-            ./appimagetool --no-appstream AppDir "Pyamoto-v${V}-Linux-arm64.AppImage"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-arm64-appimage
-          path: Pyamoto-*.AppImage
-          retention-days: 7
-
-
-  # ──────────────────────────────────────────────────────────────
-  # Release  (publish nightly GitHub Release)
+  # Publish nightly GitHub Release
   # ──────────────────────────────────────────────────────────────
   release:
     name: Publish Nightly Release
     runs-on: ubuntu-latest
     if: >-
       always() && !cancelled() &&
-      (needs.build-windows.result == 'success' ||
-       needs.build-macos.result == 'success' ||
-       needs.build-linux-x86_64.result == 'success')
+      needs.build.result == 'success'
     needs:
-      - build-windows
-      - build-macos
-      - build-linux-x86_64
+      - prepare
+      - build
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Get version and commit datetime
-        id: meta
-        run: |
-          echo "version=$(python3 -c 'import json; print(json.load(open("project.json"))["version"])')" \
-            >> $GITHUB_OUTPUT
-          COMMIT_DT=$(git log -1 --format=%cI | cut -c1-19 | sed 's/:/-/g')
-          echo "datetime=$COMMIT_DT" >> $GITHUB_OUTPUT
-          echo "sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
       - uses: actions/download-artifact@v4
         with:
@@ -424,8 +164,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: nightly-${{ steps.meta.outputs.datetime }}-${{ steps.meta.outputs.sha }}
-          name: "Nightly ${{ steps.meta.outputs.datetime }}  [${{ steps.meta.outputs.sha }}]"
+          tag_name: nightly-${{ needs.prepare.outputs.datetime }}-${{ needs.prepare.outputs.sha }}
+          name: "Nightly ${{ needs.prepare.outputs.datetime }}  [${{ needs.prepare.outputs.sha }}]"
           draft: true
           prerelease: true
           make_latest: false
@@ -438,5 +178,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release edit \
-            "nightly-${{ steps.meta.outputs.datetime }}-${{ steps.meta.outputs.sha }}" \
+            "nightly-${{ needs.prepare.outputs.datetime }}-${{ needs.prepare.outputs.sha }}" \
             --draft=false
