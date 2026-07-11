@@ -15,6 +15,13 @@ Pyamoto is an advanced fork of the original Miyamoto editor with the purpose of 
 ## Installation
 Download the latest automated release from the [releases page](https://github.com/Zenith-Team/Pyamoto/releases/latest).
 
+**macOS** users can also install via [Homebrew](https://brew.sh/):
+```sh
+brew tap zenith-team/tap
+brew trust zenith-team/tap
+brew install pyamoto
+```
+
 ## Usage
 Follow the guide on the [wiki](https://zenith.nsmbu.net/wiki/Miyamoto_Level_Editor).
 
