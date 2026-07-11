@@ -1227,7 +1227,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         self.objTS0Tab = QtWidgets.QWidget()
         self.objTS123Tab = EmbeddedTab()
         self.objAllTab.addTab(self.objTS0Tab, tsicon, 'Main')
-        self.objAllTab.addTab(self.objTS123Tab, tsicon, 'Embedded')
+        self.objAllTab.addTab(self.objTS123Tab, tsicon, 'Local')
 
         oel = QtWidgets.QVBoxLayout(self.objTS0Tab)
         self.createObjectLayout = oel

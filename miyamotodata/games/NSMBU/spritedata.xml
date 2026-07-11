@@ -4154,7 +4154,7 @@
 			<entry value="1">Checkers</entry>
 			<entry value="2">Inverted Checkers</entry>
 		</list>
-		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Embedded)" category="behavior">
+		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Local)" category="behavior">
 			<entry value="0">Red Block (Pa0 tile #208) (Object #143)</entry>
 			<entry value="1">Brick Block (Pa0 tile #48) (Object #15)</entry>
 			<entry value="2">Blank Tile (Pa0 tile #0) (Object #0)</entry>
@@ -8623,7 +8623,7 @@
 			<entry value="1">Checkers</entry>
 			<entry value="2">Inverted Checkers</entry>
 		</list>
-		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Embedded)" category="behavior">
+		<list nybble="9" title="Object Type" comment="Here you can select which object type will be used to fill the selected area.&lt;br&gt;&lt;br&gt;&lt;b&gt;Note:&lt;/b&gt; If an event is activated that triggers the 'Tile God' effect to destroy objects, and the event is deactivated afterward, then the area will be filled with the object type selected here (the 'Permanent' checkbox overrides this).&lt;br&gt;&lt;br&gt;&lt;b&gt;Tip:&lt;/b&gt; Pa0 is referring to the main tileset, with bricks and question blocks and the works, Pa1 is referring to tileset 2 (Local)" category="behavior">
 			<entry value="0">Red Block (Pa0 tile #208) (Object #143)</entry>
 			<entry value="1">Brick Block (Pa0 tile #48) (Object #15)</entry>
 			<entry value="2">Blank Tile (Pa0 tile #0) (Object #0)</entry>
