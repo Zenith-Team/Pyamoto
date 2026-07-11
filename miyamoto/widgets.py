@@ -261,6 +261,12 @@ class ObjectPickerWidget(QtWidgets.QListView):
         self.menu.addAction(delete)
         self.menu.addAction(delIns)
 
+        if globals.mainWindow.objAllTab.currentIndex() == 1:
+            self.menu.addSeparator()
+            deleteUnused = QtWidgets.QAction('Delete Unused', self)
+            deleteUnused.triggered.connect(self.HandleDeleteUnused)
+            self.menu.addAction(deleteUnused)
+
         self.menu.popup(QtGui.QCursor.pos())
 
     def LoadFromTilesets(self):
@@ -566,6 +572,82 @@ class ObjectPickerWidget(QtWidgets.QListView):
         SetDirty()
         globals.mainWindow.SelectionUpdateFlag = False
         globals.mainWindow.ChangeSelectionHandler()
+
+    def HandleDeleteUnused(self):
+        """Delete Local objects unused by the level, clipboard, or saved stamps."""
+        used = {
+            (obj.tileset, obj.type)
+            for layer in globals.Area.layers
+            for obj in layer
+            if obj.tileset in (1, 2, 3)
+        }
+
+        # Clipboard and saved stamps must keep their object definitions. The
+        # tileset deletion path reindexes references, but cannot preserve a
+        # reference to the definition being deleted.
+        encoded_sources = [
+            clip.miyamoto_clip for clip in globals.mainWindow.clipChooser._clips
+        ]
+        clipboard = globals.mainWindow.clipboard
+        if clipboard is not None:
+            encoded_sources.append(clipboard)
+
+        for encoded in encoded_sources:
+            if not isinstance(encoded, str) or not (
+                    encoded.startswith('MiyamotoClip|') and encoded.endswith('|%')):
+                continue
+            try:
+                layers, _, _, _, _, _, _ = globals.mainWindow.getEncodedObjects(
+                    encoded, False)
+            except Exception:
+                continue
+            used.update(
+                (obj.tileset, obj.type)
+                for layer in layers
+                for obj in layer
+                if obj.tileset in (1, 2, 3)
+            )
+
+        unused = []
+        for tileset in (1, 2, 3):
+            definitions = globals.ObjectDefinitions[tileset]
+            if definitions is None:
+                continue
+            unused.extend(
+                (tileset, obj_num)
+                for obj_num, definition in enumerate(definitions)
+                if definition is not None and (tileset, obj_num) not in used
+            )
+
+        if not unused:
+            QtWidgets.QMessageBox.information(
+                self, 'Delete Unused', 'No unused Local objects were found.')
+            return
+
+        count = len(unused)
+        message = (
+            f'Delete {count} unused Local object{"s" if count != 1 else ""}?\n\n'
+            'Objects placed in the level, copied to the clipboard, or used by '
+            'saved stamps will be kept. This action can be undone.'
+        )
+        result = QtWidgets.QMessageBox.question(
+            self, 'Delete Unused', message,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if result != QtWidgets.QMessageBox.Yes:
+            return
+
+        globals.UndoManager.begin_compound('Delete Unused Local Objects')
+        try:
+            for tileset, obj_num in sorted(unused, reverse=True):
+                globals.UndoManager.push(
+                    undomanager.DeleteTilesetObjectCommand(tileset, obj_num))
+        finally:
+            globals.UndoManager.end_compound()
+
+        HandleTilesetEdited()
+        globals.mainWindow.scene.update()
 
     ObjChanged = QtCore.pyqtSignal(int)
     ObjReplace = QtCore.pyqtSignal(int)
