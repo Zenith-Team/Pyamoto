@@ -274,8 +274,16 @@ class ObjectPickerWidget(QtWidgets.QListView):
         new_m0 = self.ObjectListModel()
         new_m0.LoadFromTileset(0)
         self.m0 = new_m0
-        self.setModel(self.m0)
         self.objTS123Tab.LoadFromTilesets()
+
+        # Model refreshes must not change which palette the visible tab shows.
+        # In particular, Local refreshes used to display m0 until another tab
+        # switch corrected the model.
+        if globals.mainWindow.objAllTab.currentIndex() == 0:
+            self.setModel(self.m0)
+        else:
+            self.setModel(self.objTS123Tab.getActiveModel())
+        self.viewport().update()
 
     def ShowTileset(self, id):
         """
@@ -6438,12 +6446,21 @@ class EmbeddedTab(QtWidgets.QTabWidget):
 
     def tabChanged(self, nt, layout=None):
         if 0 <= nt <= 3:
+            mw = globals.mainWindow
+
+            # Updating tab enabled states can emit currentChanged even while
+            # Local is hidden. A hidden subtab must never steal the shared
+            # object-picker layout (or change its model) from Main.
+            if (mw is None or not hasattr(mw, 'objAllTab')
+                    or mw.objAllTab.currentIndex() != 1):
+                return
+
             if not layout and hasattr(globals.mainWindow, 'createObjectLayout'):
                 layout = globals.mainWindow.createObjectLayout
 
             if layout:
                 sub_tabs = [self.objTSAllTab, self.objTS1Tab, self.objTS2Tab, self.objTS3Tab]
-                globals.mainWindow.objPicker.ShowTileset(2)
+                mw.objPicker.ShowTileset(2)
                 sub_tabs[nt].setLayout(layout)
 
     def setLayout(self, layout):
