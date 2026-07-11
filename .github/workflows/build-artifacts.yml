@@ -9,8 +9,6 @@ on:
       release_type:
         required: true
         type: string
-    secrets:
-      inherit
 
 jobs:
 
