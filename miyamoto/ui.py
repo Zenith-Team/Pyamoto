@@ -25,6 +25,43 @@ from .misc import setting
 #################################
 
 
+def themeDirectories():
+    """Return theme roots in load-precedence order."""
+    return (
+        os.path.join(globals.user_data_path, 'themes'),
+        os.path.join(globals.miyamoto_path, 'miyamotodata', 'themes'),
+    )
+
+
+def resolveThemeFolder(name):
+    """Resolve a theme folder name, preferring a user-installed theme."""
+    if (not isinstance(name, str) or not name or name in ('.', '..')
+            or '/' in name or '\\' in name):
+        raise FileNotFoundError(f'Invalid theme folder: {name!r}')
+
+    for root in themeDirectories():
+        candidate = os.path.join(root, name)
+        if os.path.isdir(candidate):
+            return candidate
+    raise FileNotFoundError(f'Theme folder not found: {name}')
+
+
+def availableThemes():
+    """Return valid theme folder names from bundled and user theme roots."""
+    names = set()
+    for root in reversed(themeDirectories()):
+        try:
+            entries = os.listdir(root)
+        except OSError:
+            continue
+        for name in entries:
+            folder = os.path.join(root, name)
+            if name != 'Classic' and os.path.isdir(folder) and os.path.isfile(
+                    os.path.join(folder, 'main.xml')):
+                names.add(name)
+    return tuple(sorted(names, key=str.casefold))
+
+
 class MiyamotoTheme:
     """
     Class that represents a Miyamoto theme
@@ -109,7 +146,7 @@ class MiyamotoTheme:
         """
         Initializes the theme from the folder
         """
-        folder = os.path.join(globals.miyamoto_path, 'miyamotodata', 'themes', folder)
+        folder = resolveThemeFolder(folder)
 
         fileList = os.listdir(folder)
 

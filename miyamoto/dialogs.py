@@ -30,7 +30,7 @@ from . import globals
 from .items import ZoneItem
 from .misc import HexSpinBox, BGName, setting, setSetting, hasLevelNameSources
 from .updater import _CHANNEL_LABELS, _CHANNEL_VALUES, _default_channel, check_for_updates_now
-from .ui import MiyamotoTheme, toQColor, GetIcon, createHorzLine
+from .ui import MiyamotoTheme, availableThemes, toQColor, GetIcon, createHorzLine
 from .widgets import LoadingTab, TilesetsTab
 from .verifications import SetDirty
 
@@ -3268,18 +3268,15 @@ class PreferencesDialog(QtWidgets.QDialog):
 
             @property
             def getAvailableThemes(self):
-                """Searches the Themes folder and returns a list of theme filepaths.
+                """Searches bundled and user theme folders.
                 Automatically adds 'Classic' to the list."""
-                _themes_dir = os.path.join(globals.miyamoto_path, 'miyamotodata', 'themes')
-                themes = os.listdir(_themes_dir)
                 themeList = [('Classic', MiyamotoTheme())]
-                for themeName in themes:
-                    if os.path.isdir(os.path.join(_themes_dir, themeName)):
-                        try:
-                            theme = MiyamotoTheme(themeName)
-                            themeList.append((themeName, theme))
-                        except Exception:
-                            pass
+                for themeName in availableThemes():
+                    try:
+                        theme = MiyamotoTheme(themeName)
+                        themeList.append((themeName, theme))
+                    except Exception:
+                        pass
 
                 return tuple(themeList)
 
