@@ -545,12 +545,14 @@ class _UpdateDialog(QtWidgets.QDialog):
 
     def _install(self):
         self.accept()
-        _start_install(self._release)
+        # Let this nested dialog unwind before closing any dialog underneath it.
+        QtCore.QTimer.singleShot(0, lambda: _start_install(self._release))
 
 
 _checker = None
 _worker = None
 _progress = None
+_restore_unsaved_state = False
 
 
 def check_for_updates():
@@ -593,6 +595,39 @@ def _on_update_found(release):
 
 
 def _start_install(release):
+    """Close an originating modal dialog before prompting and downloading."""
+    modal = QtWidgets.QApplication.activeModalWidget()
+    if isinstance(modal, QtWidgets.QDialog) and modal is not globals.mainWindow:
+        modal.reject()
+        QtCore.QTimer.singleShot(0, lambda: _confirm_install(release))
+        return
+    _confirm_install(release)
+
+
+def _confirm_install(release):
+    """Resolve unsaved work before any update download begins."""
+    global _restore_unsaved_state
+    if _worker is not None:
+        return
+    _restore_unsaved_state = False
+    window = globals.mainWindow
+    was_dirty = bool(globals.Dirty)
+    if window is not None and window.CheckDirty():
+        return
+
+    # CheckDirty leaves Dirty set when Discard is chosen. Clear it temporarily
+    # so closing after a successful download does not prompt a second time.
+    # Restore it if update preparation fails and editor remains open.
+    _restore_unsaved_state = was_dirty and bool(globals.Dirty)
+    if _restore_unsaved_state:
+        globals.Dirty = False
+        if window is not None:
+            window.UpdateTitle()
+
+    _begin_download(release)
+
+
+def _begin_download(release):
     global _worker, _progress
     if _worker is not None:
         return
@@ -600,10 +635,13 @@ def _start_install(release):
         'Downloading and verifying update...', '', 0, 100, globals.mainWindow
     )
     _progress.setWindowTitle('Pyamoto Update')
-    _progress.setWindowModality(QtCore.Qt.WindowModal)
+    _progress.setWindowModality(QtCore.Qt.ApplicationModal)
     _progress.setCancelButton(None)
     _progress.setMinimumDuration(0)
     _progress.setValue(0)
+    _progress.show()
+    _progress.raise_()
+    _progress.activateWindow()
 
     _worker = _UpdateWorker()
     _worker.progress.connect(_progress.setValue)
@@ -618,6 +656,7 @@ def _install_failed(message):
         _progress.close()
     _worker = None
     _progress = None
+    _restore_dirty_state()
     _show_error(message)
 
 
@@ -631,6 +670,7 @@ def _install_ready(location, staged, work):
     window = globals.mainWindow
     if window is not None and not window.close():
         shutil.rmtree(work, ignore_errors=True)
+        _restore_dirty_state()
         return
     try:
         _launch_helper(location, staged, work)
@@ -638,7 +678,25 @@ def _install_ready(location, staged, work):
         shutil.rmtree(work, ignore_errors=True)
         if window is not None:
             window.show()
+        _restore_dirty_state()
         _show_error(f'Could not start the update installer: {exc}')
+    else:
+        _clear_dirty_restore()
+
+
+def _restore_dirty_state():
+    global _restore_unsaved_state
+    if _restore_unsaved_state:
+        globals.Dirty = True
+        window = globals.mainWindow
+        if window is not None:
+            window.UpdateTitle()
+    _restore_unsaved_state = False
+
+
+def _clear_dirty_restore():
+    global _restore_unsaved_state
+    _restore_unsaved_state = False
 
 
 def _show_info(text):
