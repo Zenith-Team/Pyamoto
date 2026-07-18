@@ -17,7 +17,9 @@ import os
 import re
 import json
 import shutil
+import weakref
 import zipfile
+from urllib.parse import unquote, urlparse
 
 import requests
 
@@ -1590,7 +1592,7 @@ class AreaChoiceDialog(QtWidgets.QDialog):
 class _DownloadModWorker(QThread):
     progress = pyqtSignal(int)      # 0-100; -1 = extracting
     statusMsg = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)  # success, error_message
+    completed = pyqtSignal(bool, str)  # success, error_message
 
     def __init__(self, url, tmp_path, extract_dir):
         super().__init__()
@@ -1620,7 +1622,7 @@ class _DownloadModWorker(QThread):
                             self.progress.emit(int(done * 100 / total))
             if self._cancel:
                 _safe_remove(self.tmp_path)
-                self.finished.emit(False, "Cancelled")
+                self.completed.emit(False, "Cancelled")
                 return
             self.statusMsg.emit("Extracting\u2026")
             self.progress.emit(-1)
@@ -1628,14 +1630,14 @@ class _DownloadModWorker(QThread):
             with zipfile.ZipFile(self.tmp_path, 'r') as zf:
                 zf.extractall(self.extract_dir)
             _safe_remove(self.tmp_path)
-            self.finished.emit(True, "")
+            self.completed.emit(True, "")
         except Exception as e:
             _safe_remove(self.tmp_path)
-            self.finished.emit(False, str(e))
+            self.completed.emit(False, str(e))
 
 
 class _CheckUpdateWorker(QThread):
-    finished = pyqtSignal(object)  # dict or None
+    completed = pyqtSignal(object)  # dict or None
 
     def __init__(self, url):
         super().__init__()
@@ -1646,13 +1648,13 @@ class _CheckUpdateWorker(QThread):
             # Parse GitHub repo from URL
             m = re.match(r'https?://github\.com/([^/]+)/([^/]+)', self.url)
             if not m:
-                self.finished.emit(None)
+                self.completed.emit(None)
                 return
             owner, repo = m.group(1), m.group(2).rstrip('/').replace('.git', '')
             api = f'https://api.github.com/repos/{owner}/{repo}/releases/latest'
             resp = requests.get(api, timeout=10)
             if resp.status_code != 200:
-                self.finished.emit(None)
+                self.completed.emit(None)
                 return
             data = resp.json()
             tag = data.get('tag_name', '')
@@ -1662,14 +1664,14 @@ class _CheckUpdateWorker(QThread):
                 if asset['name'] == 'patch.zip':
                     download_url = asset['browser_download_url']
                     break
-            self.finished.emit({
+            self.completed.emit({
                 'version': tag.lstrip('v'),
                 'tag': tag,
                 'download_url': download_url,
                 'name': data.get('name', ''),
             })
         except Exception:
-            self.finished.emit(None)
+            self.completed.emit(None)
 
 
 def _safe_remove(path):
@@ -1678,6 +1680,25 @@ def _safe_remove(path):
             os.remove(path)
     except Exception:
         pass
+
+
+def _start_background_worker(owner, worker):
+    """Start a QThread and retain it until Qt reports that it has stopped."""
+    workers = getattr(owner, '_background_workers', None)
+    if workers is None:
+        workers = set()
+        owner._background_workers = workers
+
+    workers.add(worker)
+    worker_ref = weakref.ref(worker)
+
+    def _release_worker():
+        finished_worker = worker_ref()
+        if finished_worker is not None:
+            workers.discard(finished_worker)
+
+    worker.finished.connect(_release_worker)
+    worker.start()
 
 
 # ── Helpers for GitHub URL resolution ───────────────────────────────────────
@@ -1719,6 +1740,29 @@ def _find_main_xml_in_extracted(extract_dir):
         if 'main.xml' in files:
             return root
     return None
+
+
+def _patch_slug_from_url(url, fallback='mod'):
+    """Build a stable install-folder slug from a patch URL."""
+    parsed = urlparse(url)
+    path_parts = [unquote(part) for part in parsed.path.split('/') if part]
+
+    if parsed.netloc.lower() in ('github.com', 'www.github.com') and len(path_parts) >= 2:
+        owner = path_parts[0]
+        repo = path_parts[1]
+        if repo.lower().endswith('.git'):
+            repo = repo[:-4]
+        name = f'{owner}_{repo}'
+    elif path_parts:
+        name = path_parts[-1]
+        if name.lower().endswith('.zip'):
+            name = name[:-4]
+    else:
+        name = fallback
+
+    if not name:
+        name = fallback
+    return re.sub(r'[^\w\-]', '_', name).strip('_') or 'mod'
 
 
 class PreferencesDialog(QtWidgets.QDialog):
@@ -2593,15 +2637,6 @@ class PreferencesDialog(QtWidgets.QDialog):
                     info_label.hide()
                     lay.addWidget(info_label)
 
-                    progress_bar = QtWidgets.QProgressBar()
-                    progress_bar.setVisible(False)
-                    lay.addWidget(progress_bar)
-
-                    status_lbl = QtWidgets.QLabel()
-                    status_lbl.setStyleSheet('font-size: 11px;')
-                    status_lbl.setVisible(False)
-                    lay.addWidget(status_lbl)
-
                     btns = QtWidgets.QDialogButtonBox(
                         QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
                     btns.button(QtWidgets.QDialogButtonBox.Ok).setText('Download')
@@ -2670,29 +2705,32 @@ class PreferencesDialog(QtWidgets.QDialog):
                     os.makedirs(tmp_dir, exist_ok=True)
                     tmp_zip = os.path.join(tmp_dir, 'patch.zip')
 
-                    progress_bar.setVisible(True)
-                    progress_bar.setValue(0)
-                    status_lbl.setVisible(True)
-                    status_lbl.setText('Downloading\u2026')
-                    btns.setEnabled(False)
+                    download_progress = QtWidgets.QProgressDialog(
+                        'Connecting\u2026', 'Cancel', 0, 100, self_inner)
+                    download_progress.setWindowTitle('Downloading Patch')
+                    download_progress.setWindowModality(Qt.WindowModal)
+                    download_progress.setAutoClose(False)
+                    download_progress.setAutoReset(False)
+                    download_progress.setMinimumDuration(0)
+                    download_progress.setValue(0)
+                    download_progress.show()
 
                     worker = _DownloadModWorker(dl_url, tmp_zip, tmp_dir)
+                    download_progress.canceled.connect(worker.cancel)
 
                     def _on_progress(v):
                         if v < 0:
-                            progress_bar.setRange(0, 0)
+                            download_progress.setRange(0, 0)
                         else:
-                            progress_bar.setRange(0, 100)
-                            progress_bar.setValue(v)
+                            download_progress.setRange(0, 100)
+                            download_progress.setValue(v)
 
                     def _on_status(msg):
-                        status_lbl.setText(msg)
+                        download_progress.setLabelText(msg)
 
                     def _on_finished(success, err):
-                        btns.setEnabled(True)
+                        download_progress.close()
                         if not success:
-                            progress_bar.setVisible(False)
-                            status_lbl.setVisible(False)
                             if err != 'Cancelled':
                                 QtWidgets.QMessageBox.critical(
                                     self_inner, 'Download Failed', f'Failed to download patch:\n{err}')
@@ -2709,10 +2747,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                                 'This is not a valid Pyamoto mod.')
                             return
 
-                        # Determine slug from folder name or mod name
-                        import re as _re
-                        base_name = os.path.basename(main_xml_dir.rstrip(os.sep))
-                        slug = _re.sub(r'[^\w\-]', '_', base_name).strip('_') or 'mod'
+                        slug = _patch_slug_from_url(url, patch_name)
                         base_slug, ctr = slug, 1
                         while os.path.exists(os.path.join(user_patches, slug)):
                             slug = f'{base_slug}_{ctr}'
@@ -2734,15 +2769,12 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                         shutil.rmtree(tmp_dir, ignore_errors=True)
 
-                        status_lbl.setText('Installed!')
-                        progress_bar.setVisible(False)
-
                         _add_folder_entry(slug, user_patches)
 
                     worker.progress.connect(_on_progress)
                     worker.statusMsg.connect(_on_status)
-                    worker.finished.connect(_on_finished)
-                    worker.start()
+                    worker.completed.connect(_on_finished)
+                    _start_background_worker(self_inner, worker)
 
                 def _do_update_mod(item):
                     """Update a single mod from its patchReleaseUrl."""
@@ -2853,11 +2885,67 @@ class PreferencesDialog(QtWidgets.QDialog):
                                 self_inner, 'Updated',
                                 f'"{item.text()}" updated to version {new_ver}.')
 
-                        dl_worker.finished.connect(_dl_finished)
-                        dl_worker.start()
+                        dl_worker.completed.connect(_dl_finished)
+                        _start_background_worker(self_inner, dl_worker)
 
-                    worker.finished.connect(_on_check_result)
-                    worker.start()
+                    worker.completed.connect(_on_check_result)
+                    _start_background_worker(self_inner, worker)
+
+                def _user_patch_path(item):
+                    """Return an item's user-patch path, or None for bundled mods."""
+                    folder = item.data(Qt.UserRole)
+                    if not folder or os.path.basename(folder) != folder:
+                        return None
+                    user_patches = os.path.abspath(
+                        os.path.join(globals.user_data_path, 'patches'))
+                    mod_path = os.path.abspath(os.path.join(user_patches, folder))
+                    if os.path.dirname(mod_path) != user_patches:
+                        return None
+                    return mod_path if os.path.lexists(mod_path) else None
+
+                def _delete_mod(item, source_list):
+                    """Delete a user-owned mod, or remove its symlink."""
+                    mod_path = _user_patch_path(item)
+                    if mod_path is None:
+                        QtWidgets.QMessageBox.warning(
+                            self_inner, 'Delete Mod',
+                            'This bundled mod cannot be deleted here.')
+                        return
+
+                    is_link = os.path.islink(mod_path)
+                    confirm = QtWidgets.QMessageBox(self_inner)
+                    confirm.setWindowTitle('Delete Mod?')
+                    confirm.setIcon(QtWidgets.QMessageBox.Warning)
+                    confirm.setText(f'Are you sure you want to delete "{item.text()}"?')
+                    if is_link:
+                        confirm.setInformativeText(
+                            'Only the link will be removed. The linked folder and its files will not be deleted.')
+                    else:
+                        confirm.setInformativeText(
+                            'The mod folder and all files inside it will be permanently deleted.')
+                    confirm.setStandardButtons(
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                    confirm.setDefaultButton(QtWidgets.QMessageBox.No)
+                    if confirm.exec_() != QtWidgets.QMessageBox.Yes:
+                        return
+
+                    try:
+                        if is_link:
+                            os.unlink(mod_path)
+                        else:
+                            shutil.rmtree(mod_path)
+                    except Exception as e:
+                        QtWidgets.QMessageBox.critical(
+                            self_inner, 'Delete Failed',
+                            f'Failed to delete mod:\n{e}')
+                        return
+
+                    folder = item.data(Qt.UserRole)
+                    source_list.takeItem(source_list.row(item))
+                    self_inner._mod_path_cache.pop(folder, None)
+                    if self_inner._current_mod_folder == folder:
+                        self_inner._current_mod_folder = None
+                        inspector.setVisible(False)
 
                 def _on_context_menu_avail(pos):
                     item = avail_list.itemAt(pos)
@@ -2871,6 +2959,11 @@ class PreferencesDialog(QtWidgets.QDialog):
                     act_show_info = menu.addAction('Properties')
                     act_show_info.triggered.connect(
                         lambda: _show_inspector(item.text(), item.data(Qt.UserRole)))
+                    if _user_patch_path(item) is not None:
+                        menu.addSeparator()
+                        act_delete = menu.addAction(GetIcon('delete'), 'Delete\u2026')
+                        act_delete.triggered.connect(
+                            lambda: _delete_mod(item, avail_list))
                     menu.exec_(avail_list.viewport().mapToGlobal(pos))
 
                 def _on_context_menu_active(pos):
@@ -2885,6 +2978,11 @@ class PreferencesDialog(QtWidgets.QDialog):
                     act_show_info = menu.addAction('Properties')
                     act_show_info.triggered.connect(
                         lambda: _show_inspector(item.text(), item.data(Qt.UserRole)))
+                    if _user_patch_path(item) is not None:
+                        menu.addSeparator()
+                        act_delete = menu.addAction(GetIcon('delete'), 'Delete\u2026')
+                        act_delete.triggered.connect(
+                            lambda: _delete_mod(item, active_list))
                     menu.exec_(active_list.viewport().mapToGlobal(pos))
 
                 def _check_for_updates():
