@@ -4604,6 +4604,10 @@ class tileAnime(QtWidgets.QTabWidget):
 
         self.setTabPosition(QtWidgets.QTabWidget.South)
 
+    def allFramesPixmap(self):
+        """Return same composite image shown by All-Frames View."""
+        return self.allFramesTab.tiles.pixmap()
+
     def load(self, arc, useAddrLib=False):
 
         data = b''
@@ -4668,7 +4672,7 @@ class tileAnime(QtWidgets.QTabWidget):
         super().update()
 
 
-class animWidget(QtWidgets.QTabWidget):
+class animWidget(QtWidgets.QWidget):
     def __init__(self, editor=None):
         super().__init__()
         self.editor = editor
@@ -4684,24 +4688,30 @@ class animWidget(QtWidgets.QTabWidget):
         self.belt = tileAnime('belt_conveyor_anime', 3, 1, (144, 145, 146, 147, 148, 149,
                                                            160, 161, 162, 163, 164, 165))
 
+        self.animations = (self.block, self.hatena, self.blockL, self.hatenaL, self.tuka, self.belt)
+        self.tabs = QtWidgets.QTabWidget()
+
         path = os.path.join(globals.miyamoto_path, 'miyamotodata', 'Icons', '')
 
-        self.addTab(self.block, QtGui.QIcon(path + 'Core/Brick.png'), 'Brick Block')
-        self.addTab(self.hatena, QtGui.QIcon(path + 'Core/Qblock.png'), '? Block')
-        self.addTab(self.blockL, QtGui.QIcon(path + 'Core/Brick.png'), 'Big Brick Block')
-        self.addTab(self.hatenaL, QtGui.QIcon(path + 'Core/Qblock.png'), 'Big ? Block')
-        self.addTab(self.tuka, QtGui.QIcon(path + 'Core/DashCoin.png'), 'Dash Coin')
-        self.addTab(self.belt, QtGui.QIcon(path + 'Core/Conveyor.png'), 'Conveyor Belt')
+        self.tabs.addTab(self.block, QtGui.QIcon(path + 'Core/Brick.png'), 'Brick Block')
+        self.tabs.addTab(self.hatena, QtGui.QIcon(path + 'Core/Qblock.png'), '? Block')
+        self.tabs.addTab(self.blockL, QtGui.QIcon(path + 'Core/Brick.png'), 'Big Brick Block')
+        self.tabs.addTab(self.hatenaL, QtGui.QIcon(path + 'Core/Qblock.png'), 'Big ? Block')
+        self.tabs.addTab(self.tuka, QtGui.QIcon(path + 'Core/DashCoin.png'), 'Dash Coin')
+        self.tabs.addTab(self.belt, QtGui.QIcon(path + 'Core/Conveyor.png'), 'Conveyor Belt')
 
-        self.setTabToolTip(0, "Brick Block animation.<br><b>Needs to be 16 frames!")
-        self.setTabToolTip(1, "Question Block animation.<br><b>Needs to be 16 frames!")
-        self.setTabToolTip(2, "Big Brick Block animation.<br><b>Needs to be 16 frames!")
-        self.setTabToolTip(3, "Big Question Block animation.<br><b>Needs to be 16 frames!")
-        self.setTabToolTip(4, "Dash Coin animation.<br><b>Needs to be 8 frames!")
-        self.setTabToolTip(5, "Conveyor Belt animation.<br><b>Needs to be 8 frames!")
+        self.tabs.setTabToolTip(0, "Brick Block animation.<br><b>Needs to be 16 frames!")
+        self.tabs.setTabToolTip(1, "Question Block animation.<br><b>Needs to be 16 frames!")
+        self.tabs.setTabToolTip(2, "Big Brick Block animation.<br><b>Needs to be 16 frames!")
+        self.tabs.setTabToolTip(3, "Big Question Block animation.<br><b>Needs to be 16 frames!")
+        self.tabs.setTabToolTip(4, "Dash Coin animation.<br><b>Needs to be 8 frames!")
+        self.tabs.setTabToolTip(5, "Conveyor Belt animation.<br><b>Needs to be 8 frames!")
 
-        #self.setTabShape(QtWidgets.QTabWidget.Triangular)
-        self.setTabPosition(QtWidgets.QTabWidget.South)
+        #self.tabs.setTabShape(QtWidgets.QTabWidget.Triangular)
+        self.tabs.setTabPosition(QtWidgets.QTabWidget.South)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.tabs)
 
     def load(self):
         if self.editor and self.editor.slot:
@@ -4723,24 +4733,62 @@ class animWidget(QtWidgets.QTabWidget):
         anime = []
 
         if self.block.frames:
-            anime.append((self.block.name, packTexture(self.block.allFramesTab.tiles.pixmap())))
+            anime.append((self.block.name, packTexture(self.block.allFramesPixmap())))
 
         if self.hatena.frames:
-            anime.append((self.hatena.name, packTexture(self.hatena.allFramesTab.tiles.pixmap())))
+            anime.append((self.hatena.name, packTexture(self.hatena.allFramesPixmap())))
 
         if self.blockL.frames:
-            anime.append((self.blockL.name, packTexture(self.blockL.allFramesTab.tiles.pixmap())))
+            anime.append((self.blockL.name, packTexture(self.blockL.allFramesPixmap())))
 
         if self.hatenaL.frames:
-            anime.append((self.hatenaL.name, packTexture(self.hatenaL.allFramesTab.tiles.pixmap())))
+            anime.append((self.hatenaL.name, packTexture(self.hatenaL.allFramesPixmap())))
 
         if self.tuka.frames:
-            anime.append((self.tuka.name, packTexture(self.tuka.allFramesTab.tiles.pixmap())))
+            anime.append((self.tuka.name, packTexture(self.tuka.allFramesPixmap())))
 
         if self.belt.frames:
-            anime.append((self.belt.name, packTexture(self.belt.allFramesTab.tiles.pixmap())))
+            anime.append((self.belt.name, packTexture(self.belt.allFramesPixmap())))
 
         return anime
+
+    def exportAll(self):
+        loadedAnimations = [animation for animation in self.animations if animation.frames]
+        if not loadedAnimations:
+            QtWidgets.QMessageBox.information(self, 'Export Animations',
+                                              'No animation frames are available to export.')
+            return
+
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Export Folder')
+        if not folder:
+            return
+
+        existing = [os.path.join(folder, animation.name + '.png')
+                    for animation in loadedAnimations
+                    if os.path.exists(os.path.join(folder, animation.name + '.png'))]
+        if existing:
+            result = QtWidgets.QMessageBox.question(
+                self, 'Overwrite Existing Images',
+                '%d animation image(s) already exist in this folder. Overwrite them?' % len(existing),
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.No)
+            if result != QtWidgets.QMessageBox.Yes:
+                return
+
+        failed = []
+        for animation in loadedAnimations:
+            path = os.path.join(folder, animation.name + '.png')
+            if not animation.allFramesPixmap().save(path, 'PNG'):
+                failed.append(animation.name + '.png')
+
+        if failed:
+            QtWidgets.QMessageBox.warning(
+                self, 'Export Animations',
+                'Could not write:\n' + '\n'.join(failed))
+        else:
+            QtWidgets.QMessageBox.information(
+                self, 'Export Animations',
+                'Exported %d animation image(s).' % len(loadedAnimations))
 
     @staticmethod
     def packTexture(pixmap):
@@ -4920,9 +4968,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.handleTabChange(0)
 
     def handleTabChange(self, index):
+        self.exportAnimationsAction.setEnabled(False)
         if 0 <= index < len(self.editors):
             self.editors[index].activate()
             self.setWindowTitle(f'Edit Tilesets — {self.editors[index].name}')
+            self.exportAnimationsAction.setEnabled(self.editors[index].slot == 0)
+
+    def exportAllAnimations(self):
+        editor = self.tabs.currentWidget()
+        if editor and editor.slot == 0:
+            editor.animWidget.exportAll()
 
     _TAB_NAMES = ['Main', 'Slot 2', 'Slot 3', 'Slot 4']
 
@@ -4976,6 +5031,9 @@ class MainWindow(QtWidgets.QMainWindow):
         imageMenu = menubar.addMenu("&Image")
         imageMenu.addAction("Import Image...", self.openImage, QtGui.QKeySequence('Ctrl+I'))
         imageMenu.addAction("Export Image...", self.saveImage, QtGui.QKeySequence('Ctrl+E'))
+        self.exportAnimationsAction = imageMenu.addAction(
+            "Export all tileset animations...", self.exportAllAnimations)
+        self.exportAnimationsAction.setEnabled(False)
         imageMenu.addAction("Import Normal Map...", self.openNml, QtGui.QKeySequence('Ctrl+Shift+I'))
         imageMenu.addAction("Export Normal Map...", self.saveNml, QtGui.QKeySequence('Ctrl+Shift+E'))
 
