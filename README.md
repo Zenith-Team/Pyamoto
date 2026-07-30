@@ -4,7 +4,7 @@
     <a href="https://go.nsmbu.net/discord">
         <img alt="discord" height="56" src="https://github.com/user-attachments/assets/f43b9deb-376a-48cd-bc09-8117cde071bb">
     </a>
-    <a href="https://zenith.nsmbu.net/wiki/Miyamoto_Level_Editor">
+    <a href="https://zenith.nsmbu.net/wiki/Pyamoto_Level_Editor">
         <img alt="docs" height="56" src="https://github.com/user-attachments/assets/f492ac70-08e4-4894-a4f8-a8a829d9e4e4">
     </a>
 </div>
