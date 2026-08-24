@@ -1,6 +1,7 @@
 {
   "Theme": "Neon",
   "uiStyle": "Fusion",
+  "UIScale": 1.0,
   "RotationFPS": 30,
   "OpenMethodMode": 0,
   "LaunchBehavior": 0,

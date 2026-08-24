@@ -3110,6 +3110,9 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         setSetting('Theme', dlg.themesTab.themeBox.currentText())
         setSetting('uiStyle', dlg.themesTab.NonWinStyle.currentText())
 
+        # Get the UI scale setting (stored as a fractional multiplier)
+        setSetting('UIScale', round(dlg.themesTab.uiScale.value()) / 100.0)
+
         # Save install paths from the Resources tab
         new_data_path = dlg.resourcesTab.dataPathEdit.text().strip()
         if new_data_path:
@@ -6149,6 +6152,19 @@ def main():
     QtGui.QGuiApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     if hasattr(QtGui.QGuiApplication, 'setHighDpiScaleFactorRoundingPolicy'):
         QtGui.QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.Round)
+
+    # Apply the saved UI scale before creating the application, since
+    # QT_SCALE_FACTOR only takes effect at application startup.
+    try:
+        _settings_path = os.path.join(globals.user_data_path, 'settings.json')
+        _ui_scale = 1.0
+        if os.path.isfile(_settings_path):
+            with open(_settings_path, 'r', encoding='utf-8') as _f:
+                _ui_scale = float(json.load(_f).get('UIScale', 1.0))
+        if 0.5 <= _ui_scale <= 3.0 and _ui_scale != 1.0:
+            os.environ['QT_SCALE_FACTOR'] = str(_ui_scale)
+    except Exception:
+        pass
 
     # Create an application
     globals.app = QtWidgets.QApplication(sys.argv)

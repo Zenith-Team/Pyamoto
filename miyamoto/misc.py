@@ -924,6 +924,8 @@ def drawForegroundGrid(painter, rect):
     if globals.GridType is None:
         return
 
+    painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
+
     Zoom = globals.mainWindow.ZoomLevel
     drawLine = lambda x1, y1, x2, y2: painter.drawLine(round(x1), round(y1), round(x2), round(y2))
     GridColor = globals.theme.color('grid')

@@ -1830,6 +1830,8 @@ class PreferencesDialog(QtWidgets.QDialog):
             return True
         if self.themesTab.NonWinStyle.currentText() != self.themesTab._initial_style:
             return True
+        if self.themesTab.uiScale.value() != self.themesTab._initial_ui_scale:
+            return True
         initial = self.toolbarTab._initial_toolbar_acts
         for boxList in (self.toolbarTab.FileBoxes, self.toolbarTab.EditBoxes,
                         self.toolbarTab.ViewBoxes, self.toolbarTab.SettingsBoxes,
@@ -3295,7 +3297,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             """
             Themes Tab
             """
-            info = "<b>Themes</b><br>Pick a theme to change the application's colors and icons."
+            info = "<b>Themes</b><br>Pick a theme to change the application's colors and icons,<br>and adjust the scale of the interface."
 
             def __init__(self):
                 """
@@ -3344,9 +3346,18 @@ class PreferencesDialog(QtWidgets.QDialog):
                 if uistyle is not None:
                     self.NonWinStyle.setCurrentIndex(keys.index(setting('uiStyle', "Fusion")))
 
+                # Create the UI scale option
+                self.uiScale = QtWidgets.QDoubleSpinBox()
+                self.uiScale.setRange(50.0, 300.0)
+                self.uiScale.setSingleStep(5.0)
+                self.uiScale.setSuffix('%')
+                self.uiScale.setValue(float(setting('UIScale', 1.0)) * 100)
+                self.uiScale.setToolTip('<b>UI Scale</b><br>Adjusts the overall size of the interface.<br>Requires a restart to take effect.')
+
                 # Create the options groupbox
-                L = QtWidgets.QVBoxLayout()
-                L.addWidget(self.NonWinStyle)
+                L = QtWidgets.QFormLayout()
+                L.addRow('UI Scale:', self.uiScale)
+                L.addRow(self.NonWinStyle)
                 optionsGB = QtWidgets.QGroupBox('Options')
                 optionsGB.setLayout(L)
 
@@ -3363,6 +3374,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                 self._initial_theme = self.themeBox.currentText()
                 self._initial_style = self.NonWinStyle.currentText()
+                self._initial_ui_scale = self.uiScale.value()
 
             @property
             def getAvailableThemes(self):
