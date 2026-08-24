@@ -194,6 +194,21 @@ class Level_NSMBU(AbstractLevel):
 
         return True
 
+    def cullSpritemap(self):
+        """
+        Drops spritemap entries for custom actors that are no longer
+        placed in any area, so stale IDs aren't written to spritemap.bin.
+        Survivors keep their integer IDs, so undo history and in-memory
+        sprites stay valid until the save completes.
+        """
+        used = set()
+        for area in self.areas:
+            for sprite in area.sprites:
+                str_id = self.id_manager.int_to_string.get(sprite.type)
+                if str_id is not None:
+                    used.add(str_id)
+        self.id_manager.cull_unused(used)
+
     def save(self, innerfilename=None):
         """
         Save the level back to a file
@@ -237,6 +252,9 @@ class Level_NSMBU(AbstractLevel):
                 courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
 
         # Save the sprite map (always goes in the inner SARC)
+        # Cull entries for actors no longer placed anywhere, so stale
+        # IDs aren't written to spritemap.bin.
+        self.cullSpritemap()
         spritemap_data = self.id_manager.get_save_data_binary()
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
@@ -294,7 +312,8 @@ class Level_NSMBU(AbstractLevel):
         if L2_new is not None:
             courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (len(self.areas) + 1), L2_new))
 
-        # Save the sprite map
+        # Save the sprite map (culled to placed actors only)
+        self.cullSpritemap()
         spritemap_data = self.id_manager.get_save_data_binary()
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))

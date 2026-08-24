@@ -107,5 +107,16 @@ class SpriteIDManager:
             if str_id not in globals.CustomSpriteDefinitions:
                 return ""
             return str_id
-        
+
         return ""
+
+    def cull_unused(self, used_strings):
+        """
+        Removes mappings whose string isn't in used_strings.
+        Survivors keep their existing integer IDs so in-memory sprite
+        references stay valid; the next save writes a compacted table.
+        """
+        dead = [(s, i) for s, i in self.string_to_int.items() if s not in used_strings]
+        for str_id, int_id in dead:
+            del self.string_to_int[str_id]
+            del self.int_to_string[int_id]
