@@ -47,15 +47,28 @@ class AbstractArea:
         self.L1 = None
         self.L2 = None
 
-    def load(self, course, L0, L1, L2, progress=None):
+        # Extension: custom music track names (course{N}.{Y}.music.txt),
+        # keyed by 0-based zone index; empty if unused
+        self.customMusicNames = {}
+
+    def load(self, course, L0, L1, L2, progress=None, musicTxt=None):
         self.course = course
         self.L0 = L0
         self.L1 = L1
         self.L2 = L2
+        self.customMusicNames = dict(musicTxt or {})
         self.LoadBlocks(course)
         self.LoadTilesetNames()
         self.bgs = self.LoadBackgrounds()
         self.LoadSprites()
+
+    def getCustomMusicData(self):
+        """
+        Returns {zone_index: null-terminated custom music name} for this area.
+        Used to emit course{N}.{Y}.music.txt files.
+        """
+        return {i: name.encode('utf-8') + b'\0'
+                for i, name in self.customMusicNames.items() if name}
 
     def LoadBlocks(self, course):
         """
@@ -204,10 +217,13 @@ class Area_NSMBU(AbstractArea):
         # BG data
         self.bgs = self.LoadBackgrounds()
 
-    def load(self, course, L0, L1, L2, progress=None):
+    def load(self, course, L0, L1, L2, progress=None, musicTxt=None):
         """
         Loads an area from the archive files
         """
+
+        # Custom music track names (course{N}.{Y}.music.txt extension)
+        self.customMusicNames = dict(musicTxt or {})
 
         # Load in the course file and blocks
         self.LoadBlocks(course)
@@ -218,6 +234,12 @@ class Area_NSMBU(AbstractArea):
         self.LoadEntrances()  # block 7
         self.LoadSprites()  # block 8
         self.LoadZones()  # blocks 10, 3, and 5
+
+        # Apply custom music track names to string-mode zones (music ID 0)
+        for i, z in enumerate(self.zones):
+            if i in self.customMusicNames and z.music == 0:
+                z.customMusicName = self.customMusicNames[i]
+
         self.LoadLocations()  # block 11
         self.LoadPaths()  # block 14 and 15
 
@@ -803,6 +825,19 @@ class Area_NSMBU(AbstractArea):
             sprstruct.pack_into(buffer, offset, int(s))
             offset += 4
         self.blocks[8] = bytes(buffer)
+
+    def getCustomMusicData(self):
+        """
+        Returns {zone_index: null-terminated custom music name} for this area.
+        Derived from the live zones so switching a zone back to a numeric ID
+        drops its txt file.
+        """
+        result = {}
+        for i, z in enumerate(self.zones):
+            name = getattr(z, 'customMusicName', '')
+            if name:
+                result[i] = name.encode('utf-8') + b'\0'
+        return result
 
     def SaveZones(self):
         """

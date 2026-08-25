@@ -5905,7 +5905,13 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 z.yupperbound3 = tab.Zone_yboundup3.value()
                 z.ylowerbound3 = -tab.Zone_ybounddown3.value()
                 z.mpcamzoomadjust = 0xF if tab.Zone_boundflg.isChecked() else tab.Zone_mpzoomadjust.value()
-                z.music = tab.Zone_musicid.value()
+                if tab.Zone_custommusic.isChecked() and tab.Zone_musicname.text().strip():
+                    # Extension: custom track stored as string; ID 0 is the sentinel
+                    z.music = 0
+                    z.customMusicName = tab.Zone_musicname.text()
+                else:
+                    z.music = tab.Zone_musicid.value()
+                    z.customMusicName = ''
                 z.sfxmod = (tab.Zone_sfx.currentIndex() & 0x0F) << 4
                 if tab.Zone_boss.isChecked(): z.sfxmod |= 1
                 z.type = 0
