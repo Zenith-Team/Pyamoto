@@ -18,6 +18,7 @@ from . import misc
 from xml.etree import ElementTree as etree
 
 from . import globals
+from .bytes import bytes_to_string
 import SarcLib
 from . import spritelib as SLib
 from .tileset import CreateTilesets, SaveTileset
@@ -106,13 +107,28 @@ class Level_NSMBU(AbstractLevel):
 
         # Sort the area data
         areaData = {}
+        areaMusicTxt = {}
         for file in courseFolder.contents:
             name, val = file.name, file.data
 
             if val is None: continue
 
             if not name.startswith('course'): continue
-            if not name.endswith('.bin'): continue
+            if not name.endswith('.bin'):
+                # Custom music track name extension: course{N}.{Y}.music.txt,
+                # where N = 1-based area number and Y = 0-based zone index
+                if name.endswith('.music.txt'):
+                    stem = name[:-len('.music.txt')]
+                    parts = stem[len('course'):].split('.')
+                    if len(parts) == 2:
+                        try:
+                            thisArea, zoneIdx = int(parts[0]), int(parts[1])
+                        except ValueError:
+                            thisArea = zoneIdx = None
+                        if thisArea is not None and 0 < thisArea < 5 and zoneIdx >= 0:
+                            if thisArea not in areaMusicTxt: areaMusicTxt[thisArea] = {}
+                            areaMusicTxt[thisArea][zoneIdx] = val
+                continue
             if '_bgdatL' in name:
                 # It's a layer file
                 if len(name) != 19: continue
@@ -146,6 +162,12 @@ class Level_NSMBU(AbstractLevel):
             L1 = areaData[thisArea][2]
             L2 = areaData[thisArea][3]
 
+            # Decode the custom music track names, if present (null-terminated)
+            musicTxt = {}
+            for zoneIdx, txt in areaMusicTxt.get(thisArea, {}).items():
+                if txt:
+                    musicTxt[zoneIdx] = bytes_to_string(txt)
+
             from . import area
             if thisArea == areaNum:
                 newarea = area.Area_NSMBU()
@@ -155,7 +177,7 @@ class Level_NSMBU(AbstractLevel):
                 newarea = area.AbstractArea()
 
             newarea.areanum = thisArea
-            newarea.load(course, L0, L1, L2, progress)
+            newarea.load(course, L0, L1, L2, progress, musicTxt=musicTxt)
             self.areas.append(newarea)
 
             thisArea += 1
@@ -193,6 +215,21 @@ class Level_NSMBU(AbstractLevel):
             print(f"Warning: Could not load spritemap.bin. Reason: {e}")
 
         return True
+
+    def cullSpritemap(self):
+        """
+        Drops spritemap entries for custom actors that are no longer
+        placed in any area, so stale IDs aren't written to spritemap.bin.
+        Survivors keep their integer IDs, so undo history and in-memory
+        sprites stay valid until the save completes.
+        """
+        used = set()
+        for area in self.areas:
+            for sprite in area.sprites:
+                str_id = self.id_manager.int_to_string.get(sprite.type)
+                if str_id is not None:
+                    used.add(str_id)
+        self.id_manager.cull_unused(used)
 
     def save(self, innerfilename=None):
         """
@@ -236,7 +273,16 @@ class Level_NSMBU(AbstractLevel):
             if L2 is not None:
                 courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
 
+            # Emit per-zone custom music track names, if any. Derived from
+            # live state, so zones switched back to numeric IDs simply stop
+            # emitting their file (no stale entries).
+            for zoneIdx, musicData in sorted(area.getCustomMusicData().items()):
+                courseFolder.addFile(SarcLib.File('course%d.%d.music.txt' % (areanum + 1, zoneIdx), musicData))
+
         # Save the sprite map (always goes in the inner SARC)
+        # Cull entries for actors no longer placed anywhere, so stale
+        # IDs aren't written to spritemap.bin.
+        self.cullSpritemap()
         spritemap_data = self.id_manager.get_save_data_binary()
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
@@ -285,6 +331,9 @@ class Level_NSMBU(AbstractLevel):
             if L2 is not None:
                 courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (areanum + 1), L2))
 
+            for zoneIdx, musicData in sorted(area.getCustomMusicData().items()):
+                courseFolder.addFile(SarcLib.File('course%d.%d.music.txt' % (areanum + 1, zoneIdx), musicData))
+
         if course_new is not None:
             courseFolder.addFile(SarcLib.File('course%d.bin' % (len(self.areas) + 1), course_new))
         if L0_new is not None:
@@ -294,7 +343,8 @@ class Level_NSMBU(AbstractLevel):
         if L2_new is not None:
             courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (len(self.areas) + 1), L2_new))
 
-        # Save the sprite map
+        # Save the sprite map (culled to placed actors only)
+        self.cullSpritemap()
         spritemap_data = self.id_manager.get_save_data_binary()
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))

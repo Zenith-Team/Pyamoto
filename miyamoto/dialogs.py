@@ -789,6 +789,7 @@ class ZonesDialog(QtWidgets.QDialog):
              z0.mpcamzoomadjust, z0.yupperbound3, z0.ylowerbound3),
             z0.background,
         )
+        z.customMusicName = getattr(z0, 'customMusicName', '')
         self._addZoneTab(z, idx)
         self._renormalizeLabels()
         self._updateButtonStates()
@@ -1218,10 +1219,14 @@ class ZoneTab:
     # ── Audio ────────────────────────────────────────────────────────────────
 
     def _buildAudio(self, z):
+        from . import gamedefs
+
+        isCustom = bool(getattr(z, 'customMusicName', ''))
+
+        # Page 0: numeric ID selection
         self.Zone_music = QtWidgets.QComboBox()
         self.Zone_music.setToolTip('<b>Background Music:</b><br>Changes the background music')
 
-        from . import gamedefs
         for a, b in gamedefs.getMusic():
             self.Zone_music.addItem(b, a)
         del gamedefs
@@ -1235,6 +1240,31 @@ class ZoneTab:
         self.Zone_musicid.setValue(z.music)
         self.Zone_musicid.valueChanged.connect(self.handleMusicIDChange)
 
+        idForm = QtWidgets.QFormLayout()
+        idForm.setContentsMargins(0, 0, 0, 0)
+        idForm.addRow('Background Music:', self.Zone_music)
+        idForm.addRow('Background Music ID:', self.Zone_musicid)
+        idPage = QtWidgets.QWidget()
+        idPage.setLayout(idForm)
+
+        # Page 1: custom track name input
+        self.Zone_musicname = QtWidgets.QLineEdit(z.customMusicName)
+        self.Zone_musicname.setPlaceholderText('track name')
+        nameForm = QtWidgets.QFormLayout()
+        nameForm.setContentsMargins(0, 0, 0, 0)
+        nameForm.addRow('Track Name:', self.Zone_musicname)
+        namePage = QtWidgets.QWidget()
+        namePage.setLayout(nameForm)
+
+        self._musicStack = QtWidgets.QStackedWidget()
+        self._musicStack.addWidget(idPage)
+        self._musicStack.addWidget(namePage)
+
+        self.Zone_custommusic = QtWidgets.QCheckBox('Use custom track name (RedCore)')
+        self.Zone_custommusic.setToolTip('<b>Does not work in Vanilla</b>, requires RedCore.')
+        self.Zone_custommusic.setChecked(isCustom)
+        self.Zone_custommusic.stateChanged.connect(self._updateMusicMode)
+
         self.Zone_sfx = QtWidgets.QComboBox()
         self.Zone_sfx.setToolTip('<b>Sound Modulation:</b><br>Changes the sound effect modulation')
         self.Zone_sfx.addItems(('Normal', 'Wall Echo', 'Room Echo', 'Double Echo', 'Cave Echo', 'Underwater Echo', 'Triple Echo', 'High Pitch Echo', 'Tinny Echo', 'Flat', 'Dull', 'Hollow Echo', 'Rich', 'Triple Underwater', 'Ring Echo'))
@@ -1245,8 +1275,8 @@ class ZoneTab:
         self.Zone_boss.setChecked(bool(z.sfxmod & 0x0F))
 
         audioForm = QtWidgets.QFormLayout()
-        audioForm.addRow('Background Music:', self.Zone_music)
-        audioForm.addRow('Background Music ID:', self.Zone_musicid)
+        audioForm.addRow(self.Zone_custommusic)
+        audioForm.addRow(self._musicStack)
         audioForm.addRow('Sound Modulation:', self.Zone_sfx)
         audioForm.addRow('Boss Flag:', self.Zone_boss)
 
@@ -1255,7 +1285,19 @@ class ZoneTab:
         L.setContentsMargins(8, 8, 8, 8)
         L.addLayout(audioForm)
         L.addStretch()
+
+        self._updateMusicMode()
         return w
+
+    def _updateMusicMode(self):
+        """Swap between numeric music ID selection and custom track name input."""
+        custom = self.Zone_custommusic.isChecked()
+        if custom and not self.Zone_musicname.text():
+            # Prefill with the currently selected preset song's name
+            name = self.Zone_music.currentText()
+            if name:
+                self.Zone_musicname.setText(name)
+        self._musicStack.setCurrentIndex(1 if custom else 0)
 
     def handleMusicListSelect(self):
         if self.AutoEditMusic: return
@@ -1284,8 +1326,9 @@ class ZoneTab:
                   self.Zone_directionmode, self.Zone_sfx, self.Zone_presets):
             w.currentIndexChanged.connect(cb)
         for w in (self.Zone_vspotlight, self.Zone_vfulldark,
-                  self.Zone_boundflg, self.Zone_boss):
+                  self.Zone_boundflg, self.Zone_boss, self.Zone_custommusic):
             w.stateChanged.connect(cb)
+        self.Zone_musicname.textChanged.connect(cb)
         for rb in self.Zone_cammodebuttongroup.buttons():
             rb.toggled.connect(cb)
         for cb_flag in self.Zone_settings:
@@ -1829,6 +1872,8 @@ class PreferencesDialog(QtWidgets.QDialog):
         if self.themesTab.themeBox.currentText() != self.themesTab._initial_theme:
             return True
         if self.themesTab.NonWinStyle.currentText() != self.themesTab._initial_style:
+            return True
+        if self.themesTab.uiScale.value() != self.themesTab._initial_ui_scale:
             return True
         initial = self.toolbarTab._initial_toolbar_acts
         for boxList in (self.toolbarTab.FileBoxes, self.toolbarTab.EditBoxes,
@@ -3295,7 +3340,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             """
             Themes Tab
             """
-            info = "<b>Themes</b><br>Pick a theme to change the application's colors and icons."
+            info = "<b>Themes</b><br>Pick a theme to change the application's colors and icons,<br>and adjust the scale of the interface."
 
             def __init__(self):
                 """
@@ -3344,9 +3389,18 @@ class PreferencesDialog(QtWidgets.QDialog):
                 if uistyle is not None:
                     self.NonWinStyle.setCurrentIndex(keys.index(setting('uiStyle', "Fusion")))
 
+                # Create the UI scale option
+                self.uiScale = QtWidgets.QDoubleSpinBox()
+                self.uiScale.setRange(50.0, 300.0)
+                self.uiScale.setSingleStep(5.0)
+                self.uiScale.setSuffix('%')
+                self.uiScale.setValue(float(setting('UIScale', 1.0)) * 100)
+                self.uiScale.setToolTip('<b>UI Scale</b><br>Adjusts the overall size of the interface.<br>Requires a restart to take effect.')
+
                 # Create the options groupbox
-                L = QtWidgets.QVBoxLayout()
-                L.addWidget(self.NonWinStyle)
+                L = QtWidgets.QFormLayout()
+                L.addRow('UI Scale:', self.uiScale)
+                L.addRow(self.NonWinStyle)
                 optionsGB = QtWidgets.QGroupBox('Options')
                 optionsGB.setLayout(L)
 
@@ -3363,6 +3417,7 @@ class PreferencesDialog(QtWidgets.QDialog):
 
                 self._initial_theme = self.themeBox.currentText()
                 self._initial_style = self.NonWinStyle.currentText()
+                self._initial_ui_scale = self.uiScale.value()
 
             @property
             def getAvailableThemes(self):

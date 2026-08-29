@@ -962,6 +962,9 @@ class ZoneItem(LevelEditorItem):
         self.unk3 = p
         self.music = q
         self.sfxmod = r
+        # Extension: custom track name used when music == 0
+        # (course{N}.{Y}.music.txt, Y = this zone's index)
+        self.customMusicName = ''
         #self.block6id = s
         self.type = t
         self.UpdateRects()

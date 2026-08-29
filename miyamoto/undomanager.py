@@ -1307,6 +1307,7 @@ def get_zone_state(zone):
         'ylowerbound3': zone.ylowerbound3,
         'mpcamzoomadjust': zone.mpcamzoomadjust,
         'music': zone.music,
+        'customMusicName': getattr(zone, 'customMusicName', ''),
         'sfxmod': zone.sfxmod,
         'type': zone.type,
         'background': zone.background,
