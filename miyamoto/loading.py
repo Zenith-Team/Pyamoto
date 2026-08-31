@@ -316,16 +316,19 @@ def LoadSpriteData():
                     errors.append(spriteid)
                     errortext.append(str(e))
 
-    # Re-sync already-allocated string-ID entries back into globals.Sprites.
-    # LoadSpriteData() resets globals.Sprites entirely, which wipes slots that
-    # get_id_for_string() had previously populated for the loaded level's actors.
+    # Re-sync every level-local numeric alias after globals.Sprites is rebuilt.
+    # int_to_string is authoritative here because a loaded file can contain
+    # duplicate string entries at distinct positional IDs.
     if hasattr(globals, 'Level') and globals.Level is not None:
         id_mgr = getattr(globals.Level, 'id_manager', None)
         if id_mgr is not None:
-            for str_id, int_id in id_mgr.string_to_int.items():
+            for int_id, str_id in id_mgr.int_to_string.items():
+                definition = globals.CustomSpriteDefinitions.get(str_id)
+                if definition is None:
+                    continue
                 while len(globals.Sprites) <= int_id:
                     globals.Sprites.append(None)
-                globals.Sprites[int_id] = globals.CustomSpriteDefinitions.get(str_id)
+                globals.Sprites[int_id] = definition
 
     # Warn the user if errors occurred
     if len(errors) > 0:
@@ -715,14 +718,11 @@ def LoadGameDef(base_game=None, mods=None, dlg=None):
                 SLib.SpriteImagesLoaded.add(s.type)
 
             for s in globals.Area.sprites:
-                if s.type in spriteClasses:
-                    s.setImageObj(spriteClasses[s.type])
-                else:
+                # Re-resolve both definition/name and image class against the
+                # new patch stack without changing the level-local numeric ID.
+                s.InitializeSprite()
+                if s.type not in spriteClasses:
                     s.setImageObj(SLib.SpriteImage)
-
-            # Reload the sprite-picker text
-            for spr in globals.Area.sprites:
-                spr.UpdateListItem()  # Reloads the sprite-picker text
 
         # Load entrance names
         LoadEntranceNames(True)

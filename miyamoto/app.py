@@ -31,6 +31,7 @@ import struct
 import subprocess
 import time
 import traceback
+from urllib.parse import quote, unquote
 
 # PyQt5: import
 if currentRunningVersion >= 3.10:
@@ -89,6 +90,7 @@ from .dialogs import *
 from .gamedefs import *
 from .items import *
 from .level import *
+from .id_manager import CUSTOM_ID_BASE, remap_imported_course
 from .loading import *
 from .misc import *
 from .puzzle import MainWindow as PuzzleWindow
@@ -2069,8 +2071,17 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         # get sprites
         for item in clipboard_s:
             data = item.spritedata
-            convclip.append('1:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d' % (
-            item.type, item.objx, item.objy, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+            if isinstance(item.type, str):
+                type_token = 'S' + quote(item.type, safe='')
+            else:
+                type_token = str(item.type)
+                if item.type >= CUSTOM_ID_BASE:
+                    string_id = globals.Level.id_manager.get_string_for_id(item.type)
+                    if string_id:
+                        type_token = 'S' + quote(string_id, safe='')
+
+            convclip.append('1:%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d' % (
+            type_token, item.objx, item.objy, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
             data[8], data[9], data[10], data[11], item.layer, item.initialState))
 
         # get entrances
@@ -2368,7 +2379,18 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                 elif split[0] == '1':
                     if len(split) != 18: continue
 
-                    type = int(split[1])
+                    type_token = split[1]
+                    if type_token.startswith('S'):
+                        string_id = unquote(type_token[1:])
+                        if not string_id:
+                            continue
+                        type = (
+                            globals.Level.id_manager.get_id_for_string(string_id)
+                            if placeObjects else string_id
+                        )
+                    else:
+                        type = int(type_token)
+
                     objx = int(split[2])
                     objy = int(split[3])
                     data = bytes(map(int,
@@ -2910,6 +2932,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         except:
             return False
 
+        try:
+            source_spritemap_data = arc_['course/spritemap.bin'].data
+        except KeyError:
+            source_spritemap_data = None
+
         for file in courseFolder.contents:
             fname, val = file.name, file.data
             if val is not None:
@@ -2949,6 +2976,17 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
                     L2 = val
 
         assert course is not None
+
+        try:
+            course = remap_imported_course(
+                course, source_spritemap_data, globals.Level.id_manager
+            )
+        except ValueError as e:
+            QtWidgets.QMessageBox.warning(
+                self, 'Cannot Import Area',
+                'The area could not be imported safely:\n\n' + str(e)
+            )
+            return False
 
         # import the tilesets with the area
         getblock = struct.Struct('>II')
@@ -5046,7 +5084,11 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         Handles a new sprite being chosen
         """
         globals.CurrentSprite = type
-        if type != 1000 and type >= 0:
+        valid_type = (
+            isinstance(type, str)
+            or (isinstance(type, int) and type != 1000 and type >= 0)
+        )
+        if valid_type:
             self.defaultDataEditor.setSprite(type)
             self.defaultDataEditor.data = to_bytes(0, 12)
             self.defaultDataEditor.update()
@@ -5060,16 +5102,25 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         """
         Handles a new sprite type being chosen to replace the selected sprites
         """
-        items = self.scene.selectedItems()
         type_spr = SpriteItem
+        items = [x for x in self.scene.selectedItems() if isinstance(x, type_spr)]
+        if not items:
+            return
+
+        if isinstance(type, str):
+            try:
+                type = globals.Level.id_manager.get_id_for_string(type)
+            except ValueError as e:
+                QtWidgets.QMessageBox.warning(self, 'Cannot Replace Actor', str(e))
+                return
+
         changed = False
 
         for x in items:
-            if isinstance(x, type_spr):
-                x.spritedata = self.defaultDataEditor.data  # change this first or else images get messed up
-                x.SetType(type)
-                x.update()
-                changed = True
+            x.spritedata = self.defaultDataEditor.data  # change this first or else images get messed up
+            x.SetType(type)
+            x.update()
+            changed = True
 
         if changed:
             SetDirty()

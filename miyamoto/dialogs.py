@@ -3241,9 +3241,11 @@ class PreferencesDialog(QtWidgets.QDialog):
                         QtCore.QUrl.fromLocalFile(user_patches))
 
                 def _refresh_mods():
-                    current_active = set()
-                    for i in range(active_list.count()):
-                        current_active.add(active_list.item(i).data(Qt.UserRole))
+                    current_active = [
+                        active_list.item(i).data(Qt.UserRole)
+                        for i in range(active_list.count())
+                    ]
+                    current_active_set = set(current_active)
                     # Block signals on both lists so clearing/repopulating
                     # doesn't spuriously fire selection handlers mid-rebuild.
                     avail_list.blockSignals(True)
@@ -3267,7 +3269,7 @@ class PreferencesDialog(QtWidgets.QDialog):
                     # Rebuild available list
                     for def_, folder in all_mods:
                         is_broken = bool(getattr(def_, 'error', None))
-                        if not is_broken and folder in current_active:
+                        if not is_broken and folder in current_active_set:
                             continue
                         item = QtWidgets.QListWidgetItem(def_.name)
                         item.setData(Qt.UserRole, folder)

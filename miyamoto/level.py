@@ -22,7 +22,7 @@ from .bytes import bytes_to_string
 import SarcLib
 from . import spritelib as SLib
 from .tileset import CreateTilesets, SaveTileset
-from .id_manager import SpriteIDManager
+from .id_manager import SpriteIDManager, get_course_sprite_types, remap_course_sprite_types
 
 #################################
 
@@ -74,6 +74,7 @@ class Level_NSMBU(AbstractLevel):
         super().__init__()
         CreateTilesets()
         self.id_manager = SpriteIDManager()
+        self.spritemap_load_error = None
 
         from . import area
         self.areas.append(area.Area_NSMBU())
@@ -83,6 +84,10 @@ class Level_NSMBU(AbstractLevel):
         """
         Creates a completely new level
         """
+        self.id_manager.clear_runtime_bindings()
+        self.id_manager.reset()
+        self.spritemap_load_error = None
+
         # Create area objects
         self.areas = []
         from . import area
@@ -104,6 +109,25 @@ class Level_NSMBU(AbstractLevel):
             courseFolder = arc['course']
         except:
             return False
+
+        # Load the level-local named actor map before constructing SpriteItems.
+        # spritemap entry i is exactly map actor 0xF000+i; do not migrate or
+        # reallocate it according to actor traversal order.
+        self.id_manager.clear_runtime_bindings()
+        self.id_manager.reset()
+        self.spritemap_load_error = None
+        try:
+            spritemap_data = arc['course/spritemap.bin'].data
+        except KeyError:
+            spritemap_data = None
+
+        if spritemap_data is not None:
+            try:
+                self.id_manager.load_from_binary(spritemap_data)
+            except ValueError as e:
+                self.id_manager.reset()
+                self.spritemap_load_error = str(e)
+                print(f"Warning: Could not load spritemap.bin. Reason: {e}")
 
         # Sort the area data
         areaData = {}
@@ -182,54 +206,25 @@ class Level_NSMBU(AbstractLevel):
 
             thisArea += 1
         
-        # Reset and load the sprite ID map
-        self.id_manager.reset()
-        try:
-            spritemap_data = arc['course/spritemap.bin'].data
-            old_spritemap = SpriteIDManager()
-            old_spritemap.load_from_binary(spritemap_data)
-            
-            for area in self.areas:
-                print(f"area {area}")
-                for sprite in area.sprites:
-                    print(f"sprite {sprite.type}")
-                    spriteidold = sprite.type
-                    spritename = old_spritemap.get_string_for_id(spriteidold)
-                    if spritename == "":
-                        continue
-                    spriteidnew = self.id_manager.get_id_for_string(spritename)
-                    print(f"migrating sprite id {spriteidold} aka {spritename} to {spriteidnew} aka {self.id_manager.get_string_for_id(spriteidnew)}")
-                    sprite.type = spriteidnew # TODO: This doesn't update the number shown in the UI until a reload
-            print("finished spriteid migration")
-
-            # Re-init sprites whose type was updated by migration so they
-            # pick up the correct image class (InitializeSprite ran during
-            # SpriteItem.__init__ before string_to_int was populated).
-            for area in self.areas:
-                for sp in area.sprites:
-                    sp.InitializeSprite()
-
-            # TODO: Show a popup, but only if the migration changed anything
-
-        except Exception as e:
-            print(f"Warning: Could not load spritemap.bin. Reason: {e}")
-
         return True
 
-    def cullSpritemap(self):
-        """
-        Drops spritemap entries for custom actors that are no longer
-        placed in any area, so stale IDs aren't written to spritemap.bin.
-        Survivors keep their integer IDs, so undo history and in-memory
-        sprites stay valid until the save completes.
-        """
-        used = set()
+    def _buildSpritemapSaveProjection(self, extra_courses=()):
+        """Build the one compact named-actor mapping used by every save output."""
+        if self.spritemap_load_error:
+            raise ValueError(
+                "Cannot safely save because spritemap.bin failed to load: "
+                + self.spritemap_load_error
+            )
+
+        used_types = []
         for area in self.areas:
-            for sprite in area.sprites:
-                str_id = self.id_manager.int_to_string.get(sprite.type)
-                if str_id is not None:
-                    used.add(str_id)
-        self.id_manager.cull_unused(used)
+            used_types.extend(sprite.type for sprite in area.sprites)
+
+        for course in extra_courses:
+            if course is not None:
+                used_types.extend(get_course_sprite_types(course))
+
+        return self.id_manager.build_save_projection(used_types)
 
     def save(self, innerfilename=None):
         """
@@ -253,6 +248,8 @@ class Level_NSMBU(AbstractLevel):
                 if tilesetData:
                     globals.szsData[globals.Area.tileset3] = tilesetData
 
+        spritemap_strings, sprite_type_remap = self._buildSpritemapSaveProjection()
+
         # Make a new archive
         newArchive = SarcLib.SARC_Archive()
 
@@ -262,7 +259,7 @@ class Level_NSMBU(AbstractLevel):
 
         # Go through the areas, save them and add them back to the archive
         for areanum, area in enumerate(self.areas):
-            course, L0, L1, L2 = area.save()
+            course, L0, L1, L2 = area.save(sprite_type_remap=sprite_type_remap)
 
             if course is not None:
                 courseFolder.addFile(SarcLib.File('course%d.bin' % (areanum + 1), course))
@@ -279,11 +276,9 @@ class Level_NSMBU(AbstractLevel):
             for zoneIdx, musicData in sorted(area.getCustomMusicData().items()):
                 courseFolder.addFile(SarcLib.File('course%d.%d.music.txt' % (areanum + 1, zoneIdx), musicData))
 
-        # Save the sprite map (always goes in the inner SARC)
-        # Cull entries for actors no longer placed anywhere, so stale
-        # IDs aren't written to spritemap.bin.
-        self.cullSpritemap()
-        spritemap_data = self.id_manager.get_save_data_binary()
+        # The projection is compact GC: only placed named actors are emitted,
+        # and every course above was serialized through this exact same map.
+        spritemap_data = self.id_manager.get_save_data_binary(spritemap_strings)
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
 
@@ -311,6 +306,10 @@ class Level_NSMBU(AbstractLevel):
         Save the level back to a file (when adding a new or deleting an existing Area)
         """
 
+        spritemap_strings, sprite_type_remap = self._buildSpritemapSaveProjection(
+            (course_new,) if course_new is not None else ()
+        )
+
         # Make a new archive (inner SARC)
         newArchive = SarcLib.SARC_Archive()
 
@@ -320,7 +319,7 @@ class Level_NSMBU(AbstractLevel):
 
         # Go through the areas, save them and add them back to the archive
         for areanum, area in enumerate(self.areas):
-            course, L0, L1, L2 = area.save(True)
+            course, L0, L1, L2 = area.save(True, sprite_type_remap=sprite_type_remap)
 
             if course is not None:
                 courseFolder.addFile(SarcLib.File('course%d.bin' % (areanum + 1), course))
@@ -335,6 +334,7 @@ class Level_NSMBU(AbstractLevel):
                 courseFolder.addFile(SarcLib.File('course%d.%d.music.txt' % (areanum + 1, zoneIdx), musicData))
 
         if course_new is not None:
+            course_new = remap_course_sprite_types(course_new, sprite_type_remap)
             courseFolder.addFile(SarcLib.File('course%d.bin' % (len(self.areas) + 1), course_new))
         if L0_new is not None:
             courseFolder.addFile(SarcLib.File('course%d_bgdatL0.bin' % (len(self.areas) + 1), L0_new))
@@ -343,9 +343,8 @@ class Level_NSMBU(AbstractLevel):
         if L2_new is not None:
             courseFolder.addFile(SarcLib.File('course%d_bgdatL2.bin' % (len(self.areas) + 1), L2_new))
 
-        # Save the sprite map (culled to placed actors only)
-        self.cullSpritemap()
-        spritemap_data = self.id_manager.get_save_data_binary()
+        # Save the same compact mapping used to serialize every area above.
+        spritemap_data = self.id_manager.get_save_data_binary(spritemap_strings)
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
 

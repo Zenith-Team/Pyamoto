@@ -26,6 +26,7 @@ from .items import NabbitPathItem, CommentItem
 from .loading import LoadTileset
 from .misc import Metadata
 from . import spritelib as SLib
+from .id_manager import remap_course_sprite_types
 from .structures import Structures, GetFormat as GetStructureFormat
 
 #################################
@@ -157,8 +158,9 @@ class AbstractArea:
             offset += 24
         self.sprites = sprites
 
-    def save(self, isNewArea=False):
-        return (self.course, self.L0, self.L1, self.L2)
+    def save(self, isNewArea=False, sprite_type_remap=None):
+        course = remap_course_sprite_types(self.course, sprite_type_remap or {})
+        return (course, self.L0, self.L1, self.L2)
 
 
 class Area_NSMBU(AbstractArea):
@@ -280,7 +282,7 @@ class Area_NSMBU(AbstractArea):
 
         return True
 
-    def save(self, isNewArea=False):
+    def save(self, isNewArea=False, sprite_type_remap=None):
         """
         Save the area back to a file
         """
@@ -292,8 +294,8 @@ class Area_NSMBU(AbstractArea):
         self.SaveTilesetNames(isNewArea)  # block 1
         self.SaveOptions()  # block 2
         self.SaveEntrances()  # block 7
-        self.SaveSprites()  # block 8
-        self.SaveLoadedSprites()  # block 9
+        self.SaveSprites(sprite_type_remap)  # block 8
+        self.SaveLoadedSprites(sprite_type_remap)  # block 9
         self.SaveZones()  # blocks 10, 3, and 5
         self.SaveLocations()  # block 11
         self.SavePaths()  # blocks 14 and 15
@@ -772,17 +774,19 @@ class Area_NSMBU(AbstractArea):
                                  int(node['unk3']), int(node['unk4']))
             offset += 20
 
-    def SaveSprites(self):
+    def SaveSprites(self, sprite_type_remap=None):
         """
         Saves the sprites back to block 8
         """
+        sprite_type_remap = sprite_type_remap or {}
         offset = 0
         sprstruct = struct.Struct(FMT(SID.Sprite))
         buffer = bytearray((len(self.sprites) * 24) + 4)
         f_int = int
         for sprite in self.sprites:
             try:
-                sprstruct.pack_into(buffer, offset, f_int(sprite.type), f_int(sprite.objx), f_int(sprite.objy),
+                save_type = sprite_type_remap.get(sprite.type, sprite.type)
+                sprstruct.pack_into(buffer, offset, f_int(save_type), f_int(sprite.objx), f_int(sprite.objy),
                                     struct.unpack(">H", sprite.spritedata[:2])[0], struct.unpack(">I", sprite.spritedata[2:6])[0], struct.unpack(">I", sprite.spritedata[6:10])[0],
                                     sprite.zoneID, sprite.layer, sprite.spritedata[10:], sprite.initialState)
             except struct.error:
@@ -809,13 +813,15 @@ class Area_NSMBU(AbstractArea):
         buffer[offset + 3] = 0xFF
         self.blocks[7] = bytes(buffer)
 
-    def SaveLoadedSprites(self):
+    def SaveLoadedSprites(self, sprite_type_remap=None):
         """
         Saves the list of loaded sprites back to block 9
         """
+        sprite_type_remap = sprite_type_remap or {}
         ls = []
         for sprite in self.sprites:
-            if sprite.type not in ls: ls.append(sprite.type)
+            save_type = sprite_type_remap.get(sprite.type, sprite.type)
+            if save_type not in ls: ls.append(save_type)
         ls.sort()
 
         offset = 0

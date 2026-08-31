@@ -1683,14 +1683,16 @@ class SpriteItem(LevelEditorItem):
         """
         from .misc import extract_field_value
 
-        baseString = '[name] (at [x], [y]'.replace('[name]', str('%d: %s' % (self.type, self.name))).replace('[x]', str(self.objx)).replace('[y]', str(self.objy))
+        baseString = '[name] (at [x], [y]'.replace('[name]', f'{self.type}: {self.name}').replace('[x]', str(self.objx)).replace('[y]', str(self.objy))
 
         # ID fields — use the per-sprite field definitions from spritedata.xml
         # so bit positions are exact and coverage is complete.
         SHOW_ID_TYPES = frozenset(('event', 'movement', 'location', 'coin'))
         sdef = (globals.Sprites[self.type]
-                if globals.Sprites is not None and 0 <= self.type < len(globals.Sprites)
-                else None)
+                if (isinstance(self.type, int) and globals.Sprites is not None
+                    and 0 <= self.type < len(globals.Sprites))
+                else globals.CustomSpriteDefinitions.get(self.type)
+                if isinstance(self.type, str) else None)
         if sdef is not None:
             for f in sdef.fields:
                 if f[0] != 2:            # value fields only
@@ -1716,7 +1718,9 @@ class SpriteItem(LevelEditorItem):
 
     def __lt__(self, other):
         # Sort by objx, then objy, then sprite type
-        score = lambda sprite: (sprite.objx, sprite.objy, sprite.type)
+        def score(sprite):
+            type_key = (1, sprite.type) if isinstance(sprite.type, str) else (0, int(sprite.type))
+            return sprite.objx, sprite.objy, type_key
 
         return score(self) < score(other)
 
@@ -1729,10 +1733,10 @@ class SpriteItem(LevelEditorItem):
         # Resolve name from Sprites[] (int) or CustomSpriteDefinitions (str)
         try:
             self.name = globals.Sprites[type].name
-        except (TypeError, IndexError):
+        except (TypeError, IndexError, AttributeError):
             try:
                 self.name = globals.CustomSpriteDefinitions[type].name
-            except (KeyError, TypeError):
+            except (KeyError, TypeError, AttributeError):
                 self.name = 'UNKNOWN'
 
         self.setToolTip('<b>Actor [type]:</b><br>[name]'.replace('[type]', str(type)).replace('[name]', str(self.name)))

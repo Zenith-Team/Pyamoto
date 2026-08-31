@@ -345,14 +345,14 @@ class MiyamotoGameDefinition:
         if hasattr(self.sprites, 'ImageClasses'):
             images.update(self.sprites.ImageClasses)
 
-        # Map string_id entries to their allocated integer IDs so level
-        # sprites (which store the integer type) can find their image class.
+        # Map string_id image classes to every positional alias in the loaded
+        # level. int_to_string is authoritative for on-disk Fxxx IDs.
         has_level = hasattr(globals, 'Level') and globals.Level is not None
         id_mgr = getattr(globals.Level, 'id_manager', None) if has_level else None
         if id_mgr is not None:
-            for str_id in list(images.keys()):
-                if isinstance(str_id, str) and str_id in id_mgr.string_to_int:
-                    images[id_mgr.string_to_int[str_id]] = images[str_id]
+            for int_id, str_id in id_mgr.int_to_string.items():
+                if str_id in images:
+                    images[int_id] = images[str_id]
 
         return images
 

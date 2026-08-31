@@ -1857,13 +1857,10 @@ class SpritePickerWidget(QtWidgets.QTreeWidget):
             return
 
         if isinstance(data, str):
-            # It's a custom sprite with a string ID
-            try:
-                id_to_emit = globals.Level.id_manager.get_id_for_string(data)
-                self.SpriteChanged.emit(id_to_emit)
-            except (AttributeError, ValueError) as e:
-                print(f"Could not get ID for string '{data}': {e}")
-        
+            # Selection is not a persistence event. Keep the stable string ID
+            # until a placement/replacement actually commits it to the level.
+            self.SpriteChanged.emit(data)
+
         elif isinstance(data, int) and data >= 0:
             # It's a standard sprite with an integer ID
             self.SpriteChanged.emit(data)
@@ -1912,8 +1909,8 @@ class SpritePickerWidget(QtWidgets.QTreeWidget):
             if id != -1:
                 self.SpriteReplace.emit(id)
 
-    SpriteChanged = QtCore.pyqtSignal(int)
-    SpriteReplace = QtCore.pyqtSignal(int)
+    SpriteChanged = QtCore.pyqtSignal(object)
+    SpriteReplace = QtCore.pyqtSignal(object)
 
 
 class SpriteEditorWidget(QtWidgets.QWidget):
@@ -2957,7 +2954,9 @@ class SpriteEditorWidget(QtWidgets.QWidget):
         if (self.spritetype == type) and not reset: return
 
         self.spritetype = type
-        if 0 <= type < len(globals.Sprites) and globals.Sprites[type] is not None:
+        if isinstance(type, str):
+            sprite = globals.CustomSpriteDefinitions.get(type)
+        elif isinstance(type, int) and 0 <= type < len(globals.Sprites) and globals.Sprites[type] is not None:
             sprite = globals.Sprites[type]
         else:
             sprite = None
@@ -2998,7 +2997,7 @@ class SpriteEditorWidget(QtWidgets.QWidget):
 
         else:
             display_id = str(type)
-            if type >= 1000:
+            if isinstance(type, int) and type >= 1000:
                 string_id = globals.Level.id_manager.int_to_string.get(type)
                 if string_id:
                     display_id = string_id
@@ -4959,12 +4958,20 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                 if clicked.x() < 0: clicked.setX(0)
                 if clicked.y() < 0: clicked.setY(0)
 
-                if globals.CurrentSprite >= 0:  # fixes a bug -Treeki
+                selected_type = globals.CurrentSprite
+                if isinstance(selected_type, str):
+                    try:
+                        selected_type = globals.Level.id_manager.get_id_for_string(selected_type)
+                    except ValueError as e:
+                        QtWidgets.QMessageBox.warning(self, 'Cannot Place Actor', str(e))
+                        return
+
+                if isinstance(selected_type, int) and selected_type >= 0:  # fixes a bug -Treeki
                     # [18:15:36]  Angel-SL: I found a bug in Reggie
                     # [18:15:42]  Angel-SL: you can paint a 'No sprites found'
                     # [18:15:47]  Angel-SL: results in a sprite -2
 
-                    if globals.CurrentSprite == 564:
+                    if selected_type == 564:
                         # Get the previous flower/grass type
                         oldGrassType = 5
                         for sprite in globals.Area.sprites:
@@ -4990,7 +4997,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                         clickedy += 8 - (clickedy % 8)
 
                     data = globals.mainWindow.defaultDataEditor.data
-                    spr = SpriteItem(globals.CurrentSprite, clickedx, clickedy, data)
+                    spr = SpriteItem(selected_type, clickedx, clickedy, data)
 
                     mw = globals.mainWindow
                     spr.positionChanged = mw.HandleSprPosChange
@@ -4998,7 +5005,7 @@ class LevelViewWidget(QtWidgets.QGraphicsView):
                     
                     globals.UndoManager.push(undomanager.AddSpriteCommand(spr))
 
-                    if globals.CurrentSprite == 564:
+                    if selected_type == 564:
                         # Get the current flower/grass type
                         grassType = 5
                         for sprite in globals.Area.sprites:
@@ -6212,7 +6219,7 @@ class GameAndModsMenu(QtWidgets.QMenu):
 
     def _apply(self):
         selected_game = 'NSMBU'
-        selected_mods = []
+        checked_mods = []
         for act in self.actions():
             data = act.data()
             if not data:
@@ -6221,7 +6228,17 @@ class GameAndModsMenu(QtWidgets.QMenu):
             if kind == 'game' and act.isChecked():
                 selected_game = folder
             elif kind == 'mod' and act.isChecked():
-                selected_mods.append(folder)
+                checked_mods.append(folder)
+
+        # Preserve explicit patch precedence. The menu itself is alphabetized,
+        # so rebuilding the stack in QAction order would silently reorder mods.
+        previous_mods = setting('LastMods') or []
+        if isinstance(previous_mods, str):
+            previous_mods = [previous_mods]
+
+        checked_set = set(checked_mods)
+        selected_mods = [mod for mod in previous_mods if mod in checked_set]
+        selected_mods.extend(mod for mod in checked_mods if mod not in selected_mods)
 
         from . import gamedefs as _gd
         _gd.loadNewGameDef(selected_game, selected_mods)
