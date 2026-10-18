@@ -76,6 +76,8 @@ class Level_NSMBU(AbstractLevel):
         self.id_manager = SpriteIDManager()
         self.spritemap_load_error = None
 
+        self.excluded_resources = list()
+
         from . import area
         self.areas.append(area.Area_NSMBU())
         globals.Area = self.areas[0]
@@ -87,6 +89,8 @@ class Level_NSMBU(AbstractLevel):
         self.id_manager.clear_runtime_bindings()
         self.id_manager.reset()
         self.spritemap_load_error = None
+
+        self.excluded_resources = list()
 
         # Create area objects
         self.areas = []
@@ -115,6 +119,7 @@ class Level_NSMBU(AbstractLevel):
         # reallocate it according to actor traversal order.
         self.id_manager.clear_runtime_bindings()
         self.id_manager.reset()
+        
         self.spritemap_load_error = None
         try:
             spritemap_data = arc['course/spritemap.bin'].data
@@ -129,6 +134,13 @@ class Level_NSMBU(AbstractLevel):
                 self.spritemap_load_error = str(e)
                 print(f"Warning: Could not load spritemap.bin. Reason: {e}")
 
+        # Try and load excluded resources
+        try:
+            raw_resource_list = arc['course/excludes.txt'].data
+            self.excluded_resources = raw_resource_list.decode("utf-8").splitlines()
+        except KeyError:
+            self.excluded_resources = list()
+        
         # Sort the area data
         areaData = {}
         areaMusicTxt = {}
@@ -281,6 +293,11 @@ class Level_NSMBU(AbstractLevel):
         spritemap_data = self.id_manager.get_save_data_binary(spritemap_strings)
         if spritemap_data:
             newArchive.addFile(SarcLib.File('course/spritemap.bin', spritemap_data))
+
+        # Save resource exclusion list, if applicable
+        if len(self.excluded_resources) > 0:
+            exclusion_list_string = "\n".join(self.excluded_resources)
+            newArchive.addFile(SarcLib.File('course/excludes.txt', exclusion_list_string.encode()))
 
         # Outer SARC format (Miyamoto-style wrapping)
         if globals.UseOuterSarcFormat and innerfilename:
@@ -437,6 +454,10 @@ class Level_NSMBU(AbstractLevel):
 
             # Look up each needed file and add it to our archive
             for sprite_name in sprites_names:
+                # Skip if it's not to be included
+                if sprite_name in globals.Level.excluded_resources:
+                    continue
+                
                 # Get it from inside the original archive
                 if not globals.OverwriteSprite and sprite_name in globals.szsData:
                     archive.addFile(SarcLib.File(sprite_name, globals.szsData[sprite_name]))

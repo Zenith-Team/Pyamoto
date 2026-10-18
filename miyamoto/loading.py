@@ -752,6 +752,7 @@ def LoadActionsLists():
         ('Recent Files', False, 'openrecent'),
         ('Save Level', True, 'save'),
         ('Export Level As...', False, 'saveas'),
+        ('Exclude Embedded Resources', False, 'excludeembeddedresources'),
         ('Level Information...', False, 'metainfo'),
         ('Level Screenshot...', True, 'screenshot'),
         ('Pyamoto Preferences...', False, 'preferences'),

@@ -2095,7 +2095,7 @@ class PreferencesDialog(QtWidgets.QDialog):
             'zoomout': 'zoomout', 'zoommin': 'zoommin',
             'areaoptions': 'area', 'zones': 'zones',
             'addarea': 'add', 'importarea': 'import', 'deletearea': 'delete',
-            'reloaddata': 'reload', 'viewspritemap': 'folderpath',
+            'reloaddata': 'reload', 'viewspritemap': 'folderpath', 'excludeembeddedresources': 'folderpath',
             'infobox': 'help', 'wiki': 'contents', 'aboutqt': 'qt',
         }
 
@@ -4728,3 +4728,82 @@ class SpritemapDialog(QtWidgets.QDialog):
                 self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(str(row + 1)))
                 self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(f'0x{int_id:04X}'))
                 self.table.setItem(row, 2, QtWidgets.QTableWidgetItem(str_id))
+
+class EmbedExclusionDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        self.setWindowTitle('Exclude Embedded Resources')
+        self.setWindowIcon(GetIcon('folderpath'))
+        
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setMinimumSize(480, 360)
+        self.resize(560, 480)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        
+        self.label = QtWidgets.QLabel('The following resources will not be added to the level file:')
+        layout.addWidget(self.label)
+
+        self.exclusion_list = QtWidgets.QListWidget()
+        self.exclusion_list.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
+        layout.addWidget(self.exclusion_list)
+
+        self.text_box = QtWidgets.QLineEdit()
+        self.text_box.setPlaceholderText('Resource name')
+        self.text_box.returnPressed.connect(self.addToList)
+
+        layout.addWidget(self.text_box)
+
+        self.add_button = QtWidgets.QPushButton(GetIcon('add'), 'Add')
+        self.add_button.clicked.connect(self.addToList)
+        layout.addWidget(self.add_button)
+        
+        self.remove_button = QtWidgets.QPushButton(GetIcon('delete'), 'Remove')
+        self.remove_button.clicked.connect(self.removeFromList)
+        layout.addWidget(self.remove_button)
+
+        self.populateList()
+
+    def populateList(self):
+        for item in globals.Level.excluded_resources:
+            self.exclusion_list.addItem(item)
+    
+    def updateExclusions(self):
+        globals.Level.excluded_resources = list()
+
+        for i in range(self.exclusion_list.count()):
+            item = self.exclusion_list.item(i)
+            globals.Level.excluded_resources.append(item.text())
+
+    def addToList(self):
+        text = self.text_box.text()
+
+        if not text or not text.strip():
+            return
+
+        self.text_box.clear()
+
+        exists = False
+        for i in range(self.exclusion_list.count()):
+            if self.exclusion_list.item(i).text() == text:
+                exists = True
+                break
+
+        if exists:
+            return
+        
+        self.exclusion_list.addItem(text)
+        self.exclusion_list.sortItems()
+
+        self.updateExclusions()
+    
+    def removeFromList(self):
+        current_row = self.exclusion_list.currentRow()
+
+        if current_row == -1:
+            return;
+        
+        self.exclusion_list.takeItem(current_row)
+
+        self.updateExclusions()

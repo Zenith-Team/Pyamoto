@@ -819,6 +819,12 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         )
 
         self.CreateAction(
+            'excludeembeddedresources', self.HandleExcludeEmbeddedResources, GetIcon('folderpath'),
+            'Exclude Embedded Resources', 'Choose which resources to not embed into the level file',
+            None
+        )
+
+        self.CreateAction(
             'edittilesets', self.EditTilesets, GetIcon('animation'),
             "Edit Tilesets",
             "Opens the merged tileset editor for all slots.",
@@ -869,6 +875,7 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         fmenu.addSeparator()
         fmenu.addAction(self.actions['save'])
         fmenu.addAction(self.actions['saveas'])
+        fmenu.addAction(self.actions['excludeembeddedresources'])
         fmenu.addAction(self.actions['metainfo'])
         fmenu.addSeparator()
         fmenu.addAction(self.actions['screenshot'])
@@ -3819,6 +3826,14 @@ class MiyamotoWindow(QtWidgets.QMainWindow):
         """
         from .dialogs import SpritemapDialog
         dlg = SpritemapDialog(self)
+        dlg.exec_()
+
+    def HandleExcludeEmbeddedResources(self, checked):
+        """
+        Handle the embed exclusion dialog
+        """
+        from .dialogs import EmbedExclusionDialog
+        dlg = EmbedExclusionDialog(self)
         dlg.exec_()
 
     def EditTilesets(self, slot):
